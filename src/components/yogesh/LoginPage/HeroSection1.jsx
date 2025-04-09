@@ -5,7 +5,7 @@ const HeroSection1 = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="w-full h-screen flex items-center justify-between px-12 md:px-20 lg:px-32 bg-gradient-to-r from-[#0a1f44] to-[#123456]">
+    <div className="w-full h-screen flex items-center justify-between px-12 md:px-20 lg:px-32 bg-gradient-to-r from-[red] to-[#123456]">
       <div className="max-w-lg ">
       <h2 className="text-5xl md:text-6xl font-bold text-white leading-tight font-['Alegreya']  mt-24">
           Mesmerizing <br/>Colors of <span className="text-cyan-300">Aurora</span>
