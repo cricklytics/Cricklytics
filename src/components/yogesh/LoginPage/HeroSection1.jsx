@@ -18,7 +18,7 @@ const HeroSection1 = () => {
           onClick={() => navigate("/login")} 
           className="mt-6 bg-gradient-to-r from-[#004AAD]  to-[#5DE0E6] text-white px-8 py-3 rounded-full text-lg shadow-lg transition-all font-['Alegreya']
           cursor-pointer">
-          Login
+          Sign In
         </button>
       </div>
       <div className="hidden md:block  mt-24">

@@ -5,9 +5,16 @@ import HeroSection2 from "../components/yogesh/LoginPage/HeroSection2";
 import HeroSection3 from "../components/yogesh/LoginPage/HeroSection3";
 import HeroSection4 from "../components/yogesh/LoginPage/HeroSection4";
 
-// Import Swiper.js
+// ✅ Import Swiper modules
 import { Swiper, SwiperSlide } from "swiper/react";
-import { Navigation, Pagination, EffectFade, Autoplay } from "swiper/modules";
+import {
+  Navigation,
+  Pagination,
+  EffectFade,
+  Autoplay,
+  Keyboard, // ✅ Add this
+} from "swiper/modules";
+
 import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
@@ -16,7 +23,7 @@ import "swiper/css/effect-fade";
 function Landingpage1() {
   const [bgColor, setBgColor] = useState("bg-blue-900");
 
-  // Define backgrounds for each hero section
+  // ✅ Define backgrounds for each hero section
   const backgrounds = [
     "bg-blue-900",
     "bg-gradient-to-b from-[#0F618D] to-[#041B27]",
@@ -25,19 +32,20 @@ function Landingpage1() {
   ];
 
   return (
-    <div class={`min-h-screen w-full transition-all duration-500 ${bgColor}`}>
-      {/* Navbar */}
+    <div className={`min-h-screen w-full transition-all duration-500 ${bgColor}`}>
+      {/* ✅ Navbar */}
       <Navbar bgColor={bgColor} />
 
-      {/* Hero Sections with Swiper */}
+      {/* ✅ Swiper with keyboard support */}
       <Swiper
-        modules={[Navigation, Pagination, EffectFade, Autoplay]}
+        modules={[Navigation, Pagination, EffectFade, Autoplay, Keyboard]} // ✅ Added Keyboard module
         spaceBetween={0}
         slidesPerView={1}
         navigation
         pagination={{ clickable: true }}
         effect="fade"
-        autoplay={{ delay: 4000, disableOnInteraction: false }}
+        autoplay={{ delay: 15000, disableOnInteraction: false }}
+        keyboard={{ enabled: true }} // ✅ Enable keyboard navigation
         className="w-full"
         onSlideChange={(swiper) => setBgColor(backgrounds[swiper.activeIndex])}
       >
