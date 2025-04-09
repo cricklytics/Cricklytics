@@ -68,11 +68,10 @@ const Sidebar = ({ isOpen, closeMenu }) => {
 
           {/* ✅ Dynamic Profile Section */}
           <div className="text-center py-6 px-5 mt-6 text-black">
-            <img 
-              src={profImg} 
-              alt="Profile" 
-              className="w-20 h-20 rounded-full mb-4 object-cover border-2 border-[#5DE0E6] mx-auto"
-            />
+          <div className="w-20 h-20 rounded-full bg-black text-white flex items-center justify-center text-2xl font-bold mb-4 border-2 border-[#5DE0E6] mx-auto">
+  {userName.charAt(0).toUpperCase()}
+</div>
+
             <h6 className="text-lg font-bold text-black">
               {userName}
             </h6>

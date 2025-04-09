@@ -9,6 +9,8 @@ import {
   sendEmailVerification,
 } from "firebase/auth";
 import { doc, setDoc } from "firebase/firestore";
+import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+
 
 export default function Signup() {
   const [formData, setFormData] = useState({
@@ -69,6 +71,33 @@ export default function Signup() {
     }
   };
 
+  const handleGoogleSignup = async () => {
+    setError("");
+    setMessage("");
+  
+    const provider = new GoogleAuthProvider();
+  
+    try {
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+  
+      // Optional: Check if it's a new user and store extra info in Firestore
+      await setDoc(doc(db, "users", user.uid), {
+        uid: user.uid,
+        firstName: user.displayName || "",
+        email: user.email,
+        createdAt: new Date().toISOString(),
+        signupMethod: "google",
+      });
+  
+      setMessage("Google Sign-in successful!");
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+  
+
+
   return (
     <div className="flex flex-col md:flex-row items-center justify-center min-h-screen bg-gradient-to-b from-black to-blue-900 p-6 md:p-12 ">
       <div className="flex items-center justify-center w-full md:w-1/2">
@@ -80,7 +109,7 @@ export default function Signup() {
         <p className="text-gray-400 text-center mb-6">Express sign-up via Google and Facebook</p>
 
         <div className="flex flex-col md:flex-row gap-4 mb-6">
-          <button className="flex items-center justify-center gap-3 bg-teal-800 text-black px-6 py-3 rounded-lg hover:bg-gray-200 w-full">
+          <button onClick={handleGoogleSignup} className="flex items-center justify-center gap-3 bg-teal-800 text-black px-6 py-3 rounded-lg hover:bg-gray-200 w-full">
             <img src={googleImg} alt="Google" className="w-6" />
             Google
           </button>

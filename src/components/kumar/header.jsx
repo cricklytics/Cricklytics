@@ -1,19 +1,34 @@
 import React from "react";
 import logo from '../../assets/kumar/logo.png';
-class HeaderComponent extends React.Component{
-    render(){
-        return(
-            <>
-             <header class=' flex m-[2rem] w-[6rem] h[2rem] mb-0'>
-             <img class='w-[2rem] h[1rem]' src={logo} alt="Logo" />
-             <div class="flex justify-center items-center w-[5rem] h-[3rem] bg-yellow ml-[1.5rem]">
-  <h1 class="text-white text-2xl font-bold select-none">Cricklytics</h1>
-</div>
 
-                
-            </header>
-            </>
-        )
-    }
+class HeaderComponent extends React.Component {
+  handleClick = () => {
+    this.props.navigate('/landingpage');
+  };
+
+  render() {
+    return (
+      <>
+     <div className="flex justify-between items-center p-4 rounded-lg mb-5">
+        <div className="flex items-center gap-4 cursor-pointer select-none" onClick={this.handleClick}>
+          <img 
+            src= {logo}
+            alt="Cricklytics Logo"
+            className="h-10 object-contain block"
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.src = {logo};
+            }}
+            onClick={this.handleClick}
+          />
+          <span className="text-2xl font-bold text-white whitespace-nowrap text-shadow-[0_0_8px_rgba(93,224,230,0.4)] " >
+            Cricklytics
+          </span>
+        </div>
+      </div>
+      </>
+    );
+  }
 }
+
 export default HeaderComponent;

@@ -1,5 +1,6 @@
 import React from 'react';
 import HeaderComponent from '../components/kumar/header';
+import HeaderWithNav from '../components/kumar/HeaderWithNav';
 import { useState } from 'react';
 
 
@@ -8,7 +9,7 @@ function Tournamentseries() {
       <html class='bg-gradient-to-b from-[#0D171E] to-[#283F79] m-0'>
         {/* <div className="overflow-y-auto max-h-screen no-scrollbar"> */}
         <section className="h-[100%] overflow-hidden bg-gradient-to-b from-[#0D171E] to-[#283F79] relative">
-            <HeaderComponent />
+            <HeaderWithNav />
             <div className="absolute left-[-25%] top-[30%] w-[80rem] h-[50rem] rounded-full bg-[radial-gradient(circle,rgba(69,218,255,0.5)_40%,rgba(69,218,255,0.1)_60%,rgba(69,218,255,0.1)_100%)] blur-lg -z-10"></div>
 
             <div className="z-20 flex h-[42rem]  overflow-hidden  justify-center aling-start p-[5rem] pt-[1rem] relative">
