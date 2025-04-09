@@ -1,0 +1,16 @@
+/* Player Profile */
+.app-container {
+  min-height: 100vh;
+  background: linear-gradient(180deg, #0D171E 0%, #283F79 100%);
+  padding: 1rem; 
+  border: 5px solid black;
+}
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+/* Player Profile */
