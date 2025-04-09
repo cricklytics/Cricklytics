@@ -78,7 +78,6 @@ export default function Signup() {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
 
-      // Autofill only first name and email
       setFormData((prev) => ({
         ...prev,
         firstName: user.displayName || "",
@@ -86,7 +85,6 @@ export default function Signup() {
       }));
 
       setMessage("Google account info filled. Please complete the rest.");
-
     } catch (err) {
       setError(err.message);
     }
@@ -95,20 +93,35 @@ export default function Signup() {
   return (
     <div className="flex flex-col md:flex-row items-center justify-center min-h-screen bg-gradient-to-r from-[#0a1f44] to-[#123456] p-6 md:p-12">
       <div className="flex items-center justify-center w-full md:w-1/2">
-        <img src={img} alt="Cricket Player" className="max-w-xs md:max-w-md lg:max-w-lg h-auto object-contain" />
+        <img
+          src={img}
+          alt="Cricket Player"
+          className="max-w-xs md:max-w-md lg:max-w-lg h-auto object-contain"
+        />
       </div>
 
       <div className="w-full md:w-1/2 max-w-lg bg-opacity-90 px-6 md:px-12 py-8 rounded-lg">
-        <h1 className="text-3xl md:text-4xl font-semibold text-cyan-400 mb-4 text-center">Cricklytics</h1>
-        <p className="text-gray-400 text-center mb-6">Express sign-up via Google and Facebook</p>
+        <h1 className="text-3xl md:text-4xl font-semibold text-cyan-400 mb-4 text-center">
+          Cricklytics
+        </h1>
+        <p className="text-gray-400 text-center mb-6">
+          Express sign-up via Google and Facebook
+        </p>
 
         <div className="flex flex-col md:flex-row gap-4 mb-6">
-          <button onClick={handleGoogleSignup} className="flex items-center justify-center gap-3 bg-teal-800 text-black px-6 py-3 rounded-lg hover:bg-gray-200 w-full">
+          <button
+            onClick={handleGoogleSignup}
+            className="flex items-center justify-center gap-3 bg-teal-800 text-black px-6 py-3 rounded-lg hover:bg-gray-200 w-full"
+          >
             <img src={googleImg} alt="Google" className="w-6" />
             Google
           </button>
           <button className="flex items-center justify-center gap-3 bg-teal-800 text-white px-6 py-3 rounded-lg hover:bg-blue-700 w-full">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/0/05/Facebook_Logo_%282019%29.png" alt="Facebook" className="w-6" />
+            <img
+              src="https://upload.wikimedia.org/wikipedia/commons/0/05/Facebook_Logo_%282019%29.png"
+              alt="Facebook"
+              className="w-6"
+            />
             Facebook
           </button>
         </div>
