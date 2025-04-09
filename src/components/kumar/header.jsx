@@ -14,7 +14,7 @@ class HeaderComponent extends React.Component {
           <img 
             src= {logo}
             alt="Cricklytics Logo"
-            className="h-10 object-contain block"
+            className="h-10 object-contain block select-none"
             onError={(e) => {
               e.target.onerror = null;
               e.target.src = {logo};

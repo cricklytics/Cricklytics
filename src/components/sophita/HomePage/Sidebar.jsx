@@ -14,32 +14,42 @@ const Sidebar = ({ isOpen, closeMenu }) => {
   const navigate = useNavigate();
   const [showDropdown, setShowDropdown] = useState(false);
   const [userName, setUserName] = useState("Loading...");
+  const [userEmail, setUserEmail] = useState("");
+  const [userPhone, setUserPhone] = useState("");
 
   useEffect(() => {
     const fetchUserData = async () => {
       const currentUser = auth.currentUser;
-
+  
       if (currentUser) {
         try {
           const docRef = doc(db, "users", currentUser.uid);
           const docSnap = await getDoc(docRef);
-
+  
           if (docSnap.exists()) {
             const userData = docSnap.data();
             setUserName(userData.firstName || "User");
+            setUserPhone(userData.whatsapp || "No phone");
           } else {
             console.log("No such user document!");
             setUserName("User");
+            setUserPhone("No phone");
           }
+  
+          // Set email directly from auth
+          setUserEmail(currentUser.email || "No email");
         } catch (err) {
           console.error("Error fetching user data:", err);
           setUserName("User");
+          setUserEmail("No email");
+          setUserPhone("No phone");
         }
       }
     };
-
+  
     fetchUserData();
   }, []);
+  
 
   // Sign out handler
   const handleSignOut = async () => {
@@ -75,6 +85,8 @@ const Sidebar = ({ isOpen, closeMenu }) => {
             <h6 className="text-lg font-bold text-black">
               {userName}
             </h6>
+            <p className="text-sm text-black opacity-80 mt-1">{userEmail}</p>
+            <p className="text-sm text-black opacity-80">{userPhone}</p>
           </div>
 
           {/* Menu Items */}

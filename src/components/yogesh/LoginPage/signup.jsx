@@ -2,17 +2,23 @@
 import { useState } from "react";
 import img from "../../../assets/yogesh/login/img1.png";
 import googleImg from "../../../assets/yogesh/login/google.png";
+import { Link, useNavigate } from "react-router-dom";
 
 import { auth, db } from "../../../firebase"; // ✅ Firebase Auth & Firestore
 import {
   createUserWithEmailAndPassword,
   sendEmailVerification,
 } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc } from "firebase/firestore";
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 
 
 export default function Signup() {
+  const navigate = useNavigate();
+  const [showPhoneModal, setShowPhoneModal] = useState(false);
+  const [phoneInput, setPhoneInput] = useState("");
+  const [googleUser, setGoogleUser] = useState(null); // temporarily hold Google user
+
   const [formData, setFormData] = useState({
     firstName: "",
     dob: "",
@@ -81,20 +87,50 @@ export default function Signup() {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
   
-      // Optional: Check if it's a new user and store extra info in Firestore
-      await setDoc(doc(db, "users", user.uid), {
-        uid: user.uid,
-        firstName: user.displayName || "",
-        email: user.email,
-        createdAt: new Date().toISOString(),
-        signupMethod: "google",
-      });
+      const userRef = doc(db, "users", user.uid);
+      const userSnap = await getDoc(userRef);
+  
+      if (!userSnap.exists()) {
+        setGoogleUser(user); // hold user temporarily
+        setShowPhoneModal(true); // show modal instead of prompt
+        return;
+      }
   
       setMessage("Google Sign-in successful!");
+      setTimeout(() => navigate("/landingpage"), 2000);
     } catch (err) {
       setError(err.message);
     }
   };
+
+  
+  const handlePhoneSubmit = async () => {
+    if (!phoneInput || !googleUser) {
+      setError("Phone number is required.");
+      return;
+    }
+  
+    const userRef = doc(db, "users", googleUser.uid);
+  
+    try {
+      await setDoc(userRef, {
+        uid: googleUser.uid,
+        firstName: googleUser.displayName || "",
+        email: googleUser.email,
+        whatsapp: phoneInput,
+        createdAt: new Date().toISOString(),
+        signupMethod: "google",
+      });
+  
+      setShowPhoneModal(false);
+      setMessage("Google Sign-in successful!");
+      setTimeout(() => navigate("/landingpage"), 2000);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+  
+  
   
 
 
@@ -168,6 +204,36 @@ export default function Signup() {
           </button>
         </form>
       </div>
+      {showPhoneModal && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/50">
+    <div className="bg-gray-900 p-6 rounded-2xl shadow-xl w-[90%] max-w-md border border-cyan-600">
+      <h2 className="text-2xl font-bold text-cyan-400 mb-3 text-center">WELCOME</h2>
+      <p className="text-gray-200 mb-4 text-center">Enter your WhatsApp number to complete sign-up:</p>
+      <input
+        type="text"
+        className="w-full px-4 py-2 rounded-lg bg-gray-800 text-white focus:ring-2 focus:ring-cyan-400 outline-none"
+        placeholder="e.g. 9876543210"
+        value={phoneInput}
+        onChange={(e) => setPhoneInput(e.target.value)}
+      />
+      <div className="flex justify-end mt-6 gap-3">
+        <button
+          onClick={() => setShowPhoneModal(false)}
+          className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handlePhoneSubmit}
+          className="px-4 py-2 rounded-lg bg-cyan-600 text-white hover:bg-cyan-700 transition"
+        >
+          Submit
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
     </div>
   );
 }
