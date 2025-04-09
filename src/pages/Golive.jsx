@@ -12,7 +12,7 @@ const Golive = () => {
   const [showWomens, setShowWomens] = useState(false);
 
   return (
-    <div class="min-h-screen bg-gradient-to-b from-black to-[#001A80] text-white p-5">
+    <div class="min-h-screen bg-gradient-to-r from-[#0a1f44] to-[#123456] text-white p-5">
       {/* Top Navigation Bar */}
       <div className="flex justify-between items-center p-4 bg-black/30 rounded-lg mb-5">
         <div className="flex items-center gap-4 cursor-pointer" onClick={() => navigate("/landingpage")}>
