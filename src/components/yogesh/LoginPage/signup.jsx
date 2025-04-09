@@ -135,7 +135,7 @@ export default function Signup() {
 
 
   return (
-    <div className="flex flex-col md:flex-row items-center justify-center min-h-screen bg-gradient-to-b from-black to-blue-900 p-6 md:p-12 ">
+    <div className="flex flex-col md:flex-row items-center justify-center min-h-screen bg-gradient-to-r from-[#0a1f44] to-[#123456] p-6 md:p-12 ">
       <div className="flex items-center justify-center w-full md:w-1/2">
         <img src={img} alt="Cricket Player" className="max-w-xs md:max-w-md lg:max-w-lg h-auto object-contain" />
       </div>
