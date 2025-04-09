@@ -4,7 +4,7 @@ import cricketbg from "../../../assets/yogesh/login/2-removebg-preview 1.png";
 
 const HeroSection2 = ({ isActive }) => {
   return (
-    <div className="w-full h-screen flex flex-col items-center justify-center bg-gradient-to-b from-[#0F618D] to-[#041B27] px-10 relative">
+    <div className="w-full h-screen flex flex-col items-center justify-center bg-gradient-to-r from-[#0a1f44] to-[#123456] px-10 relative">
       <div className="container mx-auto flex flex-col md:flex-row items-center">
         <div className="relative w-full md:w-1/2 flex justify-center  mt-24">
           <img src={aboutimg} alt="Stadium Background" className="w-1/2 rounded-lg shadow-lg" />

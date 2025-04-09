@@ -3,7 +3,7 @@ import stadium from "../../../assets/yogesh/login/stadium.png";
 
 function HeroSection4() {
   return (
-    <div className="w-full h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[#CFF6F0] to-[#737373] text-black relative font-serif">
+    <div className="w-full h-screen flex flex-col items-center justify-center bg-gradient-to-r from-[#0a1f44] to-[#123456] text-black relative font-serif">
       <div className="absolute top-28 w-full text-center">
         <h1 className="text-5xl font-bold flex items-center justify-center font-['Alegreya']">
           Premium <span className="text-yellow-500 ml-2">⭐</span>

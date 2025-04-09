@@ -4,7 +4,7 @@ import cricketbg3 from "../../../assets/yogesh/login/3_-removebg-preview 1.png";
 
 const HeroSection3 = () => {
   return (
-    <div className="w-full h-screen flex items-center justify-center bg-gradient-to-r from-blue-900 to-blue-500 p-6 relative overflow-hidden">
+    <div className="w-full h-screen flex items-center justify-center bg-gradient-to-r from-[#0a1f44] to-[#123456] p-6 relative overflow-hidden">
       <div className="max-w-5xl w-full flex flex-col md:flex-row items-center justify-between text-white">
         <div className="max-w-md text-left">
           <h1 className="text-6xl font-bold text-white mb-4 font-['Alegreya']">Focus</h1>
