@@ -11,13 +11,11 @@ import {
 } from "firebase/auth";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { fetchSignInMethodsForEmail } from "firebase/auth";
 
 
 export default function Signup() {
   const navigate = useNavigate();
-  const [showPhoneModal, setShowPhoneModal] = useState(false);
-  const [phoneInput, setPhoneInput] = useState("");
-  const [googleUser, setGoogleUser] = useState(null); // temporarily hold Google user
 
   const [formData, setFormData] = useState({
     firstName: "",
@@ -39,29 +37,25 @@ export default function Signup() {
     e.preventDefault();
     setError("");
     setMessage("");
-
+  
     const { firstName, dob, email, whatsapp, password } = formData;
-
-    // ✅ Basic validation
+  
     if (!firstName || !dob || !email || !whatsapp || !password) {
-      setError("Please fill in all fields");
+      setError("Please fill in all fields before continuing.");
       return;
     }
-
+  
     if (!email.includes("@") || password.length < 6) {
       setError("Invalid email or password too short");
       return;
     }
-
+  
     try {
-      // ✅ Create Firebase Auth user
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
-
-      // ✅ Send verification email
+  
       await sendEmailVerification(user);
-
-      // ✅ Store user data in Firestore
+  
       await setDoc(doc(db, "users", user.uid), {
         uid: user.uid,
         firstName,
@@ -70,13 +64,25 @@ export default function Signup() {
         whatsapp,
         createdAt: new Date().toISOString(),
       });
-
-      setMessage("Signup successful! Check your email for verification.");
+  
+      setMessage("Verification email sent. Please check your inbox.");
+  
+      // Poll to check if email is verified
+      const interval = setInterval(async () => {
+        await user.reload();
+        if (user.emailVerified) {
+          clearInterval(interval);
+          setMessage("Email verified successfully! Redirecting to login...");
+          setTimeout(() => {
+            navigate("/login");
+          }, 2000);
+        }
+      }, 3000); // check every 3 seconds
     } catch (err) {
       setError(err.message);
     }
   };
-
+  
   const handleGoogleSignup = async () => {
     setError("");
     setMessage("");
@@ -87,48 +93,26 @@ export default function Signup() {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
   
-      const userRef = doc(db, "users", user.uid);
-      const userSnap = await getDoc(userRef);
+      const displayName = user.displayName || "";
+      const email = user.email || "";
   
-      if (!userSnap.exists()) {
-        setGoogleUser(user); // hold user temporarily
-        setShowPhoneModal(true); // show modal instead of prompt
-        return;
-      }
+      // 🔥 Immediately delete this temporary user from Firebase Auth
+      await user.delete();
   
-      setMessage("Google Sign-in successful!");
-      setTimeout(() => navigate("/landingpage"), 2000);
+      // ✅ Autofill form only
+      setFormData((prev) => ({
+        ...prev,
+        firstName: displayName.split(" ")[0] || "",
+        email: email,
+      }));
+  
+      setMessage("Google autofill complete! Please finish the form and click Sign Up.");
     } catch (err) {
-      setError(err.message);
+      setError("Google autofill failed. Please try again.");
+      console.error("Google sign-in error:", err);
     }
   };
-
   
-  const handlePhoneSubmit = async () => {
-    if (!phoneInput || !googleUser) {
-      setError("Phone number is required.");
-      return;
-    }
-  
-    const userRef = doc(db, "users", googleUser.uid);
-  
-    try {
-      await setDoc(userRef, {
-        uid: googleUser.uid,
-        firstName: googleUser.displayName || "",
-        email: googleUser.email,
-        whatsapp: phoneInput,
-        createdAt: new Date().toISOString(),
-        signupMethod: "google",
-      });
-  
-      setShowPhoneModal(false);
-      setMessage("Google Sign-in successful!");
-      setTimeout(() => navigate("/landingpage"), 2000);
-    } catch (err) {
-      setError(err.message);
-    }
-  };
   
   
   
@@ -162,12 +146,14 @@ export default function Signup() {
             placeholder="First name"
             className="w-full px-5 py-3 rounded bg-gray-800 text-white focus:ring-2 focus:ring-cyan-400"
             onChange={handleChange}
+            value={formData.firstName}
           />
           <input
             type="date"
             name="dob"
             className="w-full px-5 py-3 rounded bg-gray-800 text-white focus:ring-2 focus:ring-cyan-400"
             onChange={handleChange}
+            value={formData.dob}
           />
           <input
             type="email"
@@ -175,6 +161,7 @@ export default function Signup() {
             placeholder="Email address"
             className="w-full px-5 py-3 rounded bg-gray-800 text-white focus:ring-2 focus:ring-cyan-400"
             onChange={handleChange}
+            value={formData.email}
           />
           <input
             type="text"
@@ -204,36 +191,7 @@ export default function Signup() {
           </button>
         </form>
       </div>
-      {showPhoneModal && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/50">
-    <div className="bg-gray-900 p-6 rounded-2xl shadow-xl w-[90%] max-w-md border border-cyan-600">
-      <h2 className="text-2xl font-bold text-cyan-400 mb-3 text-center">WELCOME</h2>
-      <p className="text-gray-200 mb-4 text-center">Enter your WhatsApp number to complete sign-up:</p>
-      <input
-        type="text"
-        className="w-full px-4 py-2 rounded-lg bg-gray-800 text-white focus:ring-2 focus:ring-cyan-400 outline-none"
-        placeholder="e.g. 9876543210"
-        value={phoneInput}
-        onChange={(e) => setPhoneInput(e.target.value)}
-      />
-      <div className="flex justify-end mt-6 gap-3">
-        <button
-          onClick={() => setShowPhoneModal(false)}
-          className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition"
-        >
-          Cancel
-        </button>
-        <button
-          onClick={handlePhoneSubmit}
-          className="px-4 py-2 rounded-lg bg-cyan-600 text-white hover:bg-cyan-700 transition"
-        >
-          Submit
-        </button>
-      </div>
-    </div>
-  </div>
-)}
-
+      
     </div>
   );
 }
