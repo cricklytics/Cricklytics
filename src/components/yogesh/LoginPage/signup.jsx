@@ -83,36 +83,36 @@ export default function Signup() {
     }
   };
   
-  const handleGoogleSignup = async () => {
-    setError("");
-    setMessage("");
-  
-    const provider = new GoogleAuthProvider();
-  
-    try {
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-  
-      const displayName = user.displayName || "";
-      const email = user.email || "";
-  
-      // 🔥 Immediately delete this temporary user from Firebase Auth
-      await user.delete();
-  
-      // ✅ Autofill form only
-      setFormData((prev) => ({
-        ...prev,
-        firstName: displayName.split(" ")[0] || "",
-        email: email,
-      }));
-  
-      setMessage("Google autofill complete! Please finish the form and click Sign Up.");
-    } catch (err) {
-      setError("Google autofill failed. Please try again.");
-      console.error("Google sign-in error:", err);
-    }
-  };
-  
+const handleGoogleSignup = async () => {
+  setError("");
+  setMessage("");
+
+  const provider = new GoogleAuthProvider();
+
+  try {
+    const result = await signInWithPopup(auth, provider);
+    const user = result.user;
+
+    const displayName = user.displayName || "";
+    const email = user.email || "";
+
+    // 🔥 Immediately delete this temporary user from Firebase Auth
+    await user.delete();
+
+    // ✅ Autofill form only
+    setFormData((prev) => ({
+      ...prev,
+      firstName: displayName.split(" ")[0] || "",
+      email: email,
+    }));
+
+    setMessage("Google autofill complete! Please finish the form and click Sign Up.");
+  } catch (err) {
+    setError("Google autofill failed. Please try again.");
+    console.error("Google sign-in error:", err);
+  }
+};
+
   
   
   

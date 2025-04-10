@@ -128,7 +128,7 @@ function PlayerPages() {
   const battingStyles = [...new Set(basePlayers.map((player) => player.battingStyle))];
 
   return (
-    <div class="bg-yellow-500 scrollbar-hide">
+    <div class="bg-gradient-to-r from-[#0a1f44] to-[#123456] scrollbar-hide">
       <Frame1321317519 />
       {/* Search and Filter Section */}
       {/* <div className="container mx-auto p-6 bg-black   rounded-lg shadow-md mb-6"></div> */}
