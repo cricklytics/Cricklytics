@@ -18,9 +18,12 @@ import "react-toastify/dist/ReactToastify.css";
 
 import PlayerPages from './pages/PlayerPages';
 import Awards from './components/pawan/Awards';
-import Winner25 from './components/pawan/Winner25';
-import SelectionCriteria from './components/pawan/SelectionCriteria'
 import Winner from './components/pawan/Winner';
+import Winner25 from './components/pawan/Winner25';
+import Winner24 from './components/pawan/Winner24';
+import Winner23 from './components/pawan/Winner23';
+import SelectionCriteria from './components/pawan/SelectionCriteria'
+
 
 
 import TournamentSeries from './pages/tournamentseries';
@@ -63,6 +66,8 @@ function App() {
           <Route path="/playerpages" element={<PlayerPages />} />
           <Route path="/awards" element={<Awards />} />
           <Route path="/winner25" element={<Winner25 />} />
+          <Route path="/winner24" element={<Winner24 />} />
+          <Route path="/winner23" element={<Winner23 />} />
           <Route path="/winner" element={<Winner />} />
           <Route path="/selectionCriteria" element={<SelectionCriteria />} />
 

@@ -170,14 +170,16 @@ const Awards = () => {
               </div>
             </div>
           </div>
-          <div className="absolute w-[150px] h-[20px] top-[355px] left-[300px] font-raleway font-bold text-white text-4xl leading-[20px] whitespace-nowrap">
+          <div className="absolute w-[150px] h-[20px] top-[355px] left-[300px] font-raleway font-bold text-white text-4xl leading-[20px] whitespace-nowrap cursor-pointer"
+          onClick={() => navigate("/landingpage")}>
             Cricklytics
           </div>
           <img
                   src={Picture312Image}
                   alt="Picture3 1 2"
                   loading="lazy"
-                  className="absolute left-[260px] top-[350px] w-[30px] h-[30px] object-cover"
+                  className="absolute left-[260px] top-[350px] w-[30px] h-[30px] object-cover cursor-pointer"
+                  onClick={() => navigate("/landingpage")}
                 />
           <img className="absolute w-[30px] h-[71px] top-[340px] left-[1730px]" alt="Jam info" src={jamInfo} />
         </div>
@@ -204,14 +206,14 @@ const Awards = () => {
           <InteractiveButton
             id="view-result-2"
             className="absolute w-[643px] h-[121px] top-[1118px] left-[784px] bg-[#4cc5dc] rounded-b-[69px] shadow-button-inset text-5xl"
-            onClick={() => navigate("/Winner")}
+            onClick={() => navigate("/winner")}
           >
             VIEW RESULT
           </InteractiveButton>
           <InteractiveButton
             id="view-result-3"
             className="absolute w-[643px] h-[117px] top-[472px] left-[784px] bg-[#4cc5dc] rounded-b-[69px] shadow-button-inset text-5xl"
-            onClick={() => navigate("/Winner24")}
+            onClick={() => navigate("/winner24")}
           >
             VIEW RESULT
           </InteractiveButton>

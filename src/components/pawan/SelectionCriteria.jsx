@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import '../../styles/SelectionCriteria.css';
 import Frame1321317519 from './Frame';
 
 const SelectionCriteria = () => {
   const [openCategory, setOpenCategory] = useState(null); // Track which category is open
+
 
   const criteriaData = [
     {

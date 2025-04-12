@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import '../../styles/Winner.css';
+import Frame1321317519 from './Frame';
 
 const Winner25 = () => {
   const [activeCategory, setActiveCategory] = useState('Popularity');
@@ -190,107 +190,259 @@ const Winner25 = () => {
       .sort((a, b) => b.votes - a.votes)
       .slice(0, 3);
   }
+  
+  const styles = {
+  winnerContainer1: {
+    minHeight: '100vh',
+    width: '100%',
+    background: 'linear-gradient(180deg, rgba(13, 23, 30, 1) 0%, rgba(40, 63, 121, 1) 100%)',
+  },
+  cricklyticsLogo1: {
+    width: '16rem',  // 64px
+    height: 'auto',
+  },
+  jamInfo1: {
+    width: '4rem',  // 16px
+    height: '4rem', // 16px
+  },
+  winnerContent1: {
+    paddingLeft: '2.5rem',  // 10px
+    paddingRight: '2.5rem', // 10px
+    // paddingTop: '1.5rem',   // 6px
+    paddingBottom: '1.5rem',// 6px
+  },
+  pageTitle1: {
+    color: 'white',
+    fontSize: '3rem',   // 5xl
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: '2rem',  // 8px
+    animation: 'fade-in 0.8s ease-out forwards',
+  },
+  categoryTabs1: {
+    display: 'flex',
+    justifyContent: 'center',
+    gap: '1rem',  // 4px
+    marginBottom: '2.5rem', // 10px
+  },
+  tabButton1: {
+    paddingLeft: '1.5rem',  // 6px
+    paddingRight: '1.5rem', // 6px
+    paddingTop: '0.5rem',   // 2px
+    paddingBottom: '0.5rem',// 2px
+    borderRadius: '9999px',  // rounded-full
+    color: 'white',
+    fontSize: '1.125rem',  // lg
+    fontWeight: 600,  // font-semibold
+    transition: 'all 0.3s ease',
+    background: '#142136',
+  },
+  tabButtonHover1: {
+    background: '#2563eb',  // bg-blue-600
+    transform: 'scale(1.05)',
+  },
+  tabButtonActive1: {
+    background: '#ec4899',  // bg-pink-500
+    color: 'white',
+    transform: 'scale(1.1)',
+    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.2)',
+  },
+  winnerCards1: {
+    display: 'grid', // switch to CSS grid
+    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+    gap: '2rem',
+    maxWidth: '72rem',
+    marginLeft: 'auto',
+    marginRight: 'auto',
+  },
+  
+  winnerCard1: {
+    backgroundColor: '#142136',
+    borderRadius: '0.75rem',  // rounded-xl
+    overflow: 'hidden',
+    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+    // transition: 'transform 0.1s ease',
+    // animation: 'slide-up 0.1s ease-out forwards',
+  },
+  winnerCardHover1: {
+    // transform: 'scale(0.05)',
+    boxShadow: '0 15px 25px -5px rgba(0, 0, 0, 0.2)',
+  },
+  cardHeader1: {
+    backgroundColor: '#2563eb',  // bg-blue-600
+    color: 'white',
+    fontSize: '1.25rem',  // xl
+    fontWeight: 600,  // font-semibold
+    padding: '1rem',  // 4px
+    textAlign: 'center',
+  },
+  cardContent1: {
+    padding: '1.5rem',  // 6px
+    color: 'white',
+  },
+  playerImage1: {
+    width: '8rem',  // 32px
+    height: '8rem',  // 32px
+    borderRadius: '9999px',  // rounded-full
+    marginLeft: 'auto',
+    marginRight: 'auto',
+    marginBottom: '1rem',  // 4px
+    objectFit: 'cover',
+    border: '2px solid red',
+  },
+  playerName1: {
+    fontSize: '1.5rem',  // 2xl
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: '0.5rem',  // 2px
+  },
+  playerVotes1: {
+    fontSize: '1.125rem',  // lg
+    textAlign: 'center',
+    marginBottom: '0.5rem',  // 2px
+  },
+  playerLocation1: {
+    fontSize: '1.125rem',  // lg
+    textAlign: 'center',
+    marginBottom: '1rem',  // 2px
+  },
+  statsTable1: {
+    width: '100%',
+    textAlign: 'left',
+    fontSize: '0.875rem',  // sm
+  },
+  statsTableTd1: {
+    paddingTop: '0.25rem',  // 1px
+    paddingBottom: '0.25rem',  // 1px
+  },
+  statsTableFirstChild1: {
+    fontWeight: 600,  // font-semibold
+    paddingRight: '1rem',  // 4px
+  },
+  winnerBanner1: {
+    backgroundColor: '#fbbf24',  // bg-yellow-400
+    color: 'black',
+    textAlign: 'center',
+    paddingTop: '0.5rem',  // 2px
+    paddingBottom: '0.5rem',  // 2px
+    fontWeight: 'bold',
+    fontSize: '1.125rem',  // lg
+  },
+};
 
-  return (
-    <div className="winner-container">
-      <div className="winner-content">
-        <h1 className="page-title">Winners of 2025</h1>
+// Usage example in JSX
+// <div style={styles.winnerContainer}>...</div>
 
-        {/* Category Tabs */}
-        <div className="category-tabs">
-          {categories.map((category) => (
-            <button
-              key={category}
-              className={`tab-button ${activeCategory === category ? 'active' : ''}`}
-              onClick={() => setActiveCategory(category)}
-            >
-              {category}
-            </button>
-          ))}
-        </div>
 
-        {/* Winner Cards */}
-        <div className="winner-cards">
-          {filteredWinners.map((winner, index) => (
-            <div key={index} className="winner-card">
-              <div className="card-header">
-                {activeCategory === 'Popularity' ? 'Popularity' : winner.category}
-              </div>
-              <div className="card-content">
-                <img src={winner.image} alt={winner.name} className="player-image" />
-                <h2 className="player-name">{winner.name}</h2>
-                {activeCategory === 'Popularity' && (
-                  <p className="player-votes">{winner.votes} Votes</p>
-                )}
-                <p className="player-location">{winner.location}</p>
-                <table className="stats-table">
-                  <tbody>
-                    <tr>
-                      <td>Age:</td>
-                      <td>{winner.stats.age}</td>
-                    </tr>
-                    <tr>
-                      <td>Inns:</td>
-                      <td>{winner.stats.inns}</td>
-                    </tr>
-                    {winner.category === 'Batting' || winner.category === 'All Rounder' || (activeCategory === 'Popularity' && winner.stats.runs) ? (
-                      <>
-                        <tr>
-                          <td>Runs:</td>
-                          <td>{winner.stats.runs}</td>
-                        </tr>
-                        <tr>
-                          <td>Avg:</td>
-                          <td>{winner.stats.avg}</td>
-                        </tr>
-                        <tr>
-                          <td>SR:</td>
-                          <td>{winner.stats.sr}</td>
-                        </tr>
-                      </>
-                    ) : null}
-                    {winner.category === 'Bowling' || winner.category === 'All Rounder' ? (
-                      <>
-                        <tr>
-                          <td>Wickets:</td>
-                          <td>{winner.stats.wickets}</td>
-                        </tr>
-                        <tr>
-                          <td>Avg:</td>
-                          <td>{winner.stats.avg}</td>
-                        </tr>
-                        <tr>
-                          <td>Econ:</td>
-                          <td>{winner.stats.econ}</td>
-                        </tr>
-                      </>
-                    ) : null}
-                    {winner.category === 'Fielding' ? (
-                      <>
-                        <tr>
-                          <td>Matches:</td>
-                          <td>{winner.stats.matches}</td>
-                        </tr>
-                        <tr>
-                          <td>Catches:</td>
-                          <td>{winner.stats.catches}</td>
-                        </tr>
-                        <tr>
-                          <td>Run Outs:</td>
-                          <td>{winner.stats.runOuts}</td>
-                        </tr>
-                      </>
-                    ) : null}
-                  </tbody>
-                </table>
-              </div>
-              <div className="winner-banner">WINNER</div>
+return (
+  <div style={styles.winnerContainer1}>
+    <div style={styles.winnerContent1}>
+      <h1 style={styles.pageTitle1}>Winners of 2025</h1>
+      
+
+      {/* Category Tabs */}
+      <div style={styles.categoryTabs1}>
+      <Frame1321317519 />
+        {categories.map((category) => (
+          <button
+            key={category}
+            style={{
+              ...styles.tabButton1,
+              ...(activeCategory === category ? styles.tabButtonActive1 : {}),
+            }}
+            onClick={() => setActiveCategory(category)}
+          >
+            {category}
+          </button>
+        ))}
+      </div>
+
+      {/* Winner Cards */}
+      <div style={styles.winnerCards1}>
+        {filteredWinners.map((winner, index) => (
+          <div
+            key={index}
+            style={styles.winnerCard1}
+            className="transition-transform duration-200 hover:scale-105"
+          >
+            <div style={styles.cardHeader1}>
+              {activeCategory === 'Popularity' ? 'Popularity' : winner.category}
             </div>
-          ))}
-        </div>
+            <div style={styles.cardContent1}>
+              <img src={winner.image} alt={winner.name} style={styles.playerImage1} />
+              <h2 style={styles.playerName1}>{winner.name}</h2>
+              {activeCategory === 'Popularity' && (
+                <p style={styles.playerVotes1}>{winner.votes} Votes</p>
+              )}
+              <p style={styles.playerLocation1}>{winner.location}</p>
+              <table style={styles.statsTable1}>
+                <tbody>
+                  <tr>
+                    <td style={styles.statsTableFirstChild1}>Age:</td>
+                    <td>{winner.stats.age}</td>
+                  </tr>
+                  <tr>
+                    <td style={styles.statsTableFirstChild1}>Inns:</td>
+                    <td>{winner.stats.inns}</td>
+                  </tr>
+                  {winner.category === 'Batting' || winner.category === 'All Rounder' || (activeCategory === 'Popularity' && winner.stats.runs) ? (
+                    <>
+                      <tr>
+                        <td style={styles.statsTableFirstChild1}>Runs:</td>
+                        <td>{winner.stats.runs}</td>
+                      </tr>
+                      <tr>
+                        <td style={styles.statsTableFirstChild1}>Avg:</td>
+                        <td>{winner.stats.avg}</td>
+                      </tr>
+                      <tr>
+                        <td style={styles.statsTableFirstChild1}>SR:</td>
+                        <td>{winner.stats.sr}</td>
+                      </tr>
+                    </>
+                  ) : null}
+                  {winner.category === 'Bowling' || winner.category === 'All Rounder' ? (
+                    <>
+                      <tr>
+                        <td style={styles.statsTableFirstChild1}>Wickets:</td>
+                        <td>{winner.stats.wickets}</td>
+                      </tr>
+                      <tr>
+                        <td style={styles.statsTableFirstChild1}>Avg:</td>
+                        <td>{winner.stats.avg}</td>
+                      </tr>
+                      <tr>
+                        <td style={styles.statsTableFirstChild1}>Econ:</td>
+                        <td>{winner.stats.econ}</td>
+                      </tr>
+                    </>
+                  ) : null}
+                  {winner.category === 'Fielding' ? (
+                    <>
+                      <tr>
+                        <td style={styles.statsTableFirstChild1}>Matches:</td>
+                        <td>{winner.stats.matches}</td>
+                      </tr>
+                      <tr>
+                        <td style={styles.statsTableFirstChild1}>Catches:</td>
+                        <td>{winner.stats.catches}</td>
+                      </tr>
+                      <tr>
+                        <td style={styles.statsTableFirstChild1}>Run Outs:</td>
+                        <td>{winner.stats.runOuts}</td>
+                      </tr>
+                    </>
+                  ) : null}
+                </tbody>
+              </table>
+            </div>
+            <div style={styles.winnerBanner1}>WINNER</div>
+          </div>
+        ))}
       </div>
     </div>
-  );
+  </div>
+);
 };
 
 export default Winner25;

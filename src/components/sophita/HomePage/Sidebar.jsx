@@ -126,7 +126,7 @@ const Sidebar = ({ isOpen, closeMenu }) => {
               <ul className="pl-10 border-l-2 border-[#5DE0E6] transition-all duration-300">
                 <li 
                   className="px-4 py-2 text-sm cursor-pointer hover:bg-[rgb(68,172,199)] transition-all duration-200"
-                  onClick={() => navigate("/batting")}
+                  onClick={() => navigate("/playerpages")} 
                 >
                   🏏 Batting <FaStar className="ml-auto text-yellow-400" />
                 </li>
@@ -151,7 +151,7 @@ const Sidebar = ({ isOpen, closeMenu }) => {
               </ul>
             )}
 
-            <li className="px-6 py-3 flex items-center gap-3 cursor-pointer hover:bg-[rgba(0,0,0,0.1)] transition-all duration-300" onClick={() => navigate("/playerpages")} >
+            <li className="px-6 py-3 flex items-center gap-3 cursor-pointer hover:bg-[rgba(0,0,0,0.1)] transition-all duration-300">
               <FaUsers className="min-w-[20px]" /> Club <FaStar className="ml-auto text-yellow-400" />
             </li>
           </ul>
