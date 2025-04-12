@@ -11,7 +11,7 @@ import {
 } from "firebase/auth";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
-import { fetchSignInMethodsForEmail } from "firebase/auth";
+import { FacebookAuthProvider } from "firebase/auth";
 
 
 export default function Signup() {
@@ -113,6 +113,37 @@ const handleGoogleSignup = async () => {
   }
 };
 
+const handleFacebookSignup = async () => {
+  setError("");
+  setMessage("");
+
+  const provider = new FacebookAuthProvider();
+
+  try {
+    const result = await signInWithPopup(auth, provider);
+    const user = result.user;
+
+    const displayName = user.displayName || "";
+    const email = user.email || "";
+
+    // 🔥 Immediately delete the temporary Firebase Auth account
+    await user.delete();
+
+    // ✅ Autofill form only
+    setFormData((prev) => ({
+      ...prev,
+      firstName: displayName.split(" ")[0] || "",
+      email: email,
+    }));
+
+    setMessage("Facebook autofill complete! Please finish the form and click Sign Up.");
+  } catch (err) {
+    setError("Facebook autofill failed. Please try again.");
+    console.error("Facebook sign-in error:", err);
+  }
+};
+
+
   
   
   
@@ -133,7 +164,8 @@ const handleGoogleSignup = async () => {
             <img src={googleImg} alt="Google" className="w-6" />
             Google
           </button>
-          <button className="flex items-center justify-center gap-3 bg-teal-800 text-white px-6 py-3 rounded-lg hover:bg-blue-700 w-full">
+          <button onClick={handleFacebookSignup}
+           className="flex items-center justify-center gap-3 bg-teal-800 text-white px-6 py-3 rounded-lg hover:bg-blue-700 w-full">
             <img src="https://upload.wikimedia.org/wikipedia/commons/0/05/Facebook_Logo_%282019%29.png" alt="Facebook" className="w-6" />
             Facebook
           </button>

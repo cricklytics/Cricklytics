@@ -91,7 +91,7 @@ const Sidebar = ({ isOpen, closeMenu }) => {
 
           {/* Menu Items */}
           <ul className="list-none p-0 mt-4 text-black">
-            <li className="px-6 py-3 flex items-center gap-3 cursor-pointer hover:bg-[rgba(0,0,0,0.1)] transition-all duration-300">
+            <li className="px-6 py-3 flex items-center gap-3 cursor-pointer hover:bg-[rgba(0,0,0,0.1)] transition-all duration-300" onClick={() => navigate("/awards")}>
               <FaTrophy className="min-w-[20px]" /> CV Cricket Awards
             </li>
             <li className="px-6 py-3 flex items-center gap-3 cursor-pointer hover:bg-[rgba(0,0,0,0.1)] transition-all duration-300" onClick={() => navigate("/tournamentseries")}>
