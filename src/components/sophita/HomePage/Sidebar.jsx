@@ -5,6 +5,7 @@ import {
   FaChevronDown, FaChevronUp
 } from "react-icons/fa";
 import profImg from "../../../assets/sophita/HomePage/profpic.png";
+import { LockKeyholeIcon } from "lucide-react";
 
 import { auth, db } from "../../../firebase";
 import { doc, getDoc } from "firebase/firestore";
@@ -106,7 +107,7 @@ const Sidebar = ({ isOpen, closeMenu }) => {
               className="px-6 py-3 flex items-center gap-3 cursor-pointer hover:bg-[rgba(0,0,0,0.1)] transition-all duration-300"
               onClick={() => navigate("/go-live")}
             >
-              <FaTv className="min-w-[20px]" /> Go Live <FaStar className="ml-auto text-yellow-400" />
+              <FaTv className="min-w-[20px]" /> Go Live < LockKeyholeIcon className="ml-auto" />
             </li>
 
             <li 
@@ -125,34 +126,34 @@ const Sidebar = ({ isOpen, closeMenu }) => {
             {showDropdown && (
               <ul className="pl-10 border-l-2 border-[#5DE0E6] transition-all duration-300">
                 <li 
-                  className="px-4 py-2 text-sm cursor-pointer hover:bg-[rgb(68,172,199)] transition-all duration-200"
+                  className="flex items-center px-4 py-2 text-sm cursor-pointer hover:bg-[rgb(68,172,199)] transition-all duration-200"
                   onClick={() => navigate("/playerpages")} 
                 >
-                  🏏 Batting <FaStar className="ml-auto text-yellow-400" />
+                  🏏 Batting < LockKeyholeIcon className="ml-auto  " />
                 </li>
                 <li 
-                  className="px-4 py-2 text-sm cursor-pointer hover:bg-[rgb(68,172,199)] transition-all duration-200"
+                  className="flex items-center px-4 py-2 text-sm cursor-pointer hover:bg-[rgb(68,172,199)] transition-all duration-200"
                   onClick={() => navigate("/bowling")}
                 >
-                  🎳 Bowling <FaStar className="ml-auto text-yellow-400" />
+                  🎳 Bowling < LockKeyholeIcon className="ml-auto " />
                 </li>
                 <li 
-                  className="px-4 py-2 text-sm cursor-pointer hover:bg-[rgb(68,172,199)] transition-all duration-200"
+                  className=" flex items-center px-4 py-2 text-sm cursor-pointer hover:bg-[rgb(68,172,199)] transition-all duration-200"
                   onClick={() => navigate("/fielding")}
                 >
-                  🛡️ Fielding <FaStar className="ml-auto text-yellow-400" />
+                  🛡️ Fielding < LockKeyholeIcon className="ml-auto " />
                 </li>
                 <li 
-                  className="px-4 py-2 text-sm cursor-pointer hover:bg-[rgb(68,172,199)] transition-all duration-200"
+                  className="flex items-center px-4 py-2 text-sm cursor-pointer hover:bg-[rgb(68,172,199)] transition-all duration-200"
                   onClick={() => navigate("/table-toppers")}
                 >
-                  🏆 Table Toppers <FaStar className="ml-auto text-yellow-400" />
+                  🏆 Table Toppers < LockKeyholeIcon className="ml-auto " />
                 </li>
               </ul>
             )}
 
-            <li className="px-6 py-3 flex items-center gap-3 cursor-pointer hover:bg-[rgba(0,0,0,0.1)] transition-all duration-300">
-              <FaUsers className="min-w-[20px]" /> Club <FaStar className="ml-auto text-yellow-400" />
+            <li className="px-6 py-3 flex aling-end gap-3 cursor-pointer hover:bg-[rgba(0,0,0,0.1)] transition-all duration-300">
+              <FaUsers className="min-w-[20px]" /> Club < LockKeyholeIcon className="ml-auto" />
             </li>
           </ul>
 
