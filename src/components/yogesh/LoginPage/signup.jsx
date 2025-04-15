@@ -2,6 +2,7 @@
 import { useState } from "react";
 import img from "../../../assets/yogesh/login/img1.png";
 import googleImg from "../../../assets/yogesh/login/google.png";
+import whatsap_signup from "../../../assets/yogesh/login/whatsap_signup.png";
 import { Link, useNavigate } from "react-router-dom";
 
 import { auth, db } from "../../../firebase"; // ✅ Firebase Auth & Firestore
@@ -157,7 +158,7 @@ const handleFacebookSignup = async () => {
 
       <div className="w-full md:w-1/2 max-w-lg bg-opacity-90 px-6 md:px-12 py-8 rounded-lg">
         <h1 className="text-3xl md:text-4xl font-semibold text-cyan-400 mb-4 text-center">Cricklytics</h1>
-        <p className="text-gray-400 text-center mb-6">Express sign-up via Google and Facebook</p>
+        <p className="text-gray-400 text-center mb-6">Express sign-up via Google and whatsApp</p>
 
         <div className="flex flex-col md:flex-row gap-4 mb-6">
           <button onClick={handleGoogleSignup} className="flex items-center justify-center gap-3 bg-teal-800 text-black px-6 py-3 rounded-lg hover:bg-gray-200 w-full">
@@ -165,9 +166,9 @@ const handleFacebookSignup = async () => {
             Google
           </button>
           <button onClick={handleFacebookSignup}
-           className="flex items-center justify-center gap-3 bg-teal-800 text-white px-6 py-3 rounded-lg hover:bg-blue-700 w-full">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/0/05/Facebook_Logo_%282019%29.png" alt="Facebook" className="w-6" />
-            Facebook
+           className="flex items-center justify-center gap-3 bg-teal-800 text-black px-6 py-3 rounded-lg hover:bg-white w-full">
+            <img src={whatsap_signup} alt="whatsapp" className="w-10 h-10" />
+           WhatApp
           </button>
         </div>
 
