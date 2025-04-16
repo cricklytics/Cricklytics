@@ -25,8 +25,11 @@ import Winner23 from './components/pawan/Winner23';
 import SelectionCriteria from './components/pawan/SelectionCriteria'
 
 
-
 import TournamentSeries from './pages/tournamentseries';
+import share from './components/kumar/share';
+import TournamentPage from './components/kumar/share';
+import TeamProfile from './components/kumar/team_profile';
+import Tournament_nextpg from './components/kumar/tournament_nextpg';
 
 // import HeroSection2 from './component/HeroSection2';
 // import HeroSection3 from './component/HeroSection3';
@@ -72,7 +75,12 @@ function App() {
           <Route path="/selectionCriteria" element={<SelectionCriteria />} />
 
           <Route path="/tournamentseries" element={<TournamentSeries />} />
+           {/* Newly Added Routes */}
+           <Route path="/next" element={<Tournament_nextpg />} />
+          <Route path="/TeamProfile" element={<TeamProfile />} />
+          <Route path="/TournamentPage" element={<TournamentPage />} />
         </Routes>
+        
       </div>
     </Router>
   );
