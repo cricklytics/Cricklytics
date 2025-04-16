@@ -137,14 +137,38 @@ const Landingpage = () => {
          <div
            id="highlight"
            ref={highlightRef}
-           className={`transition-opacity duration-700 ease-in-out flex justify-center flex-wrap w-full bg-[]] h-full overflow-y-auto scrollbar-hide gap-4 ${
+           className={`transition-opacity duration-700 ease-in-out flex justify-center flex-wrap w-full bg-[] h-full overflow-y-auto scrollbar-hide gap-4 ${
              highlightVisible ? "opacity-100" : "opacity-0"
            }`}
          >
-           {highlightsData.map((item) => (
+           <div className="w-full flex justify-center" >
+            <div className="w-[50%] bg=yellow-900 flex justify-start ml-5 text-white text-xl"><a className="w-20 h-20 bg-yellow-900 rounded-full"></a><a className="w-20 h-20 bg-yellow-900 rounded-full"></a><a className="w-20 h-20 bg-yellow-900 rounded-full"></a></div></div>
+          <div className="w-full flex justify-center mt-10">
+            <div className="w-[50%] bg=yellow-900 flex justify-around text-white text-xl underline">
+            <div className="group relative">
+            <span className="block cursor-pointer text-2xl font-bold text-white underline decoration-[#00FFFF]-500 decoration-2 transition-colors duration-300 hover:text-[#800080]">
+              For You
+              <span className="absolute bottom-0 left-0 h-0.5 w-full origin-center scale-x-0 bg-white transition-transform duration-300 group-hover:scale-x-100"></span>
+            </span>
+          </div>
+          <div className="group relative">
+            <span className="block cursor-pointer text-2xl font-bold text-white transition-colors underline decoration-[#00FFFF]-500 decoration-2 transition-colors duration-300 hover:text-[#800080]">
+              Following
+              <span className="absolute bottom-0 left-0 h-0.5 w-full origin-center scale-x-0 bg-white transition-transform duration-300 group-hover:scale-x-100"></span>
+            </span>
+          </div>
+          <div className="group relative">
+            <span className="block cursor-pointer text-2xl font-bold text-white transition-colors underline decoration-[#00FFFF]-500 decoration-2 transition-colors duration-300 hover:text-[#800080]">
+              Reels
+              <span className="absolute bottom-0 left-0 h-0.5 w-full origin-center scale-x-0 bg-white transition-transform duration-300 group-hover:scale-x-100"></span>
+            </span>
+          </div>
+            </div>
+            </div>
+            {highlightsData.map((item) => (
              <div
                key={item.id}
-               className="relative w-[45%] m-3 aspect-video rounded-xl overflow-hidden shadow-2xl border border-white/20 bg-black group cursor-pointer transition-transform hover:scale-[1.02]"
+               className="relative w-[45%] h-[50%] bg-gradient-to-b from-[#0A5F68] to-[#00000] mx-100  m-3 aspect-video rounded-xl overflow-hidden shadow-2xl border border-white/20 bg-black group cursor-pointer transition-transform hover:scale-[1.02]"
                onMouseEnter={() => setHovered(item.id)}
                onMouseLeave={() => setHovered(null)}
              >
@@ -155,13 +179,13 @@ const Landingpage = () => {
                    frameBorder="0"
                    allow="autoplay; encrypted-media"
                    allowFullScreen
-                   className="absolute inset-0 w-full h-full"
+                   className="absolute inset-0 w-full h-full p-10 pt-5 pb-20"
                  />
                ) : (
                  <img
                    src={item.image}
                    alt={`Thumbnail ${item.id}`}
-                   className="w-full h-full object-cover brightness-110"
+                   className="w-full h-full object-cover brightness-110 p-10 pt-5 pb-20"
                  />
                )}
  

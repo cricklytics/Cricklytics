@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   FaTimes, FaTrophy, FaUsers, FaTv, FaStar, FaSignOutAlt,
-  FaChevronDown, FaChevronUp
+  FaChevronDown, FaChevronUp, FaLock,
 } from "react-icons/fa";
 import profImg from "../../../assets/sophita/HomePage/profpic.png";
 import { LockKeyholeIcon } from "lucide-react";
@@ -14,6 +14,7 @@ import { signOut } from "firebase/auth"; // ✅ Sign out import
 const Sidebar = ({ isOpen, closeMenu }) => {
   const navigate = useNavigate();
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showGoLiveDropdown, setShowGoLiveDropdown] = useState(false);
   const [userName, setUserName] = useState("Loading...");
   const [userEmail, setUserEmail] = useState("");
   const [userPhone, setUserPhone] = useState("");
@@ -103,12 +104,36 @@ const Sidebar = ({ isOpen, closeMenu }) => {
               <FaUsers className="min-w-[20px]" /> Start a Match
             </li>
 
+            {/* Go Live Dropdown */}
             <li 
-              className="px-6 py-3 flex items-center gap-3 cursor-pointer hover:bg-[rgba(0,0,0,0.1)] transition-all duration-300"
-              onClick={() => navigate("/go-live")}
+            className="px-6 py-3 flex items-center justify-between cursor-pointer hover:bg-[rgba(0,0,0,0.1)] transition-all duration-300"
+            onClick={() => setShowGoLiveDropdown(!showGoLiveDropdown)}
             >
-              <FaTv className="min-w-[20px]" /> Go Live < LockKeyholeIcon className="ml-auto" />
+              <span className="flex items-center gap-3">
+              <FaTv className="min-w-[20px]" /> Go Live
+              </span>
+              {showGoLiveDropdown ? <FaChevronUp /> : <FaChevronDown />}
             </li>
+            
+            {/* Go Live Dropdown Items */}
+            {showGoLiveDropdown && (
+              <ul className="pl-10 border-l-2 border-[#5DE0E6] transition-all duration-300">
+                <li 
+                  className="px-4 py-2 text-sm cursor-pointer hover:bg-[rgb(68,172,199)] transition-all duration-200"
+                  onClick={() => navigate("/international")}
+                >
+                  International
+                </li>
+                <li 
+                  className="px-4 py-2 text-sm cursor-pointer hover:bg-[rgb(68,172,199)] transition-all duration-200 flex items-center gap-2"
+                  onClick={() => navigate("/international")}
+                >
+                  National <FaLock className="text-gray-600 ml-auto" />
+                </li>
+                         
+              </ul>
+            )}
+            
 
             <li 
               className="px-6 py-3 flex items-center justify-between cursor-pointer hover:bg-[rgba(0,0,0,0.1)] transition-all duration-300"

@@ -22,7 +22,9 @@ import Winner from './components/pawan/Winner';
 import Winner25 from './components/pawan/Winner25';
 import Winner24 from './components/pawan/Winner24';
 import Winner23 from './components/pawan/Winner23';
-import SelectionCriteria from './components/pawan/SelectionCriteria'
+import SelectionCriteria from './components/pawan/SelectionCriteria';
+import National from './components/pawan/National';
+import International from './components/pawan/International';
 
 
 import TournamentSeries from './pages/tournamentseries';
@@ -72,6 +74,8 @@ function App() {
           <Route path="/winner24" element={<Winner24 />} />
           <Route path="/winner23" element={<Winner23 />} />
           <Route path="/winner" element={<Winner />} />
+          <Route path="/national" element={<National />} />
+          <Route path="/international" element={<International />} />
           <Route path="/selectionCriteria" element={<SelectionCriteria />} />
 
           <Route path="/tournamentseries" element={<TournamentSeries />} />
