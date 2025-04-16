@@ -231,6 +231,7 @@ import {
   GoogleAuthProvider,
   sendPasswordResetEmail,
 } from "firebase/auth";
+import whatsap_signup from "../../../assets/yogesh/login/whatsap_signup.png";
 import { toast } from "react-toastify";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 
@@ -380,11 +381,11 @@ const Login = () => {
               className="flex items-center justify-center bg-white w-1/2 py-2 rounded-lg shadow-md hover:bg-blue-200"
               disabled
             >
-              <span className="text-blue-600 font-semibold">Facebook</span>
+              <span className="text-blue-600 font-semibold">WhatsApp</span>
               <img
-                src="https://upload.wikimedia.org/wikipedia/commons/0/05/Facebook_Logo_%282019%29.png"
+                src={whatsap_signup}
                 alt="Facebook"
-                className="w-5 h-5 ml-2"
+                className="w-10 h-10 ml-2"
               />
             </button>
           </div>
