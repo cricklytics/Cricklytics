@@ -154,31 +154,31 @@ const Sidebar = ({ isOpen, closeMenu }) => {
                   className="flex items-center px-4 py-2 text-sm cursor-pointer hover:bg-[rgb(68,172,199)] transition-all duration-200"
                   onClick={() => navigate("/playerpages")} 
                 >
-                  🏏 Batting < LockKeyholeIcon className="ml-auto  " />
+                  🏏 Batting <FaLock className="text-gray-600 ml-auto" />
                 </li>
                 <li 
                   className="flex items-center px-4 py-2 text-sm cursor-pointer hover:bg-[rgb(68,172,199)] transition-all duration-200"
                   onClick={() => navigate("/bowling")}
                 >
-                  🎳 Bowling < LockKeyholeIcon className="ml-auto " />
+                  🎳 Bowling <FaLock className="text-gray-600 ml-auto" />
                 </li>
                 <li 
                   className=" flex items-center px-4 py-2 text-sm cursor-pointer hover:bg-[rgb(68,172,199)] transition-all duration-200"
                   onClick={() => navigate("/fielding")}
                 >
-                  🛡️ Fielding < LockKeyholeIcon className="ml-auto " />
+                  🛡️ Fielding <FaLock className="text-gray-600 ml-auto" />
                 </li>
                 <li 
                   className="flex items-center px-4 py-2 text-sm cursor-pointer hover:bg-[rgb(68,172,199)] transition-all duration-200"
                   onClick={() => navigate("/table-toppers")}
                 >
-                  🏆 Table Toppers < LockKeyholeIcon className="ml-auto " />
+                  🏆 Table Toppers <FaLock className="text-gray-600 ml-auto" />
                 </li>
               </ul>
             )}
 
             <li className="px-6 py-3 flex aling-end gap-3 cursor-pointer hover:bg-[rgba(0,0,0,0.1)] transition-all duration-300">
-              <FaUsers className="min-w-[20px]" /> Club < LockKeyholeIcon className="ml-auto" />
+              <FaUsers className="min-w-[20px]" /> Club <FaLock className="text-gray-600 ml-auto" />
             </li>
           </ul>
 

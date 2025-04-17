@@ -19,7 +19,7 @@ class HeaderComponent extends React.Component {
               e.target.onerror = null;
               e.target.src = {logo};
             }}
-            onClick={this.handleClick}
+            
           />
           <span className="text-2xl font-bold text-white whitespace-nowrap text-shadow-[0_0_8px_rgba(93,224,230,0.4)] " >
             Cricklytics
