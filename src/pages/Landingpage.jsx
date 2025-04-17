@@ -63,7 +63,7 @@ const Landingpage = () => {
     e.preventDefault();
     setIsPriceVisible((prev) => {
       const next = !prev;
-      if (next) setHighlightVisible(true); // ensure highlights are visible when modal is shown
+      if (next) setHighlightVisible(true);
       return next;
     });
   };
@@ -101,7 +101,8 @@ const Landingpage = () => {
  
   const handleMainClick = (e) => {
     if (
-      isPriceVisible || // Don't hide highlights when modal is open
+      isPriceVisible ||
+      profileStoryVisible || // ✅ Fix: Don't hide if profile story is open
       (highlightRef.current && highlightRef.current.contains(e.target)) ||
       (searchBarRef.current && searchBarRef.current.contains(e.target))
     ) {
@@ -141,33 +142,30 @@ const Landingpage = () => {
               </button>
               <div className="flex justify-center items-center flex-col">
                 <div className="flex w-full h-fit px-2 gap-5 items-center">
-                <img
-                  src={selectedProfile.image}
-                  alt="Profile"
-                  className="w-20 h-20 rounded-full object-cover"
-                />
-                <div className="flex flex-col">
-                <h2 className="text-white text-2xl">{selectedProfile.name}</h2>
-                <p className="text-white mt-2">Viewing story...</p>
-                </div>
-               
-               
+                  <img
+                    src={selectedProfile.image}
+                    alt="Profile"
+                    className="w-20 h-20 rounded-full object-cover"
+                  />
+                  <div className="flex flex-col">
+                    <h2 className="text-white text-2xl">{selectedProfile.name}</h2>
+                    <p className="text-white mt-2">Viewing story...</p>
+                  </div>
                 </div>
                 <div className="w-full h-100 rounded-lg bg-yellow-300 m-5"></div>
                 <div className="w-full flex justify-between items-center gap-5">
-                <input
-                type="text"
-                placeholder="Reply"
-                className="bg-transparent border border-white border-[2px] w-10 h-10 rounded-3xl text-white w-full pl-5"
-              />
-               <button
-                className="w-fit p-1 px-3 text-center rounded-2xl text-xl text-white cursor-pointer bg-[linear-gradient(120deg,_#000000,_#001A80)]"
-                onClick={() => setProfileStoryVisible(false)}
-              >
-                send
-              </button>
+                  <input
+                    type="text"
+                    placeholder="Reply"
+                    className="bg-transparent border border-white border-[2px] w-10 h-10 rounded-3xl text-white w-full pl-5"
+                  />
+                  <button
+                    className="w-fit p-1 px-3 text-center rounded-2xl text-xl text-white cursor-pointer bg-[linear-gradient(120deg,_#000000,_#001A80)]"
+                    onClick={() => setProfileStoryVisible(false)}
+                  >
+                    send
+                  </button>
                 </div>
-               
               </div>
             </div>
           </div>
@@ -212,7 +210,6 @@ const Landingpage = () => {
  
         {/* Content */}
         <div className={`absolute z-[1010] flex flex-col items-center p-[1rem] transition-all duration-700 ease-in-out ${highlightVisible ? "top-23" : "top-[50%]"} w-full`} style={{ height: "calc(100vh - 5rem)" }}>
-          {/* Top Friends */}
           <div className={`sticky w-[80%] top-0 z-20 bg-[rgba(2,16,30,0.7)] bg-opacity-40 backdrop-blur-md pb-4 ${highlightVisible ? "opacity-100" : "opacity-0"}`}>
             <div className="w-full flex justify-center pt-4 caret-none">
               <div className="w-[50%] flex justify-center gap-3 ml-5 text-white text-xl">
@@ -220,7 +217,10 @@ const Landingpage = () => {
                   <button
                     key={idx}
                     className="w-20 h-20 bg-yellow-900 rounded-full"
-                    onClick={() => handleProfileClick(profile)}
+                    onClick={(e) => {
+                      e.stopPropagation(); // ✅ Prevent highlight hide
+                      handleProfileClick(profile);
+                    }}
                   >
                     <img src={profile.image} className="w-20 h-20 rounded-full" alt="Friend" />
                   </button>

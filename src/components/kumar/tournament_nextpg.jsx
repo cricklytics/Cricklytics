@@ -31,7 +31,7 @@ function Tournament_nextpg() {
 
   const [value, setValue] = useState('');
   const home = () => {
-    navigate('/');
+    navigate('/tournamentseries');
   };
 
   const handleSubmit = (event) => {
