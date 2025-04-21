@@ -3,22 +3,38 @@ import { useNavigate } from "react-router-dom";
 import { FaChevronDown, FaChevronUp } from "react-icons/fa";
 import Picture32 from '../../assets/pawan/PlayerProfile/picture-312.png';
 
+// Flags imports
+import Australia from '../../assets/pawan/PlayerProfile/australia.png';
+import India from '../../assets/pawan/PlayerProfile/india.png';
+import England from '../../assets/pawan/PlayerProfile/england.png';
+import SouthAfrica from '../../assets/pawan/PlayerProfile/south-africa.png';
+import NewZealand from '../../assets/pawan/PlayerProfile/new-zealand.png';
+import Pakistan from '../../assets/pawan/PlayerProfile/pakistan.png';
+import SriLanka from '../../assets/pawan/PlayerProfile/sri-lanka.png';
+import WestIndies from '../../assets/pawan/PlayerProfile/west-indies.png';
+import Bangladesh from '../../assets/pawan/PlayerProfile/bangladesh.png';
+import Afghanistan from '../../assets/pawan/PlayerProfile/afghanistan.png';
+import Ireland from '../../assets/pawan/PlayerProfile/ireland.png';
+import Zimbabwe from '../../assets/pawan/PlayerProfile/zimbabwe.png';
+
+
+
 const International = () => {
   const navigate = useNavigate();
   const [showTeams, setShowTeams] = useState(false);
   const iccTeams = [
-    { name: "Australia", flag: "/src/assets/pawan/PlayerProfile/australia.png" },
-    { name: "India", flag: "/src/assets/pawan/PlayerProfile/india.png" },
-    { name: "England", flag: "/src/assets/pawan/PlayerProfile/england.png" },
-    { name: "South Africa", flag: "/src/assets/pawan/PlayerProfile/south-africa.png" },
-    { name: "New Zealand", flag: "/src/assets/pawan/PlayerProfile/new-zealand.png" },
-    { name: "Pakistan", flag: "/src/assets/pawan/PlayerProfile/pakistan.png" },
-    { name: "Sri Lanka", flag: "/src/assets/pawan/PlayerProfile/sri-lanka.png" },
-    { name: "West Indies", flag: "/src/assets/pawan/PlayerProfile/west-indies.png" },
-    { name: "Bangladesh", flag: "/src/assets/pawan/PlayerProfile/bangladesh.png" },
-    { name: "Afghanistan", flag: "/src/assets/pawan/PlayerProfile/ags/afghanistan.png" },
-    { name: "Ireland", flag: "/src/assets/pawan/PlayerProfile/ireland.png" },
-    { name: "Zimbabwe", flag: "/src/assets/pawan/PlayerProfile/zimbabwe.png" }
+    { name: "Australia", flag: Australia },
+            { name: "India", flag: India },
+            { name: "England", flag: England },
+            { name: "South Africa", flag: SouthAfrica },
+            { name: "New Zealand", flag: NewZealand },
+            { name: "Pakistan", flag: Pakistan },
+            { name: "Sri Lanka", flag: SriLanka },
+            { name: "West Indies", flag: WestIndies },
+            { name: "Bangladesh", flag: Bangladesh },
+            { name: "Afghanistan", flag: Afghanistan },
+            { name: "Ireland", flag: Ireland },
+            { name: "Zimbabwe", flag: Zimbabwe },
   ];
 
   return (
