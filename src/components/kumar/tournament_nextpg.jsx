@@ -83,7 +83,7 @@ const handlepayclick = (pay) => {
 
 
   return (
-    <section className="min-h-screen overflow-hidden relative bg-gradient-to-b from-[#0D171E] to-[#283F79]">
+    <section className="min-h-screen overflow-hidden relative bg-gradient-to-r from-[#0a1f44] to-[#123456]">
       <HeaderComponent />
       <div className="absolute left-[-25%] top-[30%] w-[80rem] min-h-screenrounded-full bg-[radial-gradient(circle,rgba(69,218,255,0.5)_40%,rgba(69,218,255,0.1)_60%,rgba(69,218,255,0.1)_100%)] blur-lg -z-10"></div>
       {ispriceVisible && (
