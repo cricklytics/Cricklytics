@@ -130,7 +130,7 @@ const Login = () => {
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-r from-[#0a1f44] to-[#123456] relative">
       {/* ✅ Welcome Modal Popup */}
       {showWelcome && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+        <div className="fixed inset-0 backdrop-blur-[5px] bg-transparent flex justify-center items-center z-50">
           <div className="bg-white text-center px-8 py-6 rounded-lg shadow-lg">
             <h2 className="text-2xl font-bold text-blue-700 mb-2">Welcome to Cricklytics!</h2>
             <p className="text-gray-700 text-lg">Hello <span className="font-semibold">{userName}</span> 👋</p>

@@ -14,7 +14,7 @@ import Startmatch from './pages/Startmatch';
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-
+import AdminPanel from './pages/AdminPanel';
 
 import PlayerPages from './pages/PlayerPages';
 import Awards from './components/pawan/Awards';
@@ -83,6 +83,7 @@ function App() {
            <Route path="/next" element={<Tournament_nextpg />} />
           <Route path="/TeamProfile" element={<TeamProfile />} />
           <Route path="/TournamentPage" element={<TournamentPage />} />
+          <Route path="/admin" element={<AdminPanel />} />
         </Routes>
         
       </div>
