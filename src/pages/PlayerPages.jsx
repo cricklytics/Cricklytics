@@ -128,7 +128,7 @@ function PlayerPages() {
   const battingStyles = [...new Set(basePlayers.map((player) => player.battingStyle))];
 
   return (
-    <div class="bg-gradient-to-r from-[#0a1f44] to-[#123456] scrollbar-hide">
+    <div className="bg-gradient-to-r from-[#0a1f44] to-[#123456] scrollbar-hide">
       <Frame1321317519 />
       {/* Search and Filter Section */}
       {/* <div className="container mx-auto p-6 bg-black   rounded-lg shadow-md mb-6"></div> */}
@@ -136,7 +136,7 @@ function PlayerPages() {
       
         
         {/* Search and Filter Section */}
-  <div class="container mx-auto flex p-10 flex-wrap justify-center gap-6 mb-8">
+  <div className="container mx-auto flex p-10 flex-wrap justify-center gap-6 mb-8">
   {/* Search Input */}
   
   <div className="w-full md:w-1/4">

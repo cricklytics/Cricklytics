@@ -56,8 +56,8 @@ const handlewpclick = (wp) => {
 };
     
     return (
-        <section className="h-fit overflow-hidden z-0 bg-gradient-to-r from-[#0a1f44] to-[#123456] relative">
-            <HeaderComponent />
+        <section className="h-fit overflow-hidden z-0 bg-gradient-to-b from-[#0D171E] to-[#283F79] relative">
+            <HeaderComponent navigate={navigate}/>
             {isRulesVisible && (
             <div 
             id="rules" 
@@ -103,7 +103,7 @@ const handlewpclick = (wp) => {
           </div>
             )}
 
-            {/* <div className="absolute left-[-25%] w-[80rem] h-[50rem] rounded-full bg-[radial-gradient(circle,rgba(69,218,255,0.5)_40%,rgba(69,218,255,0.1)_60%,rgba(69,218,255,0.1)_100%)] blur-lg -z-10"></div> */}
+            <div className="absolute left-[-25%] top-[30%] w-[80rem] h-[50rem] rounded-full bg-[radial-gradient(circle,rgba(69,218,255,0.5)_40%,rgba(69,218,255,0.1)_60%,rgba(69,218,255,0.1)_100%)] blur-lg -z-10"></div>
 
             <div className="z-20 flex overflow-hidden justify-center h-[100%] p-[5rem] relative">
                 <form className="z-30 gap-10 bg-[#1A2B4C] rounded-[2rem] shadow-[22px_-14px_0px_5px_#253A6E] flex flex-col items-start justify-around h-[100%] w-[90%] pl-[5rem] pr-[5rem] pt-[5rem] pb-[2rem]">
