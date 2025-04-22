@@ -40,7 +40,7 @@ const PlayerCard = ({ player, onPlay }) => {
       </div>
 
       <div>
-        <span className="text-sm text-gray-500 block mb-1">Recent Performances</span>
+        <span className="text-sm text-gray-500 block mb-1">Recent scores</span>
         <div className="flex flex-wrap gap-2 mb-2">
           {player.recentMatches && player.recentMatches.length > 0 ? (
             player.recentMatches.map((score, index) => (
