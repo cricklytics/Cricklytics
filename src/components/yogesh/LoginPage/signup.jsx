@@ -433,7 +433,7 @@ export default function Signup() {
     <div className="flex flex-col md:flex-row items-center justify-center min-h-screen bg-gradient-to-r from-[#0a1f44] to-[#123456] p-6 md:p-12 relative">
       {/* OTP Modal */}
       {showOtpModal && (
-        <div className="absolute inset-0 bg-black bg-opacity-70 backdrop-blur-sm flex justify-center items-center z-50">
+        <div className="absolute inset-0 backdrop-blur-[5px] bg-transparent flex justify-center items-center z-50">
           <div className="bg-[#0a1f44] text-white p-6 rounded-xl w-[90%] max-w-md">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold">Phone Verification</h2>

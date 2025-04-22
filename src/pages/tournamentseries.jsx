@@ -57,7 +57,7 @@ const handlewpclick = (wp) => {
     
     return (
         <section className="h-fit overflow-hidden z-0 bg-gradient-to-b from-[#0D171E] to-[#283F79] relative">
-            <HeaderComponent />
+            <HeaderComponent navigate={navigate}/>
             {isRulesVisible && (
             <div 
             id="rules" 
