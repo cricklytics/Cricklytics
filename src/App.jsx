@@ -10,6 +10,8 @@ import Landingpage from './pages/Landingpage';
 import Sidebar from './components/sophita/HomePage/Sidebar';
 import Golive from './pages/Golive';
 import Startmatch from './pages/Startmatch';
+import Tournaments from './pages/Tournaments';
+import TeamDetails from './pages/TeamDetails';
 
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -35,6 +37,8 @@ import share from './components/kumar/share';
 import TournamentPage from './components/kumar/share';
 import TeamProfile from './components/kumar/team_profile';
 import Tournament_nextpg from './components/kumar/tournament_nextpg';
+
+
 
 // import HeroSection2 from './component/HeroSection2';
 // import HeroSection3 from './component/HeroSection3';
@@ -70,6 +74,8 @@ function App() {
           <Route path="/landingpage" element={<Landingpage menuOpen={isSidebarOpen} setMenuOpen={setIsSidebarOpen} />} />
           <Route path="/go-live" element={<Golive />} />
           <Route path="/start-match" element={<Startmatch />} />
+          <Route path="/tournament" element={<Tournaments/>} />
+          <Route path="/team" element={<TeamDetails/>} />
 
           <Route path="/playerpages" element={<PlayerPages />} />
           <Route path="/awards" element={<Awards />} />

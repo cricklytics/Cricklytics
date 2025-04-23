@@ -18,6 +18,8 @@ function PlayerPages() {
   const [battingStyleFilter, setBattingStyleFilter] = useState('');
   const [audio, setAudio] = useState(null);
   const handlePlayAudio = (url) => {
+    console.log("Attempting to play audio URL:", url);
+
     if (audio) {
       audio.pause();
       audio.currentTime = 0;

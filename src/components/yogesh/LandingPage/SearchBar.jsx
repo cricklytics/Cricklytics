@@ -48,6 +48,8 @@ const SearchBar = () => {
                 onClick={() => {
                   if (tag === 'Stats') navigate('/stats');
                   else if (tag === 'Match') navigate('/match');
+                  else if (tag === 'Tournament') navigate('/tournament');
+                  else if (tag === 'Team') navigate('/team')
                   else alert(`No page implemented for ${tag}`); // fallback or add more routes
                 }}
               >
