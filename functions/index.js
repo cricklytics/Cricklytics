@@ -65,3 +65,51 @@ Recent scores are ${playerData.recentMatches.join(", ")}.`;
         console.error("❌ Error generating/storing AI voice:", error);
     }
 });
+
+exports.generateWelcomeAudio = onDocumentCreated("users/{userId}", async (event) => {
+    const snap = event.data;
+    if (!snap) {
+        console.log("❌ No user snapshot data.");
+        return;
+    }
+
+    const userData = snap.data();
+    const userId = event.params.userId;
+
+    const userName = userData.firstName || "User";
+    const welcomeText = `Welcome to Cricklytics! Hello, ${userName}`;
+
+    const request = {
+        input: { text: welcomeText },
+        voice: {
+            languageCode: "en-IN",
+            ssmlGender: "MALE",
+            name: "en-IN-Standard-A",
+        },
+        audioConfig: {
+            audioEncoding: "MP3",
+        },
+    };
+
+    try {
+        const [response] = await client.synthesizeSpeech(request);
+        const fileName = `welcome_audio/${userId}.mp3`;
+        const tempFilePath = path.join("/tmp", `${userId}_welcome.mp3`);
+
+        await util.promisify(fs.writeFile)(tempFilePath, response.audioContent, "binary");
+
+        await storage.bucket().upload(tempFilePath, {
+            destination: fileName,
+            metadata: { contentType: "audio/mpeg" },
+        });
+
+        const fileUrl = `https://firebasestorage.googleapis.com/v0/b/${storage.bucket().name}/o/${encodeURIComponent(fileName)}?alt=media`;
+
+        await db.collection("users").doc(userId).update({ welcomeAudio: fileUrl });
+
+        console.log("✅ Welcome audio stored and Firestore updated.");
+    } catch (err) {
+        console.error("❌ Failed to generate welcome audio:", err);
+    }
+});
+

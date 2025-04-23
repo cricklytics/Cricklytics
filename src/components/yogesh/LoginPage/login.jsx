@@ -20,19 +20,20 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  const [showWelcome, setShowWelcome] = useState(false);
+  // const [showWelcome, setShowWelcome] = useState(false);
   const [userName, setUserName] = useState("");
 
-  // 🔊 Speak welcome message when modal shows
-  useEffect(() => {
-    if (showWelcome) {
-      const message = `Welcome to Cricklytics! Hello, ${userName}`;
-      const utterance = new SpeechSynthesisUtterance(message);
-      utterance.lang = "en-US";
-      utterance.rate = 1;
-      window.speechSynthesis.speak(utterance);
-    }
-  }, [showWelcome, userName]);
+  // // 🔊 Speak welcome message when modal shows
+  // useEffect(() => {
+  //   if (showWelcome) {
+  //     const message = `Welcome to Cricklytics! Hello, ${userName}`;
+  //     const utterance = new SpeechSynthesisUtterance(message);
+  //     utterance.lang = "en-US";
+  //     utterance.rate = 1;
+  //     window.speechSynthesis.speak(utterance);
+  //   }
+  // }, [showWelcome, userName]);
+  
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -59,15 +60,16 @@ const Login = () => {
         setUserName("User");
       }
 
-      setShowWelcome(true); //  Show modal popup
-      setEmail("");
-      setPassword("");
+      // setShowWelcome(true); //  Show modal popup
+      // setEmail("");
+      // setPassword("");
 
-      //  After 3 seconds, close popup and navigate
-      setTimeout(() => {
-        setShowWelcome(false);
-        navigate("/landingpage");
-      }, 6000);
+      // //  After 3 seconds, close popup and navigate
+      // setTimeout(() => {
+      //   setShowWelcome(false);
+      //   navigate("/landingpage");
+      // }, 6000);
+      navigate("/welcome", { state: { userName: userDoc.data().firstName || "User" } });
     } catch (error) {
       toast.error("Invalid credentials or user does not exist.");
       console.error("Login error:", error.message);
@@ -96,13 +98,15 @@ const Login = () => {
         });
       }
 
-      setUserName(user.displayName || "User");
-      setShowWelcome(true);
+      // setUserName(user.displayName || "User");
+      // setShowWelcome(true);
 
-      setTimeout(() => {
-        setShowWelcome(false);
-        navigate("/landingpage");
-      }, 3000);
+      // setTimeout(() => {
+      //   setShowWelcome(false);
+      //   navigate("/landingpage");
+      // }, 3000);
+      navigate("/welcome", { state: { userName: user.displayName || "User" } });
+
 
       toast.success("Signed in with Google!");
     } catch (error) {
@@ -129,14 +133,14 @@ const Login = () => {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-r from-[#0a1f44] to-[#123456] relative">
       {/* ✅ Welcome Modal Popup */}
-      {showWelcome && (
+      {/* {showWelcome && (
         <div className="fixed inset-0 backdrop-blur-[5px] bg-transparent flex justify-center items-center z-50">
           <div className="bg-white text-center px-8 py-6 rounded-lg shadow-lg">
             <h2 className="text-2xl font-bold text-blue-700 mb-2">Welcome to Cricklytics!</h2>
             <p className="text-gray-700 text-lg">Hello <span className="font-semibold">{userName}</span> 👋</p>
           </div>
         </div>
-      )}
+      )} */}
 
       <div className="flex max-w-4xl w-full">
         <div className="w-1/2 hidden md:block">

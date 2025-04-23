@@ -37,6 +37,7 @@ import share from './components/kumar/share';
 import TournamentPage from './components/kumar/share';
 import TeamProfile from './components/kumar/team_profile';
 import Tournament_nextpg from './components/kumar/tournament_nextpg';
+import Greeting from './pages/greeting';
 
 
 
@@ -95,6 +96,12 @@ function App() {
            <Route path="/next" element={<Tournament_nextpg />} />
           <Route path="/TeamProfile" element={<TeamProfile />} />
           <Route path="/TournamentPage" element={<TournamentPage />} />
+          <Route path="/welcome" element={<Greeting/>} />
+
+
+
+
+
           <Route path="/admin" element={<AdminPanel />} />
         </Routes>
         
