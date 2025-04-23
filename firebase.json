@@ -23,12 +23,8 @@
         "firebase-debug.log",
         "firebase-debug.*.log",
         "*.local"
-<<<<<<< HEAD
       ],
       "predeploy": []
-=======
-      ]
->>>>>>> 69d953d8c8f0aef7dca1e083848471c81ac2974c
     }
   ]
 }
