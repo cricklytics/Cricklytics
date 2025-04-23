@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { Search } from 'lucide-react';
-import umpire from "../../../assets/yogesh/LandingPage/umpire.png";
-import umpireaft from "../../../assets/yogesh/LandingPage/umpire-aft.png";
+import { useNavigate } from 'react-router-dom';
+
  
  
 const SearchBar = () => {
   const [showSearch, setShowSearch] = useState(false);
+  const navigate = useNavigate();
+
  
   const handleToggle = () => {
     setShowSearch(!showSearch);
@@ -43,6 +45,11 @@ const SearchBar = () => {
               <button
                 key={tag}
                 className="bg-gray-200 text-black font-semibold px-4 py-1 rounded-full hover:bg-gray-300"
+                onClick={() => {
+                  if (tag === 'Stats') navigate('/stats');
+                  else if (tag === 'Match') navigate('/match');
+                  else alert(`No page implemented for ${tag}`); // fallback or add more routes
+                }}
               >
                 {tag}
               </button>

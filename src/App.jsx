@@ -25,6 +25,9 @@ import Winner23 from './components/pawan/Winner23';
 import SelectionCriteria from './components/pawan/SelectionCriteria';
 import National from './components/pawan/National';
 import International from './components/pawan/International';
+import Stats from './pages/Stats';
+import Match from './pages/Match';
+import Insights from './components/yogesh/LandingPage/Insights';
 
 
 import TournamentSeries from './pages/tournamentseries';
@@ -77,6 +80,9 @@ function App() {
           <Route path="/national" element={<National />} />
           <Route path="/international" element={<International />} />
           <Route path="/selectionCriteria" element={<SelectionCriteria />} />
+          <Route path="/stats" element={< Stats/>} />
+          <Route path="/match" element={< Match/>} />
+          <Route path="/insights" element={< Insights/>} />
 
           <Route path="/tournamentseries" element={<TournamentSeries />} />
            {/* Newly Added Routes */}

@@ -12,7 +12,7 @@ const db = getFirestore();
 const storage = getStorage();
 const client = new textToSpeech.TextToSpeechClient();
 
-exports.generatePlayerAudio = onDocumentCreated("players/{playerId}", async (event) => {
+exports.generatePlayerDetailsAudio = onDocumentCreated("players/{playerId}", async (event) => {
     const snap = event.data;
     if (!snap) {
         console.log("❌ No snapshot data received.");
