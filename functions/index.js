@@ -77,7 +77,7 @@ exports.generateWelcomeAudio = onDocumentCreated("users/{userId}", async (event)
     const userId = event.params.userId;
 
     const userName = userData.firstName || "User";
-    const welcomeText = `Welcome to Cricklytics! Hello, ${userName}`;
+    const welcomeText = `Welcome to Cricklytics! ${userName}`;
 
     const request = {
         input: { text: welcomeText },
