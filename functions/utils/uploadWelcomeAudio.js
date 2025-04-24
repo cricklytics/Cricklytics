@@ -17,6 +17,10 @@ export const generateAndUploadWelcomeAudio = async (userId, userName) => {
     },
     audioConfig: {
         audioEncoding: "MP3",
+        speakingRate: 1.0,
+        pitch: 0.0,
+        volumeGainDb: 0.0,
+        effectsProfileId: ["handset-class-device"],
     },
   };
 

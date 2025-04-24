@@ -22,6 +22,10 @@ function greeting() {
   const speechSynthesisRef = useRef(null);
   const timeoutRef = useRef(null);
 
+  const nameRef = useRef(null);
+  const [fontSize, setFontSize] = useState("2rem");
+
+
 
   useEffect(() => {
     const userName = location.state?.userName || "User";
@@ -83,7 +87,7 @@ function greeting() {
   
     const welcomeDelay = setTimeout(() => {
       playWelcomeAudio();
-    }, 2000); // 2s delay
+    }, 4000); // 2s delay
   
     const redirectDelay = setTimeout(() => {
       navigate("/landingpage");
@@ -96,6 +100,27 @@ function greeting() {
       spinAudio.currentTime = 0;
     };
   }, []);
+
+
+  useEffect(() => {
+    if (nameRef.current) {
+      const resizeFont = () => {
+        const parentWidth = nameRef.current.parentElement.offsetWidth;
+        const textWidth = nameRef.current.scrollWidth;
+  
+        if (textWidth > parentWidth) {
+          setFontSize("1.4rem"); // Shrink if too wide
+        } else {
+          setFontSize("2rem"); // Default size
+        }
+      };
+  
+      resizeFont();
+      window.addEventListener("resize", resizeFont);
+  
+      return () => window.removeEventListener("resize", resizeFont);
+    }
+  }, [userName]);
   
   
   
@@ -119,7 +144,14 @@ function greeting() {
 
       <div className={`coin ${flipComplete ? 'flipped' : 'flip-mode'}`}>
         <div className="coin__front">
-          <h2>{userName}</h2>
+        <h2
+  ref={nameRef}
+  className="whitespace-nowrap overflow-hidden text-2xl font-semibold transition-all duration-300 text-center"
+  style={{ maxWidth: "90%", fontSize }}
+>
+  {userName}
+</h2>
+
         </div>
         <div className="coin__edge">
           {[...Array(180)].map((_, i) => (
@@ -127,7 +159,8 @@ function greeting() {
           ))}
         </div>
         <div className="coin__back">
-          <h2 className="scarlet-transparent">{userName}</h2>
+          <h2 className="scarlet-transparent whitespace-nowrap overflow-hidden text-2xl font-semibold transition-all duration-300 text-center" ref={nameRef}  style={{ maxWidth: "90%", fontSize }}
+          >{userName}</h2>
         </div>
         <div className="coin__shadow"></div>
       </div>

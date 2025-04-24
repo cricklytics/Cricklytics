@@ -25,7 +25,7 @@ exports.generatePlayerDetailsAudio = onDocumentCreated("players/{playerId}", asy
     console.log(`📌 New player added: ${playerId}`);
 
     const text = `${playerData.name}, a ${playerData.role} from ${playerData.team}, 
-has a batting average of ${playerData.battingAvg} and a bowling average of ${playerData.bowlingAvg || "not applicable"}.
+has a batting average of ${playerData.battingAvg} and a bowling average of ${playerData.bowlingAvg || "well we dont have any"}.
 Recent scores are ${playerData.recentMatches.join(", ")}.`;
 
     const request = {
@@ -88,6 +88,10 @@ exports.generateWelcomeAudio = onDocumentCreated("users/{userId}", async (event)
         },
         audioConfig: {
             audioEncoding: "MP3",
+            speakingRate: 1.0,
+            pitch: 0.0,
+            volumeGainDb: 0.0,
+            effectsProfileId: ["handset-class-device"],
         },
     };
 
