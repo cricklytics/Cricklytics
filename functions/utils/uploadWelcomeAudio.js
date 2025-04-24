@@ -9,7 +9,7 @@ const client = new textToSpeech.TextToSpeechClient();
 
 export const generateAndUploadWelcomeAudio = async (userId, userName) => {
   const request = {
-    input: { text: `Welcome to Cricklytics! Hello, ${userName}` },
+    input: { text: `Welcome to Cricklytics! ${userName}` },
     voice: {
         languageCode: "en-IN",
         ssmlGender: "MALE",
