@@ -12,9 +12,10 @@ const firebaseConfig = {
   apiKey: "AIzaSyCCTHcVHrfDbkXgEwGN_6g1Zj6hvtfQ_hs",
   authDomain: "cricklytics-4aed5.firebaseapp.com",
   projectId: "cricklytics-4aed5",
-  storageBucket: "cricklytics-4aed5.appspot.com", // ✅ Corrected from ".firebasestorage.app"
+  storageBucket: "cricklytics-4aed5.firebasestorage.app",
   messagingSenderId: "173377933744",
   appId: "1:173377933744:web:01e6fda81bfa69e8b0c675",
+  measurementId: "G-16KKFSQYLE"
 };
 
 // ✅ Initialize Firebase

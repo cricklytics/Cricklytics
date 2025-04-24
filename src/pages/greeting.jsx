@@ -36,11 +36,6 @@ function greeting() {
         console.log("✅ Coin sound playing...");
       } catch (err) {
         console.warn("🔒 Coin sound autoplay blocked. Waiting for click...");
-        const resumeCoin = () => {
-          spinAudio.play();
-          document.removeEventListener("click", resumeCoin);
-        };
-        document.addEventListener("click", resumeCoin);
       }
     };
   
@@ -53,6 +48,7 @@ function greeting() {
         if (!querySnapshot.empty) {
           const userDoc = querySnapshot.docs[0];
           const audioURL = userDoc.data().welcomeAudio;
+          console.log("🎯 welcomeAudio URL:", audioURL);
   
           if (audioURL) {
             const welcomeAudio = new Audio(audioURL);
@@ -87,11 +83,11 @@ function greeting() {
   
     const welcomeDelay = setTimeout(() => {
       playWelcomeAudio();
-    }, 6000); // 6s delay
+    }, 2000); // 2s delay
   
     const redirectDelay = setTimeout(() => {
       navigate("/landingpage");
-    }, 13500); // Total ~13.5s = 6s + ~7s voice message
+    }, 9000); // Total ~13.5s = 6s + ~7s voice message
   
     return () => {
       clearTimeout(welcomeDelay);

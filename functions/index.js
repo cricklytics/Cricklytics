@@ -33,7 +33,7 @@ Recent scores are ${playerData.recentMatches.join(", ")}.`;
         voice: {
             languageCode: "en-IN",
             ssmlGender: "MALE",
-            name: "en-IN-Standard-A",
+            name: "en-IN-Wavenet-C",
         },
         audioConfig: {
             audioEncoding: "MP3",
@@ -84,7 +84,7 @@ exports.generateWelcomeAudio = onDocumentCreated("users/{userId}", async (event)
         voice: {
             languageCode: "en-IN",
             ssmlGender: "MALE",
-            name: "en-IN-Standard-A",
+            name: "en-IN-Wavenet-C",
         },
         audioConfig: {
             audioEncoding: "MP3",
@@ -103,7 +103,7 @@ exports.generateWelcomeAudio = onDocumentCreated("users/{userId}", async (event)
             metadata: { contentType: "audio/mpeg" },
         });
 
-        const fileUrl = `https://firebasestorage.googleapis.com/v0/b/${storage.bucket().name}/o/${encodeURIComponent(fileName)}?alt=media`;
+        const fileUrl = `https://firebasestorage.googleapis.com/v0/b/cricklytics-4aed5.firebasestorage.app/o/${encodeURIComponent(fileName)}?alt=media`;
 
         await db.collection("users").doc(userId).update({ welcomeAudio: fileUrl });
 

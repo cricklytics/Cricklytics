@@ -13,7 +13,7 @@ export const generateAndUploadWelcomeAudio = async (userId, userName) => {
     voice: {
         languageCode: "en-IN",
         ssmlGender: "MALE",
-        name: "en-IN-Standard-A",
+        name: "en-IN-Wavenet-C",
     },
     audioConfig: {
         audioEncoding: "MP3",
