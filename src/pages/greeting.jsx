@@ -2,7 +2,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import '../App.scss';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
-import coinSound from '../assets/kumar/coinsound.mp3';
+import coinSound from '../assets/kumar/CoinTossAudio.mp3';
 import { useLocation, useNavigate } from "react-router-dom";
 import { getDoc, doc, collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "../firebase"; // Adjust if path differs
@@ -87,7 +87,7 @@ function greeting() {
   
     const welcomeDelay = setTimeout(() => {
       playWelcomeAudio();
-    }, 4000); // 2s delay
+    }, 3000); // 2s delay
   
     const redirectDelay = setTimeout(() => {
       navigate("/landingpage");
