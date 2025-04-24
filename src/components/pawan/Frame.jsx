@@ -1,7 +1,7 @@
 import React from 'react';
 import Picture312Image from '../../assets/pawan/PlayerProfile/picture-312.png';
 import VectorImage from '../../assets/pawan/PlayerProfile/jam-info.svg';
-import FrameImage from '../../assets/pawan/PlayerProfile/right-11.png';
+import FrameImage from '../../assets/kumar/right-chevron.png';
 import { useNavigate } from "react-router-dom";
 
 const Frame1321317519 = () => {
@@ -43,7 +43,7 @@ const Frame1321317519 = () => {
         src={FrameImage}
         alt="Frame 1321317522"
         loading="lazy"
-        className="absolute left-[1px] top-[30px] w-[40px] h-[53px] cursor-pointer "onClick={() => navigate("/awards")}
+        className="absolute left-[1px] top-[30px] w-[40px] h-[53px] cursor-pointer  w-10 h-10 -scale-x-100 "onClick={() => navigate("/landingpage")}
       />
     </div>
   );

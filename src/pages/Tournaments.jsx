@@ -5,6 +5,7 @@ import Advertisement from '../assets/sophita/HomePage/Advertisement3.jpg';
 import img2019 from '../assets/sophita/HomePage/2019.jpeg';
 import img2022 from '../assets/sophita/HomePage/2022.jpeg';
 import img2025 from '../assets/sophita/HomePage/2025.jpeg';
+import backButton from '../assets/kumar/right-chevron.png';
 
 const myTeams = [
   {
@@ -57,6 +58,16 @@ export default function Tournaments() {
             Cricklytics
           </span>
         </div>
+      </div>
+            
+       {/* 🔙 Back Button Below Logo */}
+      <div className="mb-4">
+        <img
+          src={backButton} // Change path if needed
+          alt="Back"
+          className="h-8 w-8 cursor-pointer absolute w-10 h-10 -scale-x-100 top-25 left-5'"
+          onClick={() => window.history.back()}
+        />
       </div>
 
       {/* Tabs */}

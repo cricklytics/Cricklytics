@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaPlay, FaRegImage } from 'react-icons/fa';
 import logo from '../assets/sophita/HomePage/picture3_2.png';
+import backButton from '../assets/kumar/right-chevron.png'
 
 export default function Highlights() {
   const [activeTab, setActiveTab] = useState('myteam');
@@ -35,6 +36,17 @@ export default function Highlights() {
           </span>
         </div>
       </div>
+
+      {/* 🔙 Back Button Below Logo */}
+<div className="mb-4">
+  <img
+    src={backButton} // Change path if needed
+    alt="Back"
+    className="h-8 w-8 cursor-pointer absolute w-10 h-10 -scale-x-100  left-5'"
+    onClick={() => window.history.back()}
+  />
+</div>
+
 
       {/* Tabs */}
       <div className="flex justify-center space-x-12 text-black text-lg font-semibold border-b-4 border-white pb-2 mb-6">
