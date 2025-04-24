@@ -30,7 +30,7 @@ function greeting() {
   useEffect(() => {
     const userName = location.state?.userName || "User";
     const spinAudio = new Audio(coinSound);
-    spinAudio.volume = 0.3;
+    spinAudio.volume = 0.9;
     spinAudio.loop = false;
   
     // Play coin sound on page load
