@@ -20,6 +20,8 @@ import Netherlands from '../../assets/pawan/PlayerProfile/netherlands.png';
 import Scotland from '../../assets/pawan/PlayerProfile/scotland.png';
 import Nepal from '../../assets/pawan/PlayerProfile/nepal.png';
 
+
+
 const National = () => {
   const navigate = useNavigate();
   const [showCountries, setShowCountries] = useState(false);
@@ -67,18 +69,18 @@ const National = () => {
             Cricklytics
           </span>
         </div>
-        <button 
+        {/* <button 
           className="text-white bg-[#5DE0E6] px-4 py-2 rounded-lg hover:bg-[#48C6EF]"
           onClick={() => navigate("/go-live")}
         >
           Back to Go Live
-        </button>
+        </button> */}
       </div>
 
       {/* Container for Title and Dropdowns */}
       <div className="max-w-3xl mx-auto mt-10">
         <div className="bg-[rgba(71,156,182,0.7)] p-8 rounded-xl shadow-lg border border-white/20">
-          <h1 className="text-3xl  text-black font-bold text-center mb-6">National Cricket Teams</h1>
+          <h1 className="text-3xl  text-black font-bold text-center mb-6">International and National Cricket Teams</h1>
           <div className="space-y-4">
             {sections.map((section) => (
               <div key={section.title} className="relative">
@@ -114,6 +116,26 @@ const National = () => {
               </div>
             ))}
           </div>
+        </div>
+
+        {/* Navigation Buttons */}
+        <div className="flex justify-center gap-6 items-center mt-10 w-full max-w-[800px] mx-auto px-4">
+          <button 
+            onClick={() => navigate("/landingpage")}
+            className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg">
+            Cancel
+          </button>
+          <button 
+            onClick={() => navigate("/go-live")}
+            className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded-lg">
+            Back 
+          </button>
+          {/* <button 
+            onClick={() => navigate("/some-next-page")}
+            className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg"
+          >
+            Skip
+          </button> */}
         </div>
       </div>
     </div>

@@ -119,16 +119,10 @@ const Sidebar = ({ isOpen, closeMenu }) => {
             {showGoLiveDropdown && (
               <ul className="pl-10 border-l-2 border-[#5DE0E6] transition-all duration-300">
                 <li 
-                  className="px-4 py-2 text-sm cursor-pointer hover:bg-[rgb(68,172,199)] transition-all duration-200"
-                  onClick={() => navigate("/international")}
-                >
-                  International
-                </li>
-                <li 
                   className="px-4 py-2 text-sm cursor-pointer hover:bg-[rgb(68,172,199)] transition-all duration-200 flex items-center gap-2"
                   onClick={() => navigate("/national")}
                 >
-                  National <FaLock className="text-gray-600 ml-auto" />
+                  National & International <FaLock className="text-gray-600 ml-auto" />
                 </li>
                          
               </ul>
