@@ -48,11 +48,11 @@ const TournamentPage = () => {
   return (
     <section className="bg-gradient-to-b from-[#0D171E] to-[#283F79] text-white p-4 md:p-8 min-h-screen flex items-center w-full overflow-hidden z-0 relative">
       <div className="z-20 flex overflow-hidden justify-center w-full p-2 md:p-[5rem] relative">
-        <form className="z-30 gap-5 md:gap-10 bg-[#1A2B4C] rounded-xl md:rounded-[2rem] shadow-[8px_-5px_0px_2px_#253A6E] md:shadow-[22px_-14px_0px_5px_#253A6E] flex flex-col items-center justify-around w-full max-w-[90rem] m-2 md:m-4 p-4 md:pl-[5rem] md:pr-[5rem] md:pt-[5rem] md:pb-[2rem] text-start">
+        <form className="z-30 gap-5 md:gap-10 bg-[#1A2B4C] rounded-xl md:rounded-[2rem] shadow-[8px_-5px_0px_2px_#253A6E] md:shadow-[22px_-14px_0px_5px_#253A6E] flex flex-col items-center justify-around w-full max-w-[70rem] m-2 md:m-4 p-4 md:pl-[5rem] md:pr-[5rem] md:pt-[5rem] md:pb-[2rem] text-start">
           <h1 className="text-2xl md:text-4xl font-bold mb-4 md:mb-6 mt-4 md:mt-10 text-center">Tournament Setup</h1>
 
           {step === 'menu' && (
-            <div className="flex flex-col md:flex-row gap-4 md:gap-10 w-full justify-center">
+            <div className="flex flex-col md:flex-row gap-4 md:gap-10 w-[50%] justify-center">
               <button
                 onClick={() => navigate('/next')}
                 className="text-sm cursor-pointer absolute top-4 left-4 md:top-10 md:left-10"
@@ -108,7 +108,7 @@ const TournamentPage = () => {
               </button>
 
               {showTeamCards && (
-                <div className="flex flex-col w-full h-fit my-4 md:my-10 gap-3 md:gap-5">
+                <div className="flex flex-col w-full justify-center md:items-center h-fit my-4 md:my-10 gap-3 md:gap-5">
                   {[
                     { id: 'team1', name: 'Team 1', img: frd1 },
                     { id: 'team2', name: 'Team 2', img: frd1 },
@@ -117,7 +117,7 @@ const TournamentPage = () => {
                   ].map((team) => (
                     <div
                       key={team.id}
-                      className="flex bg-blue-900 items-center gap-3 md:gap-5 w-full h-16 md:h-20 hover:shadow-[0px_0px_13px_0px_#253A6E] hover:bg-blue-400 hover:cursor-pointer rounded-lg md:rounded-xl p-2"
+                      className="flex bg-blue-900 items-center gap-3 md:gap-5 h-16 md:h-20 hover:shadow-[0px_0px_13px_0px_#253A6E] hover:bg-blue-400 hover:cursor-pointer rounded-lg md:rounded-xl p-2"
                       onClick={() => handleCardClick(team.name)}
                     >
                       <img src={team.img} className="h-10 w-10 md:h-12 md:w-12 rounded-full" alt={team.name} />

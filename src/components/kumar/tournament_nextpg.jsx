@@ -9,12 +9,13 @@ import { useState } from 'react';
 function Tournament_nextpg() {
   const navigate = useNavigate();
   const [isRulesVisible, setIsRulesVisible] = useState(false);
+  const [ispriceVisible, setIspriceVisible] = useState(false);
+  const [showValidationError, setShowValidationError] = useState(false);
   
   const toggleDivVisibility = (e) => {
     e.preventDefault();
     setIsRulesVisible(prevState => !prevState); 
   };
-  const [ispriceVisible, setIspriceVisible] = useState(false);
   
   const togglepriceVisibility = (e) => {
     e.preventDefault();
@@ -24,13 +25,50 @@ function Tournament_nextpg() {
   const Teamprofile = () => {
     navigate('/TeamProfile');
   };
-  const Tournament = () => {
+  
+  const Tournament = (e) => {
+    e.preventDefault();
+    
+    // Check if all required fields are filled
+    const isFormValid = (
+      selectedhmd !== null &&
+      selectedmpd !== null &&
+      selectedbpr !== null &&
+      selectedpm !== null &&
+      selectedof !== null
+    );
+
+    if (!isFormValid) {
+      setShowValidationError(true);
+      return;
+    }
     navigate('/TournamentPage');
   };
-  
+
+  const handleCancel = (e) => {
+    e.preventDefault();
+    // Check if any fields have values
+    const hasData = (
+      selectedhmd !== null ||
+      selectedmpd !== null ||
+      selectedbpr !== null ||
+      selectedpm !== null ||
+      selectedof !== null ||
+      value.trim() !== ''
+    );
+
+    if (hasData) {
+      if (window.confirm('Are you sure you want to cancel? All entered data will be lost.')) {
+        window.location.reload();
+      }
+    } else {
+      navigate('/');
+    }
+  };
+
   const [value, setValue] = useState('');
   const home = () => {
-    navigate('/tournamentseries');
+    navigate('/');
   };
 
   const handleSubmit = (event) => {
@@ -42,30 +80,35 @@ function Tournament_nextpg() {
   const hmdoptions = ['1', '2', '3','4','5+'];
   const handlehmdClick = (hmd) => {
     setSelectedhmd(hmd);
+    setShowValidationError(false);
   };
 
   const [selectedmpd, setSelectedmpd] = useState(null);
   const mpdoptions = ['1', '2', '3','4','5+'];
   const handlempdClick = (mpd) => {
     setSelectedmpd(mpd);
+    setShowValidationError(false);
   };
 
   const [selectedbpr, setSelectedbpr] = useState(null);
   const bproptions = ['500-1000', '1100-1500','1600-2000','2000+','Not Dedcided'];
   const handlebprClick = (bpr) => {
     setSelectedbpr(bpr); 
+    setShowValidationError(false);
   };
 
   const [selectedpm, setSelectedpm] = useState(null);
   const pmoptions = ['100-5000', '600-1000','1100-1500','Not decided'];
   const handlepmClick = (pm) => {
     setSelectedpm(pm); 
+    setShowValidationError(false);
   };
 
   const [selectedof, setSelectedof] = useState(null);
   const ofoptions = ['Cricklytics','Whatsapp','Call'];
   const handleofClick = (of) => {
     setSelectedof(of); 
+    setShowValidationError(false);
   };
 
   const [selectedpay, setSelectedpay] = useState(null);
@@ -270,6 +313,12 @@ function Tournament_nextpg() {
           </button>
           <h1 className="text-2xl md:text-4xl text-white font-bold mt-12 md:mt-5 w-full text-center md:text-left">Add Tournament/Series</h1>
 
+          {showValidationError && (
+            <div className="w-full bg-red-500 text-white p-2 rounded-lg mb-4 text-sm md:text-base">
+              Please fill all required fields before proceeding
+            </div>
+          )}
+
           <div className="w-full md:w-[80%] lg:w-[60%] relative flex flex-col md:flex-col items-start md:items-start justify-between gap-2 md:gap-5">
             <label className="text-lg md:text-xl text-white">What You need?</label>
             <div className="flex flex-wrap gap-2 md:gap-0">
@@ -296,7 +345,7 @@ function Tournament_nextpg() {
           </div>
 
           <div id='hdm' className="w-full relative flex-col items-center justify-between gap-3 md:gap-5 mt-4 md:mt-[2rem]">
-            <label className="text-lg md:text-xl text-white">Match Type</label>
+            <label className="text-lg md:text-xl text-white">Match Type*</label>
             <div className='w-full md:w-[50%] relative flex items-center justify-start mt-2 md:mt-4'>
               {hmdoptions.map((hdm) => ( 
                 <input
@@ -310,10 +359,13 @@ function Tournament_nextpg() {
                 />
               ))}
             </div>
+            {showValidationError && selectedhmd === null && (
+              <p className="text-red-500 text-sm mt-1">Please select match type</p>
+            )}
           </div>
 
           <div id='mpd' className="w-full md:w-[80%] lg:w-[60%] relative flex flex-col md:flex-col items-start md:items-start justify-start gap-2 md:gap-5">
-            <label className="text-lg md:text-xl text-white">How Many Days</label>
+            <label className="text-lg md:text-xl text-white">How Many Days*</label>
             <div className='w-full md:w-[50%] relative flex items-center justify-start mt-2 md:mt-4'>
               {mpdoptions.map((mpd) => ( 
                 <input
@@ -327,6 +379,9 @@ function Tournament_nextpg() {
                 />
               ))}
             </div>
+            {showValidationError && selectedmpd === null && (
+              <p className="text-red-500 text-sm mt-1">Please select number of days</p>
+            )}
           </div>
 
           <div className='w-full flex flex-col'>
@@ -338,7 +393,7 @@ function Tournament_nextpg() {
               </div>
             </div>
             <div id='bpr' className="w-full relative flex-col items-center justify-between mt-3 md:mt-[2rem]">
-              <label className="text-lg md:text-xl text-white">Per Day</label>
+              <label className="text-lg md:text-xl text-white">Per Day*</label>
               <div className='w-full md:w-[40%] lg:w-[50%] relative flex flex-wrap items-center justify-start mt-2 md:mt-4'>
                 {bproptions.map((bpr) => ( 
                   <input
@@ -352,13 +407,14 @@ function Tournament_nextpg() {
                   />
                 ))}
               </div>
+              {showValidationError && selectedbpr === null && (
+                <p className="text-red-500 text-sm mt-1">Please select budget per day</p>
+              )}
             </div>
             <div id='pm'className="w-full relative flex-col items-center justify-between mt-3 md:mt-[2rem]">
-            
               <div className='flex-col items-center gap-2 mt-2'>
-              
                 <div className='w-full md:w-[40%] lg:w-[50%] relative flex items-center justify-start'>
-                <label className="flex gap-2 md:gap-5 text-lg md:text-xl text-white">Per Match </label>
+                <label className="flex gap-2 md:gap-5 text-lg md:text-xl text-white">Per Match*</label>
                   <select
                     id="location"
                     name="location"
@@ -383,11 +439,14 @@ function Tournament_nextpg() {
                     />
                   ))}
                 </div>
+                {showValidationError && selectedpm === null && (
+                  <p className="text-red-500 text-sm mt-1">Please select budget per match</p>
+                )}
               </div>
             </div>
 
             <div id='of' className="w-full relative flex-col items-center justify-between gap-3 md:gap-5 mt-3 md:mt-[2rem]">
-              <label className="text-lg md:text-xl text-white">How Can Official Handle You</label>
+              <label className="text-lg md:text-xl text-white">How Can Official Handle You*</label>
               <div className='w-full md:w-[40%] lg:w-[50%] relative flex flex-wrap items-center justify-start mt-2 md:mt-4'>
                 {ofoptions.map((of) => ( 
                   <input
@@ -401,6 +460,9 @@ function Tournament_nextpg() {
                   />
                 ))}
               </div>
+              {showValidationError && selectedof === null && (
+                <p className="text-red-500 text-sm mt-1">Please select official handling method</p>
+              )}
               
               <input className="w-full md:w-70 h-10 md:h-12 border-2 border-white text-white p-2 rounded-xl mt-3 md:mt-[2rem] placeholder-white placeholder-opacity-100 text-sm md:text-base" type="number" placeholder='Contact Number'/>
             </div>
@@ -485,11 +547,19 @@ function Tournament_nextpg() {
             </label>
           </div>
 
-          <div className="flex justify-end w-full">
+          <div className="flex justify-end w-full gap-4">
+            <button
+              type="button"
+              className="rounded-xl w-32 md:w-44 bg-gray-500 h-8 md:h-9 text-white cursor-pointer hover:shadow-[0px_0px_13px_0px_#5DE0E6] text-sm md:text-base"
+              onClick={handleCancel}
+            >
+              Cancel
+            </button>
             <button
               type="submit"
               className="rounded-xl w-32 md:w-44 bg-gradient-to-l from-[#5DE0E6] to-[#004AAD] h-8 md:h-9 text-white cursor-pointer hover:shadow-[0px_0px_13px_0px_#5DE0E6] text-sm md:text-base"
-              onClick={Tournament}>
+              onClick={Tournament}
+            >
               Create Tournament
             </button>
           </div>
