@@ -13,6 +13,7 @@ import Startmatch from './pages/Startmatch';
 import Tournaments from './pages/Tournaments';
 import TeamDetails from './pages/TeamDetails';
 import Highlights from './pages/Highlights'
+import MatchStart from './pages/MatchStart';
 
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -79,6 +80,7 @@ function App() {
           <Route path="/tournament" element={<Tournaments/>} />
           <Route path="/team" element={<TeamDetails/>} />
           <Route path="/highlights" element={<Highlights/>} />
+          <Route path="/match-start" element={<MatchStart/>} />
 
           <Route path="/playerpages" element={<PlayerPages />} />
           <Route path="/awards" element={<Awards />} />
