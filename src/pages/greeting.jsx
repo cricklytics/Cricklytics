@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import '../App.scss';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
@@ -14,13 +13,9 @@ function greeting() {
   const navigate = useNavigate();
   const userName = location.state?.userName || "User";
 
-  const showWelcome = true;
 
   const [flipComplete, setFlipComplete] = useState(false); // Will be true after 3s
-  const spinAudioRef = useRef(null);
-  const hasSpokenRef = useRef(false);
-  const speechSynthesisRef = useRef(null);
-  const timeoutRef = useRef(null);
+
 
   const nameRef = useRef(null);
   const [fontSize, setFontSize] = useState("2rem");
@@ -146,7 +141,7 @@ function greeting() {
         <div className="coin__front">
         <h2
   ref={nameRef}
-  className="whitespace-nowrap overflow-hidden text-2xl font-semibold transition-all duration-300 text-center"
+  className="whitespace-nowrap overflow-hidden font-bold text-center coin-text"
   style={{ maxWidth: "90%", fontSize }}
 >
   {userName}
@@ -159,7 +154,7 @@ function greeting() {
           ))}
         </div>
         <div className="coin__back">
-          <h2 className="scarlet-transparent whitespace-nowrap overflow-hidden text-2xl font-semibold transition-all duration-300 text-center" ref={nameRef}  style={{ maxWidth: "90%", fontSize }}
+          <h2 className="scarlet-transparent whitespace-nowrap overflow-hidden font-bold text-center coin-text" ref={nameRef}  style={{ maxWidth: "90%", fontSize }}
           >{userName}</h2>
         </div>
         <div className="coin__shadow"></div>

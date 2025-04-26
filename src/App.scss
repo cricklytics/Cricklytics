@@ -1,10 +1,21 @@
+/* Ensure the entire page has a dark background as a fallback */
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(#000814);
+  overflow-x: hidden;
+}
+
 /* Player Profile */
 .app-container {
   min-height: 100vh;
-  background: linear-gradient(180deg, #0D171E 0%, #283F79 100%);
-  padding: 1rem; 
+  background: linear-gradient(180deg, #0d171e 0%, #283f79 100%);
+  padding: 1rem;
   border: 5px solid black;
 }
+
 .no-scrollbar {
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -15,50 +26,81 @@
 }
 /* Player Profile */
 
-
-$coin-diameter: 300px;
-$coin-thickness: 20px;
-$coin-color: #3a3a3a;
-
+$coin-diameter: 18rem;
+$coin-thickness: 1rem; // Reduced thickness for a cleaner edge
+$coin-color: #c0c0c0; // Metallic silver
 $coin-front: '../src/assets/kumar/silvercoinshade.png';
 $coin-back: '../src/assets/kumar/silvercoinshade.png';
 $edge-faces: 180;
 $edge-face-length: $coin-diameter * 3.14 / $edge-faces * 1.01;
 $turn-time: 4s;
 
-.outer{
-  background:linear-gradient(#000814);
+.outer {
+  background: linear-gradient(#000814);
   width: 100%;
-  height: 100vh;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.lottie-background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  z-index: 1;
+  object-fit: cover;
+  background: linear-gradient(#000814);
+}
+
+.content-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  width: 90%;
+  max-width: 1200px;
+  padding: 1rem;
+}
+
+#greet {
+  text-align: center;
+  font-size: 5rem;
+  font-weight: bold;
+  color: rgb(192, 213, 255);
+  caret-color: transparent;
+  text-shadow:
+    1px 1px 0 #000,
+    2px 2px 1px #333,
+    3px 3px 2px #666,
+    4px 4px 3px #999;
+  margin-bottom: 2rem;
 }
 
 .coin {
   position: relative;
   width: $coin-diameter;
   height: $coin-diameter;
-  margin: 50px auto;
   transform-style: preserve-3d;
-  animation: rotate3d $turn-time linear infinite;
   transition: all 0.3s;
   image-rendering: auto;
   backface-visibility: hidden;
   -webkit-font-smoothing: antialiased;
-  animation: flip-motion $turn-time linear 1 forwards;
-  &.flipped {
-    // transform: perspective(1000px) rotateX(0deg); // <- force the initial state
-    // animation: flip-coin $turn-time linear 1 forwards;
-    .coin.paused {
-      animation-play-state: paused !important;
-    }
-  }
-  
 }
 
+.flip-mode {
+  animation: flip-motion $turn-time linear 1 forwards;
+}
 
+.flipped {
+  transform: perspective(1000px) rotateX(360deg);
+}
 
 @keyframes flip-motion {
   0% {
@@ -72,10 +114,9 @@ $turn-time: 4s;
   }
 }
 
-
 @keyframes flip-coin {
   0% {
-    transform: perspective(1000px)rotateX(0deg);
+    transform: perspective(1000px) rotateX(0deg);
   }
   50% {
     transform: perspective(1000px) rotateX(180deg);
@@ -85,71 +126,50 @@ $turn-time: 4s;
   }
 }
 
-
-
 .coin__front,
 .coin__back {
   position: absolute;
-  width: $coin-diameter;
-  height: $coin-diameter;
+  width: 100%;
+  height: 100%;
   border-radius: 50%;
   overflow: hidden;
   background-color: $coin-color;
-
-  &:after {
-    content: "";
-    position: absolute;
-    left: -$coin-diameter / 2;
-    bottom: 100%;
-    display: block;
-    height: $coin-diameter / 1.5;
-    width: $coin-diameter * 2;
-    background: #fff;
-    opacity: 0.3;
-    animation: shine linear $turn-time / 2 infinite;
-  }
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backface-visibility: hidden;
+  z-index: 2; // Ensure front/back faces are above the edge
 }
 
 .coin__front {
   background-image: url($coin-front);
   background-size: cover;
+  background-position: center;
   transform: translateZ($coin-thickness / 2);
-  h2{
-    position: absolute;
-  }
 }
 
 .coin__back {
   background-image: url($coin-back);
-  
   background-size: cover;
+  background-position: center;
   transform: translateZ(-$coin-thickness / 2) rotateY(180deg) scale(-1);
-  h2{
-    position: absolute;
-  }
 }
 
 .coin__edge {
-  position: absolute;
+  position:absolute;
   width: 100%;
   height: 100%;
   transform-style: preserve-3d;
+  z-index: -1; // Below front/back faces
 
   div {
     position: absolute;
     height: $edge-face-length;
     width: $coin-thickness;
-    background: $coin-color;
+    background: $coin-color; // Match the coin color for a seamless edge
 
     @for $i from 1 through $edge-faces {
       &:nth-child(#{$i}) {
-        background: darken(
-          $coin-color,
-          ((($i - $edge-faces / 2) * ($i - $edge-faces / 2)) /
-            ($edge-faces * $edge-faces / 4)) *
-            100 *
-            0.7
-        );
         transform: translateY(#{$coin-diameter / 2 - $edge-face-length / 2})
           translateX(#{$coin-diameter / 2 - $coin-thickness / 2})
           rotateZ(#{360deg / $edge-faces * ($i - 1)})
@@ -160,73 +180,88 @@ $turn-time: 4s;
   }
 }
 
-// .coin__shadow {
-//   position: absolute;
-//   width: $coin-diameter;
-//   height: $coin-thickness;
-//   border-radius: 50%;
-//   background: #D4AF37;
-//   box-shadow: 0 0 $coin-thickness * 5 $coin-thickness * 5 #D4AF37;
-//   opacity: 0.125;
-//   transform: rotateX(90deg) translateZ(-$coin-diameter * 1.1) scale(0.5);
-// }
-
-@keyframes rotate3d {
-  0% {
-    transform: perspective(1000px) rotateX(0deg) scale(1);
-  }
-  100% {
-    transform: perspective(1000px) rotateX(360deg);
-  }
+.coin__shadow {
+  position: absolute;
+  bottom: -1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 70%;
+  height: 0.5rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 50%;
+  filter: blur(5px);
 }
-
-
-@keyframes shine {
-  0%,
-  15% {
-    transform: translateY($coin-diameter * 2) rotate(-40deg);
-  }
-  50% {
-    transform: translateY(-$coin-diameter) rotate(-40deg);
-  }
-}
-
 
 .coin__front h2,
 .coin__back h2 {
-  top: 45%;
+  position: absolute;
+  top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   font-size: 3rem;
-  font-weight: bold; 
+  font-weight: bold;
   color: rgb(13, 47, 114);
   caret-color: transparent;
   text-shadow:
     1px 1px 0 #000,
     2px 2px 1px #333,
     3px 3px 2px #666,
-    4px 4px 3px #999; 
+    4px 4px 3px #999;
 }
 
-
-.outer #greet{
+.coin-text {
   text-align: center;
-  font-size: 5rem;
-  font-weight: bold; 
-  color: rgb(192, 213, 255);
-  caret-color: transparent;
-  text-shadow:
-    1px 1px 0 #000,
-    2px 2px 1px #333,
-    3px 3px 2px #666,
-    4px 4px 3px #999; 
+  white-space: nowrap;
+  overflow: hidden;
+  max-width: 90%;
 }
 
+.scarlet-transparent {
+  color: #fff;
+  text-shadow: 0 0 10px rgba(255, 69, 0, 0.8);
+}
 
-#gif{
-  position: absolute;
-  top:25%;
-  width: 40%;
-  height:50%;
+/* Media Queries for Mobile Responsiveness */
 
+
+@media (max-width: 480px) {
+  $coin-diameter: 18rem;
+  $coin-thickness: 0.6rem;
+
+  #greet {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .coin {
+    width: $coin-diameter;
+    height: $coin-diameter;
+  }
+
+  .coin__shadow {
+    width: 50%;
+    height: 0.3rem;
+    bottom: -0.75rem;
+    
+  }
+
+  .lottie-background {
+    height: 100vh;
+  }
+
+  .coin__front h6,
+  .coin__back h6 {
+    font-size: 1rem;
+
+  width: 120%;
+  height: 30%;
+  
+  
+  }
+  .coin-text {
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    max-width: 50%;
+  }
 }

@@ -1,4 +1,3 @@
-
 @import 'tailwindcss';
 
 .awards-bg-gradient {
@@ -32,40 +31,53 @@
   @apply scale-95;
 }
 
-.winner-card {
-  @apply absolute bg-[#142136] p-4 rounded-lg transition-transform duration-300 hover:scale-110 cursor-pointer;
-}
-
-.winner-card:nth-child(1) {
-  top: 330px;
-  left: 823px;
-  width: 563px;
-  height: 98px;
-}
-
-.winner-card:nth-child(2) {
-  top: 970px;
-  left: 823px;
-  width: 563px;
-  height: 98px;
-}
-
-.winner-card:nth-child(3) {
-  top: 970px;
-  left: 53px;
-  width: 563px;
-  height: 98px;
-}
-
-.winner-image {
-  @apply w-16 h-16 mx-auto mb-2;
-}
-
-.winner-year {
-  @apply font-sans text-white text-2xl text-center;
-}
-
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .awards-bg-gradient {
+    min-height: auto;
+    padding-bottom: 2rem;
+  }
+
+  .interactive-button {
+    font-size: 1rem;
+    padding: 0.5rem 1rem;
+  }
+
+  h2, h3 {
+    font-size: 1.5rem !important;
+  }
+
+  p {
+    font-size: 0.875rem !important;
+    line-height: 1.5 !important;
+  }
+
+  img {
+    max-width: 100%;
+    height: auto;
+  }
+
+  .max-w-[1525px] {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .interactive-button {
+    font-size: 0.875rem;
+    padding: 0.5rem;
+  }
+
+  h2, h3 {
+    font-size: 1.25rem !important;
+  }
+
+  p {
+    font-size: 0.75rem !important;
+  }
 }
