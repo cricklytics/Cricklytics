@@ -56,8 +56,8 @@ const handlewpclick = (wp) => {
 };
     
     return (
-        <section className="h-fit overflow-hidden z-0 bg-gradient-to-b from-[#0D171E] to-[#283F79] relative">
-            <HeaderComponent navigate={navigate}/>
+      <section className="min-h-screen w-full overflow-hidden z-0 bg-gradient-to-b from-[#0D171E] to-[#283F79] relative">
+            <HeaderComponent />
             {isRulesVisible && (
             <div 
             id="rules" 
@@ -105,16 +105,16 @@ const handlewpclick = (wp) => {
 
             <div className="absolute left-[-25%] top-[30%] w-[80rem] h-[50rem] rounded-full bg-[radial-gradient(circle,rgba(69,218,255,0.5)_40%,rgba(69,218,255,0.1)_60%,rgba(69,218,255,0.1)_100%)] blur-lg -z-10"></div>
 
-            <div className="z-20 flex overflow-hidden justify-center h-[100%] p-[5rem] relative">
-                <form className="z-30 gap-10 bg-[#1A2B4C] rounded-[2rem] shadow-[22px_-14px_0px_5px_#253A6E] flex flex-col items-start justify-around h-[100%] w-[90%] pl-[5rem] pr-[5rem] pt-[5rem] pb-[2rem]">
+            <div className="z-20 flex overflow-hidden justify-center w-full p-[1rem] md:p-[5rem] relative">
+                <form className="z-30 gap-5 md:gap-10 bg-[#1A2B4C] rounded-[1rem] md:rounded-[2rem] shadow-[11px_-7px_0px_3px_#253A6E] md:shadow-[22px_-14px_0px_5px_#253A6E] flex flex-col items-start justify-around w-full max-w-[90rem] pl-[1rem] pr-[1rem] pt-[2rem] pb-[1rem] md:pl-[5rem] md:pr-[5rem] md:pt-[5rem] md:pb-[2rem]">
                     <h1 className="text-4xl text-white font-bold text-center">Add Tournament/Series</h1>
-                    <div className="w-[60%] relative flex items-center justify-between gap-5">
-                        <label className="text-xl text-white">Tournament/ Series Name</label>
+                    <div className="w-full md:w-[80%] lg:w-[60%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-5">
+                        <label className="text-xl text-white mt-10">Tournament/ Series Name</label>
                         <input className="w-64 h-12 border-2 border-white text-white p-2 rounded-xl mt-2" type="text" placeholder="Tournament/Series Name" />
                     </div>
-                    <div className="w-[60%] relative flex items-center justify-between gap-5">
+                    <div className="md:w-[80%] lg:w-[60%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-5">
                         <h2 className="text-xl mb-4 text-start text-white">Upload an Image</h2>
-                        <div className="w-[40%] relative flex items-center justify-between gap-5 mb-6">
+                        <div className="w-full md:w-[35%] relative flex items-center justify-between gap-5 mb-6">
                         <div className="w-[10rem] h-fit p-2 bg-white rounded-2xl shadow-lg">
                             <div className="flex items-center justify-center w-full">
                                 <label for="image-upload" className="flex flex-col items-center justify-center w-full h-[4rem] border-2 border-dashed border-gray-300 rounded-2xl cursor-pointer bg-gray-50 hover:bg-gray-100 transition">
@@ -129,7 +129,7 @@ const handlewpclick = (wp) => {
                         </div>
                     </div>
 
-                    <div className="w-[60%] relative flex items-center justify-between gap-5">
+                    <div className="w-full md:w-[80%] lg:w-[60%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-5">
                         <label for="location" className="flex text-lg font-medium text-white mb-2">Choose your location</label>
                         <select id="location" name="location" className="block w-[16rem] bg-white-900 px-4 py-2 border border-white rounded-md text-gray-200 focus:ring-blue-500 cursor-pointer">
                             <option value="">Select a location</option>
@@ -141,14 +141,14 @@ const handlewpclick = (wp) => {
                         </select>
                     </div>
 
-                    <div className="w-[60%] relative flex items-center justify-between gap-5">
+                    <div className="w-full md:w-[80%] lg:w-[60%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-5">
                         <label className="text-xl text-white">No of Teams</label>
                         <input className="w-64 h-12 border-2 border-white text-white p-2 rounded-xl mt-[.5rem]" type="text" placeholder="Participation Team" />
                     </div>
 
-                    <div className="relative flex justify-between w-[100%]">
-                        <label className="text-xl text-white">Dates</label>
-                        <div className="absolute left-[35%] flex w-[90%] h-fit">                    
+                    <div className="relative flex flex-col md:flex-row justify-between w-full gap-2 md:gap-0">
+                    <label className="text-lg md:text-xl text-white">Dates</label>
+                    <div className="w-full md:absolute md:left-[35%] flex flex-col md:flex-row gap-2 md:gap-0 md:w-[90%] h-fit">                    
                             <div className="flex items-center w-[30%]">
                                 <label className="text-xl text-white">Start Date</label>
                                 <input className="w-40 h-12 border-2 border-white text-white p-2 rounded-xl ml-[.5rem]" type="date" />
@@ -160,7 +160,7 @@ const handlewpclick = (wp) => {
                         </div>
                     </div>
 
-                    <div className="w-[60%] relative flex items-center justify-between gap-5">
+                    <div className="w-full md:w-[80%] lg:w-[60%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-5">
                         <label className="text-xl text-white">Location</label>
                         <input
                             className="w-64 h-12 border-2 border-white text-white p-2 rounded-xl mt-2 bg-no-repeat pl-10 pr-12 py-2 placeholder-white"
@@ -174,7 +174,7 @@ const handlewpclick = (wp) => {
                         />
                     </div>
 
-                    <div className="w-[60%] relative flex items-center justify-between gap-5">
+                    <div className="w-full md:w-[80%] lg:w-[60%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-5">
                         <label className="text-xl text-white">Schedule</label>
                         <div>
                             <input className="accent-cyan-500 w-[1rem] h-[1rem]" type="radio" name="days" id="weekdays" />
@@ -185,7 +185,7 @@ const handlewpclick = (wp) => {
                         </div>
                     </div>
 
-                    <div className="w-[60%] relative flex items-center justify-between gap-5">
+                    <div className="w-full md:w-[80%] lg:w-[60%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-5">
                         <label for="timing" className="flex text-lg font-medium text-white mb-2">Choose your Timing</label>
                         <select id="timing" name="timing" className="block w-[16rem] bg-white-900 px-4 py-2 border border-white rounded-md text-gray-200 focus:ring-blue-500 cursor-pointer">
                             <option value="" className='bg-blue-400 text-white'>Select a Timing</option>
@@ -195,7 +195,7 @@ const handlewpclick = (wp) => {
                         </select>
                     </div>
 
-                    <div className="w-[60%] relative flex items-center justify-between gap-5">
+                    <div className="w-full md:w-[80%] lg:w-[60%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-5">
                         <label className="text-xl text-white">Rules and Descrimination</label>
                         <div className="w-[40%] relative flex items-center justify-between gap-5 mb-6">
                        <button id="view-rules" className="rounded-xl w-24 bg-gradient-to-l from-[#5DE0E6] to-[#004AAD] h-9 text-white mr-6 cursor-pointer" onClick={toggleDivVisibility}>
@@ -247,9 +247,10 @@ const handlewpclick = (wp) => {
         ))}
       </div>
     </div>
+    
     <div id='Category' className="w-full relative flex-col items-center justify-between gap-5">
   <label className="text-xl text-white">Tournament Category</label>
-  <div className='w-[50%] relative flex-col items-center justify-center mt-4'>
+       <div className='md:w-[40%] lg:w-[50%] relative flex flex-wrap items-center justify-start mt-2 md:mt-4'>
     {categoryoption.map((Category) => (
       <input
         key={Category}
@@ -266,7 +267,7 @@ const handlewpclick = (wp) => {
 
 <div id='matchtype' className="w-full relative flex-col items-center justify-between gap-5">
   <label className="text-xl text-white">Match Type</label>
-  <div className='w-[40%] relative flex-col items-center justify-center mt-4'>
+  <div className='md:w-[40%] relative flex-col items-center justify-center mt-4'>
     {matchtypeoption.map((matchtype) => ( // Use matchtypeoption here
       <input
         key={matchtype}
@@ -284,7 +285,7 @@ const handlewpclick = (wp) => {
 
 <div id='wp' className="w-full relative flex-col items-center justify-between gap-5">
   <label className="text-xl text-white">Winning Prize</label>
-  <div className='w-[40%] relative flex-col items-center justify-center mt-4'>
+  <div className='md:w-[40%]relative flex-col items-center justify-center mt-4'>
     {wpoption.map((wp) => ( // Use matchtypeoption here
       <input
         key={wp}
@@ -299,7 +300,7 @@ const handlewpclick = (wp) => {
   </div>
 </div>
 
-<div className="w-[60%] relative flex flex-col items-start justify-between gap-5">
+<div className="w-full md:w-[80%] lg:w-[60%] relative flex flex-col items-start justify-between gap-2 md:gap-5">
                         <div>
                             <input className="accent-cyan-500 w-[1rem] h-[1rem]" type="checkbox" name="opt1" id="weekdays" />
                             <label className="text-xl text-white ml-[1rem]" htmlFor="weekdays">Enable Home/Away Format</label>

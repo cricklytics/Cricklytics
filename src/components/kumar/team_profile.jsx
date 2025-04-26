@@ -36,15 +36,16 @@ function TeamProfileForm() {
   };
 
   return (
-    <section className='min-h-screen bg-gradient-to-b from-[#0D171E] to-[#283F79] m-0'>
+    <section className="min-h-screen w-full overflow-hidden z-0 bg-gradient-to-b from-[#0D171E] to-[#283F79] relative">
       <section className="min-h-screen z-0 bg-gradient-to-b from-[#0D171E] to-[#283F79] relative">
-        <div className="z-20 flex justify-center min-h-screen p-[5rem] relative">
-          <form className="z-30 bg-[#1A2B4C] rounded-[2rem] shadow-[22px_-14px_0px_5px_#253A6E] flex flex-col items-start justify-around h-fit w-[90%] pl-[5rem] pr-[5rem] pt-[5rem] pb-[5rem]" onSubmit={nextpage}>
+
+      <div className="z-20 flex overflow-hidden justify-center w-full p-[1rem] md:p-[5rem] relative">
+                <form className="z-30 gap-5 md:gap-10 bg-[#1A2B4C] rounded-[1rem] md:rounded-[2rem] shadow-[11px_-7px_0px_3px_#253A6E] md:shadow-[22px_-14px_0px_5px_#253A6E] flex flex-col items-start justify-around w-full max-w-[90rem] pl-[1rem] pr-[1rem] pt-[2rem] pb-[1rem] md:pl-[5rem] md:pr-[5rem] md:pt-[5rem] md:pb-[2rem]" onSubmit={nextpage}>
             <button
                           onClick={herenext}
                           className="mt-10 text-sm cursor-pointer bg-yellow-900"
                         >
-                          <img src={nav} className="absolute w-10 h-10 -scale-x-100 top-33 left-45" alt="Back" />
+                          <img src={nav} className="absolute w-10 h-10 -scale-x-100 top-13 left-10" alt="Back" />
                         </button>
             
             <h2 className="text-4xl text-white font-bold ">Enter Team Data & Rosters</h2>
@@ -106,7 +107,7 @@ function TeamProfileForm() {
             <button
               type="button"
               onClick={handleAddPlayer}
-              className="w-lg py-3 bg-cyan-500 text-white rounded-md hover:bg-blue-500 mt-4 cursor-pointer"
+              className="w-full lg:w-[50%] py-3 bg-cyan-500 text-white rounded-md hover:bg-blue-500 mt-4 cursor-pointer"
             >
               Add Another Player
             </button>
