@@ -9,6 +9,7 @@ import fr1 from '../assets/yogesh/login/friends1.jpg';
 import fr2 from '../assets/yogesh/login/friends2.jpg';
 import comment from '../assets/yogesh/login/msg.png';
 import SearchBar from '../components/yogesh/LandingPage/SearchBar';
+import AIAssistance from "../components/sophita/HomePage/AIAssistance";
 
 import { db } from "../firebase"; // ✅ ADD FIREBASE
 import { collection, getDocs } from "firebase/firestore"; // ✅ ADD FIRESTORE
@@ -26,6 +27,9 @@ const Landingpage = () => {
   const [highlightsData, setHighlightsData] = useState([]);
   const highlightRef = useRef(null);
   const searchBarRef = useRef(null);
+
+  const [isAIExpanded, setIsAIExpanded] = useState(false);
+
 
   
   // ✅ Fetch highlights from Firebase Firestore
@@ -196,7 +200,7 @@ const Landingpage = () => {
         <Sidebar isOpen={menuOpen} closeMenu={() => setMenuOpen(false)} />
  
         {/* Content */}
-        <div className={`absolute z-[1010] flex flex-col items-center p-2 md:p-[1rem] transition-all duration-700 ease-in-out ${highlightVisible ? "top-16 md:top-23" : "top-[50%]"} w-full`} style={{ height: "calc(100vh - 4rem)" }}>
+        <div className={`absolute z-[1010] flex flex-col items-center p-2 md:p-[1rem] transition-all duration-700 ease-in-out ${highlightVisible ? "top-16 md:top-23" : "top-[50%]"} w-full ${isAIExpanded ? "opacity-0 pointer-events-none" : "opacity-100"}`} style={{ height: "calc(100vh - 4rem)" }}>
           <div className={`sticky w-full md:w-[80%] top-0 z-20 bg-[rgba(2,16,30,0.7)] bg-opacity-40 backdrop-blur-md pb-2 md:pb-4 ${highlightVisible ? "opacity-100" : "opacity-0"}`}>
             <div className="w-full flex justify-center pt-2 md:pt-4 caret-none">
               <div className="w-full md:w-[50%] flex justify-center gap-2 md:gap-3 md:ml-5 text-white text-sm md:text-xl">
@@ -229,7 +233,8 @@ const Landingpage = () => {
           <div
             id="highlight"
             ref={highlightRef}
-            className={`transition-opacity duration-700 ease-in-out flex justify-center flex-wrap w-full h-full overflow-y-auto scrollbar-hide gap-2 md:gap-4 ${highlightVisible ? "opacity-100" : "opacity-0"} flex-grow`}
+            className={`transition-opacity duration-700 ease-in-out flex justify-center flex-wrap w-full h-full overflow-y-auto scrollbar-hide gap-2 md:gap-4 
+              ${highlightVisible && !isAIExpanded ? "opacity-100" : "opacity-0"} flex-grow`}
           >
             {highlightsData.length > 0 ? highlightsData.map((item) => (
             <div
@@ -276,6 +281,10 @@ const Landingpage = () => {
           </div>
         </div>
       </div>
+      <AIAssistance 
+      isAIExpanded={isAIExpanded} 
+      setIsAIExpanded={setIsAIExpanded} 
+    />
     </div>
   );
 };
