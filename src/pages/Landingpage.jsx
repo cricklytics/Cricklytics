@@ -120,7 +120,7 @@ const Landingpage = () => {
         {/* Profile Story Modal */}
         {profileStoryVisible && selectedProfile && (
           <div className="fixed inset-0 flex justify-center items-center bg-opacity-60 backdrop-blur-md z-[9999]">
-            <div className="bg-gradient-to-b from-[#0D171E] to-[#283F79] p-6 rounded-lg shadow-lg w-[28%] max-w-lg">
+            <div className="bg-gradient-to-b from-[#0D171E] to-[#283F79] p-6 rounded-lg shadow-lg w-[90%] md:w-[70%] lg:w-[28%] max-w-lg">
               <button
                 className="absolute top-4 right-4 text-2xl text-white cursor-pointer"
                 onClick={() => setProfileStoryVisible(false)}
@@ -132,22 +132,22 @@ const Landingpage = () => {
                   <img
                     src={selectedProfile.image}
                     alt="Profile"
-                    className="w-20 h-20 rounded-full object-cover"
+                    className="w-16 h-16 md:w-20 md:h-20 rounded-full object-cover"
                   />
                   <div className="flex flex-col">
-                    <h2 className="text-white text-2xl">{selectedProfile.name}</h2>
-                    <p className="text-white mt-2">Viewing story...</p>
+                    <h2 className="text-white text-xl md:text-2xl">{selectedProfile.name}</h2>
+                    <p className="text-white mt-2 text-sm md:text-base">Viewing story...</p>
                   </div>
                 </div>
-                <div className="w-full h-100 rounded-lg bg-yellow-300 m-5"></div>
-                <div className="w-full flex justify-between items-center gap-5">
+                <div className="w-full h-64 md:h-96 rounded-lg bg-yellow-300 m-3 md:m-5"></div>
+                <div className="w-full flex justify-between items-center gap-3 md:gap-5">
                   <input
                     type="text"
                     placeholder="Reply"
-                    className="bg-transparent border border-white border-[2px] w-10 h-10 rounded-3xl text-white w-full pl-5"
+                    className="bg-transparent border border-white border-[2px] h-8 md:h-10 rounded-3xl text-white w-full pl-3 md:pl-5 text-sm md:text-base"
                   />
                   <button
-                    className="w-fit p-1 px-3 text-center rounded-2xl text-xl text-white cursor-pointer bg-[linear-gradient(120deg,_#000000,_#001A80)]"
+                    className="w-fit p-1 px-2 md:px-3 text-center rounded-2xl text-sm md:text-xl text-white cursor-pointer bg-[linear-gradient(120deg,_#000000,_#001A80)]"
                     onClick={() => setProfileStoryVisible(false)}
                   >
                     send
@@ -159,20 +159,20 @@ const Landingpage = () => {
         )}
  
         {/* Navbar */}
-        <nav className="fixed top-0 z-[1000] h-30 flex w-full items-center justify-between bg-gradient-to-b from-[#02101E] to-[#040C15] px-5 py-2.5 text-white">
+        <nav className="fixed top-0 z-[1000] h-20 md:h-30 flex w-full items-center justify-between bg-gradient-to-b from-[#02101E] to-[#040C15] px-3 md:px-5 py-2 text-white">
           <div className="flex items-center">
             <button
-              className="mt-6 flex cursor-pointer flex-col gap-1 p-2.5"
+              className="mt-4 md:mt-6 flex cursor-pointer flex-col gap-1 p-1 md:p-2.5"
               onClick={(e) => {
                 e.stopPropagation();
                 setMenuOpen(!menuOpen);
               }}
             >
-              <div className="h-1 w-10 rounded bg-white"></div>
-              <div className="h-1 w-8 rounded bg-white"></div>
-              <div className="h-1 w-5 rounded bg-white"></div>
+              <div className="h-0.5 md:h-1 w-6 md:w-10 rounded bg-white"></div>
+              <div className="h-0.5 md:h-1 w-4 md:w-8 rounded bg-white"></div>
+              <div className="h-0.5 md:h-1 w-3 md:w-5 rounded bg-white"></div>
             </button>
-            <span className="ml-8 mt-6 text-3xl font-bold">Cricklytics</span>
+            <span className="ml-4 md:ml-8 mt-4 md:mt-6 text-xl md:text-3xl font-bold">Cricklytics</span>
           </div>
  
           <div className="fixed inset-0 -z-10 flex items-center justify-center">
@@ -183,11 +183,11 @@ const Landingpage = () => {
             />
           </div>
  
-          <div className="mt-6 flex items-center gap-8">
-            <div ref={searchBarRef} className="z-[2000] mt-5 h-22 w-fit">
+          <div className="mt-4 md:mt-6 flex items-center gap-4 md:gap-8">
+            <div ref={searchBarRef} className="z-[2000] mt-3 md:mt-5 h-16 md:h-22 w-fit">
               <SearchBar />
             </div>
-            <span className="text-2xl font-bold cursor-pointer hover:text-[#3edcff]">Contact</span>
+            <span className="text-sm md:text-2xl font-bold cursor-pointer hover:text-[#3edcff] hidden sm:inline">Contact</span>
             <FaBell className="cursor-pointer hover:scale-110" size={24} />
             <FaUser className="cursor-pointer hover:scale-110" size={24} />
           </div>
@@ -196,31 +196,31 @@ const Landingpage = () => {
         <Sidebar isOpen={menuOpen} closeMenu={() => setMenuOpen(false)} />
  
         {/* Content */}
-        <div className={`absolute z-[1010] flex flex-col items-center p-[1rem] transition-all duration-700 ease-in-out ${highlightVisible ? "top-23" : "top-[50%]"} w-full`} style={{ height: "calc(100vh - 5rem)" }}>
-          <div className={`sticky w-[80%] top-0 z-20 bg-[rgba(2,16,30,0.7)] bg-opacity-40 backdrop-blur-md pb-4 ${highlightVisible ? "opacity-100" : "opacity-0"}`}>
-            <div className="w-full flex justify-center pt-4 caret-none">
-              <div className="w-[50%] flex justify-center gap-3 ml-5 text-white text-xl">
+        <div className={`absolute z-[1010] flex flex-col items-center p-2 md:p-[1rem] transition-all duration-700 ease-in-out ${highlightVisible ? "top-16 md:top-23" : "top-[50%]"} w-full`} style={{ height: "calc(100vh - 4rem)" }}>
+          <div className={`sticky w-full md:w-[80%] top-0 z-20 bg-[rgba(2,16,30,0.7)] bg-opacity-40 backdrop-blur-md pb-2 md:pb-4 ${highlightVisible ? "opacity-100" : "opacity-0"}`}>
+            <div className="w-full flex justify-center pt-2 md:pt-4 caret-none">
+              <div className="w-full md:w-[50%] flex justify-center gap-2 md:gap-3 md:ml-5 text-white text-sm md:text-xl">
                 {[{ image: fr1, name: 'Friend 1' }, { image: fr2, name: 'Friend 2' }, { image: fr1, name: 'Friend 3' }].map((profile, idx) => (
                   <button
                     key={idx}
-                    className="w-20 h-20 bg-yellow-900 rounded-full"
+                    className="w-12 h-12 md:w-20 md:h-20 bg-yellow-900 rounded-full"
                     onClick={(e) => {
                       e.stopPropagation(); // ✅ Prevent highlight hide
                       handleProfileClick(profile);
                     }}
                   >
-                    <img src={profile.image} className="w-20 h-20 rounded-full" alt="Friend" />
+                    <img src={profile.image} className="w-full h-full rounded-full" alt="Friend" />
                   </button>
                 ))}
               </div>
             </div>
  
             {/* Tabs */}
-            <div className="w-full flex justify-center mt-4">
-              <div className="w-[50%] flex justify-around text-white text-xl underline cursor-pointer">
-                <span className="text-2xl font-bold hover:text-[#800080]">For You</span>
-                <span className="text-2xl font-bold hover:text-[#800080]">Following</span>
-                <span className="text-2xl font-bold hover:text-[#800080]">Reels</span>
+            <div className="w-full flex justify-center mt-2 md:mt-4">
+              <div className="w-full md:w-[50%] flex justify-around text-white text-sm md:text-xl underline cursor-pointer">
+                <span className="text-base md:text-2xl font-bold hover:text-[#800080]">For You</span>
+                <span className="text-base md:text-2xl font-bold hover:text-[#800080]">Following</span>
+                <span className="text-base md:text-2xl font-bold hover:text-[#800080]">Reels</span>
               </div>
             </div>
           </div>
@@ -229,12 +229,12 @@ const Landingpage = () => {
           <div
             id="highlight"
             ref={highlightRef}
-            className={`transition-opacity duration-700 ease-in-out flex justify-center flex-wrap w-full h-full overflow-y-auto scrollbar-hide gap-4 ${highlightVisible ? "opacity-100" : "opacity-0"} flex-grow`}
+            className={`transition-opacity duration-700 ease-in-out flex justify-center flex-wrap w-full h-full overflow-y-auto scrollbar-hide gap-2 md:gap-4 ${highlightVisible ? "opacity-100" : "opacity-0"} flex-grow`}
           >
             {highlightsData.length > 0 ? highlightsData.map((item) => (
             <div
               key={item.id}
-              className="relative w-[45%] bg-gradient-to-b from-[#0A5F68] to-[#000000] aspect-video rounded-xl mx-100 my-10 overflow-hidden shadow-2xl border border-white/20 group cursor-pointer transition-transform hover:scale-[1.02]"
+              className="relative w-full sm:w-[80%] md:w-[45%] bg-gradient-to-b from-[#0A5F68] to-[#000000] aspect-video rounded-lg md:rounded-xl mx-2 md:mx-100 my-4 md:my-10 overflow-hidden shadow-lg md:shadow-2xl border border-white/20 group cursor-pointer transition-transform hover:scale-[1.02]"
               onMouseEnter={() => setHovered(item.id)}
               onMouseLeave={() => setHovered(null)}
             >
@@ -245,23 +245,28 @@ const Landingpage = () => {
                   frameBorder="0"
                   allow="autoplay; encrypted-media"
                   allowFullScreen
-                  className="absolute inset-0 w-full h-full p-5 pb-20 brightness-125"
+                  className="absolute inset-0 w-full h-full p-2 md:p-5 pb-12 md:pb-20 brightness-125"
                 />
               ) : (
+                <>
                 <img
                   src={item.image}
                   alt={`Thumbnail ${item.title}`}
-                  className="w-full h-full object-cover brightness-110 p-5 pb-20"
+                  className="w-full h-full object-cover brightness-110 p-2 md:p-5 pb-12 md:pb-20"
                 />
+                <h3 className="absolute bottom-12 md:bottom-20 left-2 md:left-5 text-white text-sm md:text-lg font-bold">
+                      {item.title}
+                </h3>
+                </>
               )}
 
               <div className="absolute h-full inset-0 flex flex-col items-start justify-end">
-                <div className="flex justify-evenly items-end h-full w-60 mr-5 mb-8">
+                <div className="flex justify-evenly items-end h-full w-40 md:w-60 mr-2 md:mr-5 mb-4 md:mb-8">
                   <button onClick={() => toggleLike(item.id)} className="z-10">
-                    <img src={likedVideos[item.id] ? alike : blike} alt="Like" className="w-[2rem] h-[2rem]" />
+                    <img src={likedVideos[item.id] ? alike : blike} alt="Like" className="w-6 h-6 md:w-8 md:h-8" />
                   </button>
-                  <img src={comment} alt="Comment" className="w-[2rem] h-[2rem] z-10" />
-                  <img src={share} alt="Share" className="w-[2rem] h-[2rem] z-7" />
+                  <img src={comment} alt="Comment" className="w-6 h-6 md:w-8 md:h-8 z-10" />
+                  <img src={share} alt="Share" className="w-6 h-6 md:w-8 md:h-8 z-7" />
                 </div>
               </div>
             </div>
