@@ -30,12 +30,8 @@ function greeting() {
   
     // Play coin sound on page load
     const playCoinSound = async () => {
-      try {
         await spinAudio.play();
         console.log("✅ Coin sound playing...");
-      } catch (err) {
-        console.warn("🔒 Coin sound autoplay blocked. Waiting for click...");
-      }
     };
   
     // Play welcome audio after 6 seconds
