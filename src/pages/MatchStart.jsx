@@ -1,4 +1,4 @@
-import React, { useState ,useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import FireworksCanvas from '../components/sophita/HomePage/FireworksCanvas';
 import { FaChevronDown, FaChevronUp, FaTrophy, FaHeart, FaCommentDots, FaShareAlt } from 'react-icons/fa';
@@ -19,12 +19,6 @@ import ipl2018 from '../assets/sophita/HomePage/2018.jpeg';
 import advertisement1 from '../assets/sophita/HomePage/Advertisement1.webp'
 import { useNavigate } from 'react-router-dom';
 import { useLocation } from 'react-router-dom';
-import { db } from '../firebase'; // adjust your correct firebase config import
-import { collection, addDoc, getDocs } from 'firebase/firestore';
-
-
-
-
 
 const IPLCards = () => {
   const cards = [
@@ -220,15 +214,11 @@ const FixtureGenerator = () => {
   const location = useLocation();
   const targetTab = location.state?.targetTab;
 
-
-useEffect(() => {
-  if (targetTab) {
-    setActiveTab(targetTab);
-  }
-}, [targetTab]);
-
-
-  
+  useEffect(() => {
+    if (targetTab) {
+      setActiveTab(targetTab);
+    }
+  }, [targetTab]);
 
   const teams = [
     'Team A', 'Team B', 'Team C', 'Team D',
@@ -261,41 +251,28 @@ useEffect(() => {
     { x: 3, y: 2, intensity: 40 },
   ];
 
-  const generateFixtures = async () => {
+  const generateFixtures = () => {
     if (!selectedTeamA || !selectedTeamB) {
       alert('Please select both teams');
       return;
     }
-  
-    try {
-      await addDoc(collection(db, 'fixtures'), {
-        teamA: selectedTeamA,
-        teamB: selectedTeamB,
-        date: new Date().toISOString(), // or you can use a manual input later
-      });
-      console.log('Fixture created successfully!');
-      fetchFixtures(); // after adding, fetch updated list
-    } catch (error) {
-      console.error('Error adding fixture:', error);
-      console.log('Failed to create fixture.');
-    }
+
+    const newFixture = {
+      id: Date.now(),
+      teamA: selectedTeamA,
+      teamB: selectedTeamB,
+      date: new Date().toISOString()
+    };
+
+    setGeneratedFixtures([...generatedFixtures, newFixture]);
+    setShowFixtures(true);
   };
 
-  const fetchFixtures = async () => {
-    try {
-      const querySnapshot = await getDocs(collection(db, 'fixtures'));
-      const fixturesData = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setGeneratedFixtures(fixturesData);
-      setShowFixtures(true);
-    } catch (error) {
-      console.error('Error fetching fixtures:', error);
-    }
+  const handleNextClick = () => {
+    setGeneratedFixtures([]);
+    setShowFixtures(false);
+    navigate('/StartMatchPlayers');
   };
-  
-  
 
   const groupedFixtures = generatedFixtures.reduce((acc, fixture) => {
     if (!acc[fixture.round]) {
@@ -438,12 +415,11 @@ useEffect(() => {
                     className="px-6 py-3 bg-gradient-to-r from-green-500 to-teal-500 text-white font-semibold rounded-lg shadow-md hover:from-green-600 hover:to-teal-600 transition-all"
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    onClick={() => navigate('/StartMatchPlayers')}  // <-- Replace '/next-page' with your desired route
+                    onClick={handleNextClick}
                   >
                     Next
                   </motion.button>
                 </div>
-
               </motion.div>
             )}
           </motion.div>
@@ -542,7 +518,6 @@ useEffect(() => {
             }}
           >
             <FireworksCanvas />
-                {/* --- ADD CANCEL BUTTON HERE, OUTSIDE the <div className="relative z-20 text-center p-8"> --- */}
             <div className="absolute top-4 right-4 z-30">
               <motion.button
                 onClick={() => setActiveTab('Fixture Generator')}
