@@ -19,6 +19,9 @@ import ipl2018 from '../assets/sophita/HomePage/2018.jpeg';
 import advertisement1 from '../assets/sophita/HomePage/Advertisement1.webp'
 import { useNavigate } from 'react-router-dom';
 import { useLocation } from 'react-router-dom';
+import { db } from '../firebase'; // adjust your correct firebase config import
+import { collection, addDoc, getDocs } from 'firebase/firestore';
+
 
 
 
@@ -258,28 +261,41 @@ useEffect(() => {
     { x: 3, y: 2, intensity: 40 },
   ];
 
-  const generateFixtures = () => {
+  const generateFixtures = async () => {
     if (!selectedTeamA || !selectedTeamB) {
       alert('Please select both teams');
       return;
     }
-
-    const allTeams = [...teams];
-    const fixtures = [];
-
-    for (let i = 0; i < allTeams.length; i++) {
-      for (let j = i + 1; j < allTeams.length; j++) {
-        fixtures.push({
-          match: `${allTeams[i]} vs ${allTeams[j]}`,
-          round: Math.floor(i / 3) + 1,
-          id: `${i}-${j}`
-        });
-      }
+  
+    try {
+      await addDoc(collection(db, 'fixtures'), {
+        teamA: selectedTeamA,
+        teamB: selectedTeamB,
+        date: new Date().toISOString(), // or you can use a manual input later
+      });
+      alert('Fixture created successfully!');
+      fetchFixtures(); // after adding, fetch updated list
+    } catch (error) {
+      console.error('Error adding fixture:', error);
+      alert('Failed to create fixture.');
     }
-
-    setGeneratedFixtures(fixtures);
-    setShowFixtures(true);
   };
+
+  const fetchFixtures = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, 'fixtures'));
+      const fixturesData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setGeneratedFixtures(fixturesData);
+      setShowFixtures(true);
+    } catch (error) {
+      console.error('Error fetching fixtures:', error);
+    }
+  };
+  
+  
 
   const groupedFixtures = generatedFixtures.reduce((acc, fixture) => {
     if (!acc[fixture.round]) {
@@ -397,30 +413,25 @@ useEffect(() => {
                 <h3 className="text-xl font-semibold mb-6 text-gray-800 border-b pb-2">Tournament Fixtures</h3>
                 
                 <div className="space-y-8">
-                  {Object.entries(groupedFixtures).map(([round, fixtures]) => (
-                    <div key={round} className="space-y-4">
-                      <h4 className="text-lg font-medium text-blue-700">Round {round}</h4>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {fixtures.map((fixture) => (
-                          <motion.div
-                            key={fixture.id}
-                            className="bg-gradient-to-br from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-4 shadow-sm"
-                            whileHover={{ scale: 1.02 }}
-                          >
-                            <div className="flex items-center justify-between">
-                              <span className="font-medium text-gray-800">{fixture.match.split(' vs ')[0]}</span>
-                              <span className="mx-2 text-gray-500">vs</span>
-                              <span className="font-medium text-gray-800">{fixture.match.split(' vs ')[1]}</span>
-                            </div>
-                            <div className="mt-2 flex justify-between text-sm text-gray-500">
-                              <span>Date: TBD</span>
-                              <span>Venue: TBD</span>
-                            </div>
-                          </motion.div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {generatedFixtures.map((fixture) => (
+                      <motion.div
+                        key={fixture.id}
+                        className="bg-gradient-to-br from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-4 shadow-sm"
+                        whileHover={{ scale: 1.02 }}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium text-gray-800">{fixture.teamA}</span>
+                          <span className="mx-2 text-gray-500">vs</span>
+                          <span className="font-medium text-gray-800">{fixture.teamB}</span>
+                        </div>
+                        <div className="mt-2 flex justify-between text-sm text-gray-500">
+                          <span>Date: TBD</span>
+                          <span>Venue: TBD</span>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
                 </div>
                 <div className="w-full flex justify-end mt-8">
                   <motion.button

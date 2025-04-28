@@ -100,6 +100,7 @@ const TournamentPage = () => {
                     <button
                       type="submit"
                       className="rounded-xl w-32 md:w-44 bg-gradient-to-l from-[#5DE0E6] to-[#004AAD] h-8 md:h-9 text-white cursor-pointer hover:shadow-[0px_0px_13px_0px_#5DE0E6] text-sm md:text-base"
+                      onClick={() => navigate('/match-start', { state: { targetTab: 'Fixture Generator' } })}
                     >
                       Next
                     </button>
