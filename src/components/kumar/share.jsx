@@ -64,14 +64,16 @@ const TournamentPage = () => {
           <h1 className="text-2xl md:text-4xl font-bold mb-4 md:mb-6 mt-4 md:mt-10 text-center">Tournament Setup</h1>
  
           {step === 'menu' && (
-            <div className="flex flex-col md:flex-row gap-4 md:gap-10 w-[50%] justify-center">
+            <div className="flex flex-row md:flex-col gap-4 md:gap-10 w-[50%] justify-center">
+        
               <button
                 onClick={() => navigate('/next')}
                 className="text-sm cursor-pointer absolute top-4 left-4 md:top-10 md:left-10"
               >
                 <img src={nav} className="w-8 h-8 md:w-10 md:h-10 -scale-x-100" alt="Back" />
               </button>
-              <button
+              <div className='flex flex-col md:flex-row gap-4 md:gap-10 w-full justify-center'>
+              <button 
                 onClick={() => setStep('addManually')}
                 className="bg-[linear-gradient(120deg,_#000000,_#001A80)] px-2 py-4 md:px-6 md:py-3 rounded-xl md:rounded-2xl border border-white hover:bg-green-700 cursor-pointer text-sm md:text-base"
               >
@@ -86,8 +88,25 @@ const TournamentPage = () => {
               >
                 Share With Organisers
               </button>
+              </div>
+              <div className="flex justify-center w-full gap-4 mt-20">
+                    <button
+                      type="button"
+                      className="rounded-xl w-32 md:w-44 bg-gray-500 h-8 md:h-9 text-white cursor-pointer hover:shadow-[0px_0px_13px_0px_#5DE0E6] text-sm md:text-base"
+                      onClick={handleCancel}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="rounded-xl w-32 md:w-44 bg-gradient-to-l from-[#5DE0E6] to-[#004AAD] h-8 md:h-9 text-white cursor-pointer hover:shadow-[0px_0px_13px_0px_#5DE0E6] text-sm md:text-base"
+                    >
+                      Next
+                    </button>
+                  </div>
             </div>
           )}
+        
  
           {step === 'addManually' && (
             <div className='flex flex-col items-center w-full'>
@@ -236,14 +255,26 @@ const TournamentPage = () => {
                   </ul>
                 </div>
               )}
-            </div>
-          )}
-          <button
+              <div className="flex justify-center w-full gap-4 mt-20">
+                    <button
+                      type="button"
+                      className="rounded-xl w-32 md:w-44 bg-gray-500 h-8 md:h-9 text-white cursor-pointer hover:shadow-[0px_0px_13px_0px_#5DE0E6] text-sm md:text-base"
+                      onClick={handleCancel}
+                    >
+                      Cancel
+                    </button>
+                    <button
                       type="submit"
                       className="rounded-xl w-32 md:w-44 bg-gradient-to-l from-[#5DE0E6] to-[#004AAD] h-8 md:h-9 text-white cursor-pointer hover:shadow-[0px_0px_13px_0px_#5DE0E6] text-sm md:text-base"
                     >
                       Next
                     </button>
+                  </div>
+                  
+            </div>
+            
+          )}
+          
         </form>
       </div>
     </section>
