@@ -19,13 +19,6 @@ import ipl2018 from '../assets/sophita/HomePage/2018.jpeg';
 import advertisement1 from '../assets/sophita/HomePage/Advertisement1.webp'
 import { useNavigate } from 'react-router-dom';
 import { useLocation } from 'react-router-dom';
-<<<<<<< HEAD
-=======
-
-
-
-
->>>>>>> 5f6f4b8ac6de567db2ce6ab1c44fbab09e1f47ab
 
 const IPLCards = () => {
   const cards = [
@@ -263,7 +256,6 @@ const FixtureGenerator = () => {
       alert('Please select both teams');
       return;
     }
-<<<<<<< HEAD
 
     const newFixture = {
       id: Date.now(),
@@ -280,7 +272,7 @@ const FixtureGenerator = () => {
     setGeneratedFixtures([]);
     setShowFixtures(false);
     navigate('/StartMatchPlayers');
-=======
+
 
     const allTeams = [...teams];
     const fixtures = [];
@@ -297,7 +289,7 @@ const FixtureGenerator = () => {
 
     setGeneratedFixtures(fixtures);
     setShowFixtures(true);
->>>>>>> 5f6f4b8ac6de567db2ce6ab1c44fbab09e1f47ab
+
   };
 
   const groupedFixtures = generatedFixtures.reduce((acc, fixture) => {
