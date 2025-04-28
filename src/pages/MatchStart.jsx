@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState ,useEffect } from 'react';
 import { motion } from 'framer-motion';
 import FireworksCanvas from '../components/sophita/HomePage/FireworksCanvas';
 import { FaChevronDown, FaChevronUp, FaTrophy, FaHeart, FaCommentDots, FaShareAlt } from 'react-icons/fa';
@@ -17,6 +17,11 @@ import ipl2021 from '../assets/sophita/HomePage/2021.jpeg';
 import ipl2020 from '../assets/sophita/HomePage/2020.jpeg';
 import ipl2018 from '../assets/sophita/HomePage/2018.jpeg';
 import advertisement1 from '../assets/sophita/HomePage/Advertisement1.webp'
+import { useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
+
+
+
 
 const IPLCards = () => {
   const cards = [
@@ -207,6 +212,20 @@ const FixtureGenerator = () => {
   const [activeAnalyticsTab, setActiveAnalyticsTab] = useState('scorecard');
   const [generatedFixtures, setGeneratedFixtures] = useState([]);
   const [showFixtures, setShowFixtures] = useState(false);
+  const navigate = useNavigate();
+
+  const location = useLocation();
+  const targetTab = location.state?.targetTab;
+
+
+useEffect(() => {
+  if (targetTab) {
+    setActiveTab(targetTab);
+  }
+}, [targetTab]);
+
+
+  
 
   const teams = [
     'Team A', 'Team B', 'Team C', 'Team D',
@@ -403,6 +422,17 @@ const FixtureGenerator = () => {
                     </div>
                   ))}
                 </div>
+                <div className="w-full flex justify-end mt-8">
+                  <motion.button
+                    className="px-6 py-3 bg-gradient-to-r from-green-500 to-teal-500 text-white font-semibold rounded-lg shadow-md hover:from-green-600 hover:to-teal-600 transition-all"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => navigate('/StartMatchPlayers')}  // <-- Replace '/next-page' with your desired route
+                  >
+                    Next
+                  </motion.button>
+                </div>
+
               </motion.div>
             )}
           </motion.div>
@@ -501,6 +531,17 @@ const FixtureGenerator = () => {
             }}
           >
             <FireworksCanvas />
+                {/* --- ADD CANCEL BUTTON HERE, OUTSIDE the <div className="relative z-20 text-center p-8"> --- */}
+            <div className="absolute top-4 right-4 z-30">
+              <motion.button
+                onClick={() => setActiveTab('Fixture Generator')}
+                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-full shadow-md transition-all"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                Cancel
+              </motion.button>
+            </div>
             <div className="relative z-20 text-center p-8">
               <img 
                 src={trophy}

@@ -40,6 +40,7 @@ import TournamentPage from './components/kumar/share';
 import TeamProfile from './components/kumar/team_profile';
 import Tournament_nextpg from './components/kumar/tournament_nextpg';
 import Greeting from './pages/greeting';
+import StartMatchPlayers from './pages/StartMatchPlayers';
 
 
 
@@ -101,6 +102,7 @@ function App() {
           <Route path="/TeamProfile" element={<TeamProfile />} />
           <Route path="/TournamentPage" element={<TournamentPage />} />
           <Route path="/welcome" element={<Greeting/>} />
+          <Route path="/StartMatchPlayers" element={<StartMatchPlayers />} />
 
 
 
