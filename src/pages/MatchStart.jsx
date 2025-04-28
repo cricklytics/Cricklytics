@@ -273,11 +273,11 @@ useEffect(() => {
         teamB: selectedTeamB,
         date: new Date().toISOString(), // or you can use a manual input later
       });
-      alert('Fixture created successfully!');
+      console.log('Fixture created successfully!');
       fetchFixtures(); // after adding, fetch updated list
     } catch (error) {
       console.error('Error adding fixture:', error);
-      alert('Failed to create fixture.');
+      console.log('Failed to create fixture.');
     }
   };
 
