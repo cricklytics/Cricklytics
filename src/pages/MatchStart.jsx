@@ -308,23 +308,25 @@ const FixtureGenerator = () => {
 
       {/* Navigation */}
       <nav className="w-screen shadow-sm">
-        <div className="w-full max-w-7xl px-4 sm:px-8 py-2 mx-auto">
-          <ul className="flex justify-center space-x-2 sm:space-x-4 overflow-x-auto">
-            {['Fixture Generator', 'Live Score', 'Match Results', 'Highlights', 'Match Analytics'].map((tab) => (
-              <li key={tab}>
-                <button
-                  className={`py-2 px-3 sm:px-4 rounded-lg transition bg-gradient-to-r from-blue-700 via-blue-800 to-blue-900 whitespace-nowrap text-sm sm:text-base ${
-                    activeTab === tab
-                      ? 'bg-blue-600 text-white font-semibold shadow-md'
-                      : 'bg-gray-100 text-black hover:bg-gray-200'
-                  }`}
-                  onClick={() => setActiveTab(tab)}
-                >
-                  {tab}
-                </button>
-              </li>
-            ))}
-          </ul>
+        <div className="w-full max-w-7xl px-2 sm:px-8 py-2 mx-auto">
+          <div className="overflow-x-auto">
+            <ul className="flex space-x-2 min-w-max px-2">
+              {['Fixture Generator', 'Live Score', 'Match Results', 'Highlights', 'Match Analytics'].map((tab) => (
+                <li key={tab} className="flex-shrink-0">
+                  <button
+                    className={`py-2 px-3 rounded-lg transition whitespace-nowrap text-sm sm:text-base ${
+                      activeTab === tab
+                        ? 'bg-blue-600 text-white font-semibold shadow-md'
+                        : 'bg-gray-100 text-black hover:bg-gray-200'
+                    }`}
+                    onClick={() => setActiveTab(tab)}
+                  >
+                    {tab}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </nav>
 

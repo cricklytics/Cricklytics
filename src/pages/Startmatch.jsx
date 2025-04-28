@@ -74,7 +74,7 @@ const PlayerSelector = ({ teamA, teamB }) => {
             <span className="text-2xl font-bold text-white">Cricklytics</span>
           </div>
           <motion.div 
-            className="text-black bg-white bg-opacity-90 px-4 py-2 rounded-lg font-medium"
+            className="text-black bg-white bg-opacity-100 text-center w-33 md:w-40 px-4 py-2 rounded-lg font-medium"
             whileHover={{ scale: 1.05 }}
           >
             Schedule: {formattedDate}
