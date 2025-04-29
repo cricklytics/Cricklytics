@@ -36,7 +36,7 @@ export default function TeamDetails() {
           <img 
             src={logo}
             alt="Cricklytics Logo"
-            className="h-10 object-contain block"
+            className="h-7 w-7 md:h-10 object-contain block select-none"
           
             onError={(e) => {
               e.target.onerror = null;
