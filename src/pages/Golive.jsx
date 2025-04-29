@@ -22,14 +22,14 @@ const Golive = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-black to-[#001A80] text-white p-5">
+    <div className="min-h-screen bg-gradient-to-b from-black to-[#001A80] text-white p-5 py-0">
       {/* Top Navigation Bar */}
       <div className="flex justify-between items-center p-4 bg-black/30 rounded-lg mb-5">
         <div className="flex items-center gap-4">
           <img
             src={Picture3}
             alt="Cricklytics Logo"
-            className="h-10 object-contain block"
+            className="h-7 w-7 md:h-10 object-contain block select-none mt-1"
             onError={(e) => {
               e.target.onerror = null;
               e.target.src = "/images/Picture3 2.png";
@@ -220,11 +220,11 @@ const Golive = () => {
           onClick={() => navigate("/landingpage")}>
           Cancel
         </button>
-        <button className="bg-gray-400 hover:bg-gray-500 text-white px-6 py-2 rounded-full transition duration-300"
+        {/* <button className="bg-gray-400 hover:bg-gray-500 text-white px-6 py-2 rounded-full transition duration-300"
           onClick={() => navigate("/national")}
         >
           Back
-        </button>
+        </button> */}
         {/* <button
           onClick={() => navigate("/")}
           className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full transition duration-300">

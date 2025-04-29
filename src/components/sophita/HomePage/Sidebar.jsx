@@ -107,16 +107,16 @@ const Sidebar = ({ isOpen, closeMenu }) => {
             {/* Go Live Dropdown */}
             <li 
             className="px-4 py-2 md:px-6 md:py-3 flex items-center justify-between cursor-pointer hover:bg-[rgba(0,0,0,0.1)] transition-all duration-300"
-            onClick={() => setShowGoLiveDropdown(!showGoLiveDropdown)}
-            >
+            onClick={() => navigate("/go-live")}>
+
               <span className="flex items-center gap-2 md:gap-3">
-              <FaTv className="min-w-[16px] md:min-w-[20px]" /> Go Live
+              <FaTv className="min-w-[16px] md:min-w-[20px]" /> Go Live <FaLock className="text-gray-600 ml-1" />
               </span>
-              {showGoLiveDropdown ? <FaChevronUp /> : <FaChevronDown />}
+              {/* {showGoLiveDropdown ? <FaChevronUp /> : <FaChevronDown />} */}
             </li>
             
             {/* Go Live Dropdown Items */}
-            {showGoLiveDropdown && (
+            {/* {showGoLiveDropdown && (
               <ul className="pl-6 md:pl-10 border-l-2 border-[#5DE0E6]">
                 <li 
                   className="px-2 md:px-4 py-1 md:py-2 text-sm flex items-center gap-1 hover:bg-[rgb(68,172,199)] transition-all duration-200"
@@ -126,7 +126,7 @@ const Sidebar = ({ isOpen, closeMenu }) => {
                 </li>
                          
               </ul>
-            )}
+            )} */}
             
 
             <li 

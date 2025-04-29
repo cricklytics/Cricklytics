@@ -9,44 +9,49 @@ const Frame1321317519 = () => {
     const navigate = useNavigate();
 
   return (
-    <div>
-      {/* Cricklytics Text */}
-      <div
-        className="absolute left-[30px] top-[6px] w-[50px] h-[20px] text-white font-raleway font-bold text-[20px] leading-[100%] text-left whitespace-pre-wrap
-        cursor-pointer"
-        onClick={() => navigate("/landingpage")}>
-        Cricklytics
-      </div>
-
-      {/* Picture3 1 2 Image */}
+    <div className="relative">
+    {/* Header section with logo and menu icon */}
+    <div className="flex items-center h-[32px] pl-[10px] pt-3"> {/* Added left padding here */}
+      {/* Picture3 1 2 Image now comes FIRST */}
       <img
         src={Picture312Image}
         alt="Picture3 1 2"
         loading="lazy"
-        className="absolute left-[5px] top-[6px] w-[20px] h-[20px] object-cover cursor-pointer" onClick={() => navigate("/landingpage")}
+        className="h-7 w-7 md:h-10 object-contain select-none cursor-pointer pl-1"
+        onClick={() => navigate("/landingpage")}
       />
-
-      {/* JamInfo Container */}
+      
+      {/* Cricklytics Text - now comes AFTER the image with 3px space */}
       <div
-        className="absolute right-[20px] top-[1px] w-[20px] h-[20px] object-cover"
+        className="text-white font-raleway font-bold text-[20px] leading-[100%] cursor-pointer ml-[3px] pl-1.5"
+        onClick={() => navigate("/landingpage")}
       >
+        Cricklytics
+      </div>
+      
+      {/* JamInfo Container (menu icon) - positioned to the right */}
+      <div className="ml-auto pr-[10px]"> {/* Added right padding here */}
         <img
           src={VectorImage}
           alt="Vector"
           loading="lazy"
-          className="absolute left-[6px] top-[1px] w-[62.5px] h-[59.17px]"
+          className="left-[6px] top-[1px] w-[30.5px] h-[30.17px] pt-3 pr-3"
         />
       </div>
-
-      {/* Frame 1321317522 Image */}
-      <img
-        src={FrameImage}
-        alt="Frame 1321317522"
-        loading="lazy"
-        className="absolute left-[1px] top-[30px] w-[40px] h-[53px] cursor-pointer  w-10 h-10 -scale-x-100 "onClick={() => navigate("/awards")}
-      />
     </div>
+  
+    {/* Frame Image (back button) - positioned lower with margin-top and left padding */}
+    <img
+      src={FrameImage}
+      alt="Frame 1321317522"
+      loading="lazy"
+      className="w-10 h-10 -scale-x-100 cursor-pointer mt-[20px] ml-[10px]" 
+      onClick={() => navigate("/awards")}
+    />
+  </div>
   );
 };
 
 export default Frame1321317519;
+
+// left-[6px] top-[1px] w-[30.5px] h-[30.17px] pt-3 pr-3

@@ -63,7 +63,7 @@ const IPLCards = () => {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col justify-center items-center p-6">
+    <div className="min-h-screen flex flex-col justify-center items-center p-6 py-0">
       <div className="flex flex-wrap justify-center gap-6 mb-12">
         {cards.map((card, index) => (
           <motion.div
@@ -286,15 +286,15 @@ const FixtureGenerator = () => {
     <div className="w-screen min-h-screen bg-gradient-to-br from-green-400 via-blue-400 to-blue-200 overflow-x-hidden">
       {/* Header */}
       <header className="w-screen shadow-md">
-        <div className="w-full max-w-7xl px-4 sm:px-8 py-4 flex justify-between items-center mx-auto">
+        <div className="w-full max-w-7xl px-4 sm:px-8 py-4 flex justify-between items-center">
           <div className="flex items-center">
             <motion.img
               src={logo}
               alt="Cricklytics Logo"
-              className="h-12 mr-3"
+              className="h-7 w-7 md:h-10 object-contain block select-none"
               whileHover={{ scale: 1.05 }}
             />
-            <h1 className="text-2xl font-bold text-gray-800">Cricklytics</h1>
+            <h1 className="text-2xl font-bold text-gray-800 pl-3">Cricklytics</h1>
           </div>
           <div className="text-gray-600">
             {new Date().toLocaleDateString('en-US', {
@@ -309,8 +309,8 @@ const FixtureGenerator = () => {
       {/* Navigation */}
       <nav className="w-screen shadow-sm">
         <div className="w-full max-w-7xl px-2 sm:px-8 py-2 mx-auto">
-          <div className="overflow-x-auto">
-            <ul className="flex space-x-2 min-w-max px-2">
+          <div className="overflow-x-auto flex kustify-start md:justify-center">
+            <ul className="flex justify-evenly gap-x-5 md:gap-x-0 w-[1100px] md:w-[70%] px-2">
               {['Fixture Generator', 'Live Score', 'Match Results', 'Highlights', 'Match Analytics'].map((tab) => (
                 <li key={tab} className="flex-shrink-0">
                   <button

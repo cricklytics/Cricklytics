@@ -41,7 +41,7 @@ const Awards = () => {
         <div className="relative w-full mt-5px flex flex-col items-center">
           <div className="relative w-full flex justify-between items-center mb-4">
             <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/landingpage")}>
-              <img src={Picture312Image} alt="Logo" className="w-6 h-6 md:w-8 md:h-8 object-cover" />
+              <img src={Picture312Image} alt="Logo" className="h-7 w-7 md:h-10 object-contain block select-none" />
               <span className="font-raleway font-bold text-white text-lg md:text-2xl">Cricklytics</span>
             </div>
             <img src={jamInfo} alt="Jam info" className="w-6 h-12 md:w-8 md:h-16" />
