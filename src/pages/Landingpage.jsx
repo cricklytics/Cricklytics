@@ -15,7 +15,7 @@ import { useNavigate } from "react-router-dom";
 
 import { db } from "../firebase";
 import { collection, getDocs } from "firebase/firestore";
-
+ 
 const Landingpage = () => {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -31,14 +31,14 @@ const Landingpage = () => {
     { id: 3, image: fr1, name: 'Friend 3' }
   ]);
   const [editingProfileId, setEditingProfileId] = useState(null);
-
+ 
   const [highlightsData, setHighlightsData] = useState([]);
   const highlightRef = useRef(null);
   const searchBarRef = useRef(null);
   const fileInputRef = useRef(null);
-
+ 
   const [isAIExpanded, setIsAIExpanded] = useState(false);
-
+ 
   // Fetch highlights from Firebase Firestore
   useEffect(() => {
     const fetchHighlights = async () => {
@@ -53,7 +53,7 @@ const Landingpage = () => {
         console.error("Error fetching highlights:", err);
       }
     };
-
+ 
     fetchHighlights();
   }, []);
  
@@ -123,23 +123,23 @@ const Landingpage = () => {
     setSelectedProfile(profile);
     setProfileStoryVisible(true);
   };
-
+ 
   const handleAddImageClick = (e, profileId) => {
     e.stopPropagation();
     setEditingProfileId(profileId);
     fileInputRef.current.click();
     setHighlightVisible(true); // Ensure highlights remain visible
   };
-
+ 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
       const reader = new FileReader();
       reader.onload = (event) => {
         const newImage = event.target.result;
-        setProfileImages(prev => prev.map(profile => 
-          profile.id === editingProfileId 
-            ? { ...profile, image: newImage } 
+        setProfileImages(prev => prev.map(profile =>
+          profile.id === editingProfileId
+            ? { ...profile, image: newImage }
             : profile
         ));
       };
@@ -147,7 +147,7 @@ const Landingpage = () => {
     }
     setEditingProfileId(null);
   };
-
+ 
   return (
     <div className="bg-[#02101E]">
       <div
@@ -163,7 +163,7 @@ const Landingpage = () => {
           accept="image/*"
           style={{ display: 'none' }}
         />
-
+ 
         {/* Profile Story Modal */}
         {profileStoryVisible && selectedProfile && (
           <div className="fixed inset-0 flex justify-center items-center bg-opacity-60 backdrop-blur-md z-[9999]">
@@ -252,15 +252,18 @@ const Landingpage = () => {
                 {profileImages.map((profile) => (
                   <div key={profile.id} className="relative profile-image-container">
                     <button
-                      className="w-12 h-12 md:w-20 md:h-20 bg-yellow-900 rounded-full"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleProfileClick(profile);
-                      }}
-                    >
-                      <img src={profile.image} className="relative w-full h-full rounded-full" alt="Friend" />
-                    </button>
-                    <button 
+  id="profiles-of-users"
+  className="w-13 h-13 md:w-20 md:h-20 rounded-full bg-cover bg-center"
+  style={{ backgroundImage: `url(${profile.image})` }}
+  onClick={(e) => {
+    e.stopPropagation();
+    handleProfileClick(profile);
+  }}
+>
+</button>
+ 
+               
+                    <button
                       className="absolute -top-1 -right-1 h-5 w-5 rounded-full pb-2 bg-gray-800 flex items-center justify-center text-xl text-white font-bold"
                       onClick={(e) => handleAddImageClick(e, profile.id)}
                     >
@@ -285,13 +288,13 @@ const Landingpage = () => {
           <div
             id="highlight"
             ref={highlightRef}
-            className={`transition-opacity duration-700 ease-in-out mt-10 md:mt-0 flex justify-center flex-wrap w-full h-full overflow-y-auto scrollbar-hide gap-2 md:gap-4 
+            className={`transition-opacity duration-700 ease-in-out mt-10 md:mt-0 flex justify-center flex-wrap w-full h-full overflow-y-auto scrollbar-hide gap-2 md:gap-4
               ${highlightVisible && !isAIExpanded ? "opacity-100" : "opacity-0"} flex-grow`}
           >
             {highlightsData.length > 0 ? highlightsData.map((item) => (
               <div
                 key={item.id}
-                className="relative w-full sm:w-[80%] md:w-[45%] bg-gradient-to-b from-[#0A5F68] to-[#000000] aspect-video rounded-lg md:rounded-xl mx-2 md:mx-100 my-4 md:my-10 overflow-hidden shadow-lg md:shadow-2xl border border-white/20 group cursor-pointer transition-transform hover:scale-[1.02]"
+                className="relative h-100 sm:w-[90%] md:w-[45%] bg-gradient-to-b from-[#0A5F68] to-[#000000] aspect-video rounded-lg md:rounded-xl mx-2 md:mx-100 my-4 md:my-10 overflow-hidden shadow-lg md:shadow-2xl border border-white/20 group cursor-pointer transition-transform hover:scale-[1.02]"
                 onMouseEnter={() => setHovered(item.id)}
                 onMouseLeave={() => setHovered(null)}
               >
@@ -302,29 +305,34 @@ const Landingpage = () => {
                     frameBorder="0"
                     allow="autoplay; encrypted-media"
                     allowFullScreen
-                    className="absolute inset-0 w-full h-full p-2 md:p-5 pb-12 md:pb-20 brightness-125"
+                    className="absolute inset-0 w-full h-[90%] p-2 md:p-5 pb-2 md:pb-12 brightness-125"
                   />
                 ) : (
                   <>
                     <img
                       src={item.image}
                       alt={`Thumbnail ${item.title}`}
-                      className="w-full h-full object-cover brightness-110 p-2 md:p-5 pb-12 md:pb-20"
+                      className="w-full h-[90%] object-cover brightness-110 p-2 md:p-5 pb-12 md:pb-20"
                     />
-                    <h3 className="absolute bottom-12 md:bottom-20 left-2 md:left-5 text-white text-sm md:text-lg font-bold">
+                   
+                  </>
+                 
+                )}
+                 
+ 
+                <div className="absolute h-full inset-0 grid items-end justify-start">
+                  <div className="grid">
+                  <h3 className="text-white text-sm md:text-lg font-bold m-0 ml-3 md:mr-9">
                       {item.title}
                     </h3>
-                  </>
-                )}
-
-                <div className="absolute h-full inset-0 flex flex-col items-start justify-end">
-                  <div className="flex justify-evenly items-end h-full w-40 md:w-60 mr-2 md:mr-5 mb-4 md:mb-8">
+                    <div className="flex justify-evenly items-end  h-12 w-40 md:w-60 mr-2 mt-3 md:mr-5 mb-2 md:mb-5">
                     <button onClick={() => toggleLike(item.id)} className="z-10">
                       <img src={likedVideos[item.id] ? alike : blike} alt="Like" className="w-6 h-6 md:w-8 md:h-8" />
                     </button>
                     <img src={comment} alt="Comment" className="w-6 h-6 md:w-8 md:h-8 z-10" />
                     <img src={share} alt="Share" className="w-6 h-6 md:w-8 md:h-8 z-7" />
                   </div>
+                </div>
                 </div>
               </div>
             )) : (
@@ -333,9 +341,9 @@ const Landingpage = () => {
           </div>
         </div>
       </div>
-      <AIAssistance 
-        isAIExpanded={isAIExpanded} 
-        setIsAIExpanded={setIsAIExpanded} 
+      <AIAssistance
+        isAIExpanded={isAIExpanded}
+        setIsAIExpanded={setIsAIExpanded}
       />
     </div>
   );
