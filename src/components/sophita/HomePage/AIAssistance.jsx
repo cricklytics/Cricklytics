@@ -163,7 +163,7 @@ const AIAssistance = ({ isAIExpanded, setIsAIExpanded }) => {
                 e.target.src = "/images/bot-placeholder.png";
               }}
             />
-            <span className="text-sm text-amber-100 font-bold pl-8 font-['Alegreya']">AI Assistance</span>
+            <span className="text-sm text-amber-100 font-bold pl-8 font-['Alegreya']">Chiti Robot</span>
           </button>
         </motion.div>
       ) : (

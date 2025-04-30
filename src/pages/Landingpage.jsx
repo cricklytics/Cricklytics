@@ -238,8 +238,12 @@ const Landingpage = () => {
             </div>
             <span className="text-sm md:text-2xl font-bold cursor-pointer hover:text-[#3edcff] hidden sm:inline">Contact</span>
             <FaBell className="cursor-pointer hover:scale-110" size={24} />
+              
+
             <FaUser className="cursor-pointer hover:scale-110" size={24} />
           </div>
+          
+          
         </nav>
  
         <Sidebar isOpen={menuOpen} closeMenu={() => setMenuOpen(false)} />
@@ -262,7 +266,6 @@ const Landingpage = () => {
 >
 </button>
  
-               
                     <button
                       className="absolute -top-1 -right-1 h-5 w-5 rounded-full pb-2 bg-gray-800 flex items-center justify-center text-xl text-white font-bold"
                       onClick={(e) => handleAddImageClick(e, profile.id)}
@@ -345,7 +348,11 @@ const Landingpage = () => {
         isAIExpanded={isAIExpanded}
         setIsAIExpanded={setIsAIExpanded}
       />
+
+
+      
     </div>
+    
   );
 };
  
