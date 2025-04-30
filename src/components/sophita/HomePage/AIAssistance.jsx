@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import logo from '../../../assets/pawan/PlayerProfile/picture-312.png';
 import Userprof from '../../../assets/pawan/PlayerProfile/user-placeholder.png';
-import bot from '../../../assets/pawan/PlayerProfile/chitti-robo.png';
+import bot from '../../../assets/pawan/PlayerProfile/chitti_robot.png';
 
 const AIAssistance = ({ isAIExpanded, setIsAIExpanded }) => {
   const navigate = useNavigate();
@@ -152,18 +152,18 @@ const AIAssistance = ({ isAIExpanded, setIsAIExpanded }) => {
               setIsMinimized(false);
               setIsAIExpanded(true);
             }}
-            className="flex items-center gap-2 px-4 py-2 bg-[#5DE0E6] text-black rounded-full shadow-lg hover:bg-[#48C6EF] transition-all duration-300"
+            className="relative  flex items-center gap-2 px-4 py-2 bg-[#5DE0E6] text-black rounded-full shadow-lg hover:bg-[#48C6EF] transition-all duration-300"
           >
             <img 
               src={bot}
               alt="Chitti ROBO" 
-              className="w-8 h-8 rounded-full"
+              className="w-17 h-17 -top-7 z-10  absolute -left-2 rounded-full"
               onError={(e) => {
                 e.target.onerror = null;
                 e.target.src = "/images/bot-placeholder.png";
               }}
             />
-            <span className="text-sm text-amber-100 font-bold font-['Alegreya']">AI Assistance</span>
+            <span className="text-sm text-amber-100 font-bold pl-8 font-['Alegreya']">AI Assistance</span>
           </button>
         </motion.div>
       ) : (
