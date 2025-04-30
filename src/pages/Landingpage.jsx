@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { FaBell, FaUser } from "react-icons/fa";
+import { FaBell, FaUser, FaSearch, FaComment, FaTimes, FaPaperPlane } from "react-icons/fa";
 import { Search } from 'lucide-react'; 
 import Sidebar from "../components/sophita/HomePage/Sidebar";
 import mImg from '../assets/sophita/HomePage/player.png';
@@ -38,6 +38,95 @@ const Landingpage = () => {
   const fileInputRef = useRef(null);
  
   const [isAIExpanded, setIsAIExpanded] = useState(false);
+
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchValue, setSearchValue] = useState('');
+  const [showChat, setShowChat] = useState(false);
+  const [activeChatTab, setActiveChatTab] = useState('primary');
+  const [messageInput, setMessageInput] = useState('');
+  const searchRef = useRef(null);
+  const chatRef = useRef(null);
+  const inputRef = useRef(null);
+
+  const handleToggleSearch = () => {
+    setShowSearch(!showSearch);
+  };
+ 
+  const handleSearchChange = (e) => {
+    setSearchValue(e.target.value);
+  };
+  const handleSendMessage = () => {
+    if (messageInput.trim()) {
+      // Add your message sending logic here
+      console.log("Message sent:", messageInput);
+      setMessageInput('');
+    }
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (searchRef.current && !searchRef.current.contains(event.target)) {
+        setShowSearch(false);
+      }
+      if (chatRef.current && !chatRef.current.contains(event.target)) {
+        const messageIcon = document.querySelector('.message-icon');
+        if (!messageIcon?.contains(event.target)) {
+          setShowChat(false);
+        }
+      }
+    };
+ 
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setShowSearch(false);
+        setShowChat(false);
+      }
+      if (event.key === 'Enter' && showChat && messageInput) {
+        handleSendMessage();
+      }
+    };
+ 
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+ 
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [messageInput]);
+
+  // Sample chat data
+  const chatData = {
+    primary: [
+      {
+        id: 1,
+        name: "John Doe",
+        lastMessage: "Hey, how are you doing?",
+        time: "2h",
+        unread: true,
+        avatar: "bg-gradient-to-r from-[#5DE0E6] to-[#004AAD]"
+      },
+      {
+        id: 2,
+        name: "Jane Smith",
+        lastMessage: "Let's meet tomorrow!",
+        time: "1d",
+        unread: false,
+        avatar: "bg-gradient-to-r from-pink-500 to-yellow-500"
+      }
+    ],
+    general: [
+      {
+        id: 3,
+        name: "Team Cricklytics",
+        lastMessage: "New features coming soon!",
+        time: "3d",
+        unread: false,
+        avatar: "bg-gradient-to-r from-purple-500 to-red-500"
+      }
+    ],
+    requests: []
+  };
  
   // Fetch highlights from Firebase Firestore
   useEffect(() => {
@@ -238,7 +327,135 @@ const Landingpage = () => {
             </div>
             <span className="text-sm md:text-2xl font-bold cursor-pointer hover:text-[#3edcff] hidden sm:inline">Contact</span>
             <FaBell className="cursor-pointer hover:scale-110" size={24} />
-              
+
+             {/* Message Icon with dropdown */}
+          <div className="relative">
+            <FaComment
+              className="message-icon cursor-pointer text-white transition-transform duration-200 hover:scale-110"
+              size={24}
+              onClick={() => setShowChat(!showChat)}
+            />
+           
+            {showChat && (
+              <div
+                ref={chatRef}
+                className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl z-[1050] border border-gray-200 overflow-hidden"
+              >
+                {/* Chat Header */}
+                <div className="bg-white p-3 border-b border-gray-200 flex justify-between items-center">
+                  <div className="flex items-center">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-r from-[#5DE0E6] to-[#004AAD] flex items-center justify-center mr-2">
+                      <FaComment className="text-white" size={14} />
+                    </div>
+                    <h3 className="font-semibold text-gray-800">Messages</h3>
+                  </div>
+                  <button
+                    onClick={() => setShowChat(false)}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    <FaTimes />
+                  </button>
+                </div>
+ 
+                {/* Search Bar */}
+                <div className="p-2 border-b border-gray-200">
+                  <div className="relative">
+                    <FaSearch className="absolute left-3 top-2.5 text-gray-400" size={12} />
+                    <input
+                      type="text"
+                      placeholder="Search"
+                      className="w-full bg-gray-100 rounded-lg py-1.5 pl-9 pr-3 text-sm focus:outline-none"
+                    />
+                  </div>
+                </div>
+ 
+                {/* Chat List */}
+                <div className="flex-1 overflow-y-auto h-64">
+                  {chatData[activeChatTab]?.length > 0 ? (
+                    chatData[activeChatTab].map((chat) => (
+                      <div key={chat.id} className="p-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer flex items-center">
+                        <div className={`w-10 h-10 rounded-full ${chat.avatar} mr-3`}></div>
+                        <div className="flex-1">
+                          <div className="flex justify-between items-center">
+                            <span className={`font-semibold text-sm ${chat.unread ? 'text-black' : 'text-gray-800'}`}>
+                              {chat.name}
+                            </span>
+                            <span className="text-xs text-gray-400">{chat.time}</span>
+                          </div>
+                          <p className={`text-xs ${chat.unread ? 'font-medium text-black' : 'text-gray-500'} truncate`}>
+                            {chat.lastMessage}
+                          </p>
+                        </div>
+                        {chat.unread && (
+                          <div className="w-2 h-2 rounded-full bg-[#5DE0E6] ml-2"></div>
+                        )}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-10 px-4">
+                      <div className="w-16 h-16 mx-auto rounded-full bg-gray-100 flex items-center justify-center mb-3">
+                        <FaComment className="text-gray-400" size={20} />
+                      </div>
+                      <h4 className="font-medium text-gray-700 mb-1">
+                        {activeChatTab === 'requests'
+                          ? "No message requests"
+                          : "No messages yet"}
+                      </h4>
+                      <p className="text-xs text-gray-500">
+                        {activeChatTab === 'requests'
+                          ? "When someone messages you who you don't follow, it'll appear here"
+                          : "Start a conversation with your friends"}
+                      </p>
+                    </div>
+                  )}
+                </div>
+ 
+                {/* Message Input (visible only in primary tab) */}
+                {activeChatTab === 'primary' && (
+                  <div className="p-2 border-t border-gray-200 bg-white">
+                    <div className="flex items-center">
+                      <input
+                        type="text"
+                        placeholder="Write a message..."
+                        className="flex-1 border rounded-l-lg py-2 px-3 text-sm focus:outline-none"
+                        value={messageInput}
+                        onChange={(e) => setMessageInput(e.target.value)}
+                      />
+                      <button
+                        className="bg-[#5DE0E6] text-white py-2 px-4 rounded-r-lg hover:bg-[#4acfd6] flex items-center"
+                        onClick={handleSendMessage}
+                      >
+                        <FaPaperPlane size={14} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+ 
+                {/* Bottom Navigation */}
+                <div className="p-2 border-t border-gray-200 bg-white flex justify-around z-50">
+                  <button
+                    className={`hover:text-[#5DE0E6] p-2 ${activeChatTab === 'requests' ? 'text-[#5DE0E6] border-b-2 border-[#5DE0E6]' : 'text-gray-700'}`}
+                    onClick={() => setActiveChatTab('requests')}
+                  >
+                    <span className="text-xs">Requests</span>
+                  </button>
+                  <button
+                    className={`hover:text-[#5DE0E6] p-2 ${activeChatTab === 'primary' ? 'text-[#5DE0E6] border-b-2 border-[#5DE0E6]' : 'text-gray-700'}`}
+                    onClick={() => setActiveChatTab('primary')}
+                  >
+                    <span className="text-xs">Primary</span>
+                  </button>
+                  <button
+                    className={`hover:text-[#5DE0E6] p-2 ${activeChatTab === 'general' ? 'text-[#5DE0E6] border-b-2 border-[#5DE0E6]' : 'text-gray-700'}`}
+                    onClick={() => setActiveChatTab('general')}
+                  >
+                    <span className="text-xs">General</span>
+                  </button>
+                </div>
+
+              </div>
+            )}
+          </div>
 
             <FaUser className="cursor-pointer hover:scale-110" size={24} />
           </div>
@@ -249,8 +466,15 @@ const Landingpage = () => {
         <Sidebar isOpen={menuOpen} closeMenu={() => setMenuOpen(false)} />
  
         {/* Content */}
-        <div className={`absolute z-[1010] flex flex-col items-center p-2 md:p-[1rem] transition-all duration-700 ease-in-out ${highlightVisible ? "top-16 md:top-23" : "top-[50%]"} w-full ${isAIExpanded ? "opacity-0 pointer-events-none" : "opacity-100"}`} style={{ height: "calc(100vh - 4rem)" }}>
-          <div className={`sticky w-full md:w-[80%] top-0 z-20 bg-[rgba(2,16,30,0.7)] bg-opacity-40 backdrop-blur-md pb-2 md:pb-4 ${highlightVisible ? "opacity-100" : "opacity-0"}`}>
+        <div
+          className={`absolute z-[1010] flex flex-col items-center p-2 md:p-[1rem] transition-all duration-700 ease-in-out ${
+            highlightVisible ? "top-16 md:top-23" : "top-[50%]"
+          } w-full ${isAIExpanded ? "opacity-0 pointer-events-none" : "opacity-100"} ${
+            showChat ? "pointer-events-none" : "" // Conditional pointer-events
+          }`}
+          style={{ height: "calc(100vh - 4rem)" }}
+        >
+          <div className={`sticky w-full md:w-[80%] top-0 z-20 bg-[rgba(2,16,30,0.7)] bg-opacity-40 backdrop-blur-md pb-2 md:pb-4 ${highlightVisible && !showChat ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
             <div className="w-full flex justify-center pt-2 md:pt-4 caret-none">
               <div className="w-full md:w-[50%] flex justify-center gap-2 md:gap-3 md:ml-5 text-white text-sm md:text-xl">
                 {profileImages.map((profile) => (
