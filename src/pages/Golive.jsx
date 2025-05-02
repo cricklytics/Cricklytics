@@ -1,10 +1,9 @@
 import React, { useState } from "react";
-import { FaChevronDown, FaChevronUp } from "react-icons/fa";
+import { FaChevronDown, FaChevronUp, FaBars, FaTimes } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import Picture3 from '../assets/sophita/HomePage/Picture3.png';
 import Southafrica from '../assets/sophita/HomePage/Southafrica.png';
 import Netherland from '../assets/sophita/HomePage/Netherland.jpeg';
-
 
 const Golive = () => {
   const navigate = useNavigate();
@@ -12,6 +11,7 @@ const Golive = () => {
   const [showT20, setShowT20] = useState(false);
   const [showWomens, setShowWomens] = useState(false);
   const [showICC, setShowICC] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const iccTeams = {
     Asia: ["India", "Pakistan", "Sri Lanka", "Bangladesh", "Afghanistan"],
@@ -19,6 +19,43 @@ const Golive = () => {
     Africa: ["South Africa", "Zimbabwe", "Namibia"],
     Australia: ["Australia", "New Zealand"],
     Americas: ["West Indies", "USA", "Canada"]
+  };
+
+  // Toggle mobile menu
+  const toggleMobileMenu = () => {
+    setMobileMenuOpen(!mobileMenuOpen);
+  };
+
+  // Handle dropdown click for mobile
+  const handleDropdownClick = (dropdown) => {
+    switch(dropdown) {
+      case 'countries':
+        setShowCountries(!showCountries);
+        setShowICC(false);
+        setShowT20(false);
+        setShowWomens(false);
+        break;
+      case 'icc':
+        setShowICC(!showICC);
+        setShowCountries(false);
+        setShowT20(false);
+        setShowWomens(false);
+        break;
+      case 't20':
+        setShowT20(!showT20);
+        setShowCountries(false);
+        setShowICC(false);
+        setShowWomens(false);
+        break;
+      case 'womens':
+        setShowWomens(!showWomens);
+        setShowCountries(false);
+        setShowICC(false);
+        setShowT20(false);
+        break;
+      default:
+        break;
+    }
   };
 
   return (
@@ -40,7 +77,8 @@ const Golive = () => {
           </span>
         </div>
 
-        <div className="flex gap-8 relative">
+        {/* Desktop Navigation */}
+        <div className="hidden md:flex gap-8 relative">
           {/* Countries Dropdown */}
           <div className="relative">
             <div
@@ -169,7 +207,144 @@ const Golive = () => {
             )}
           </div>
         </div>
+
+        {/* Mobile Menu Button */}
+        <div className="md:hidden">
+          <button onClick={toggleMobileMenu} className="text-white focus:outline-none">
+            {mobileMenuOpen ? <FaTimes size={24} /> : <FaBars size={24} />}
+          </button>
+        </div>
       </div>
+
+      {/* Mobile Menu Dropdown */}
+      {mobileMenuOpen && (
+        <div className="md:hidden bg-black/70 rounded-lg p-4 mb-4 z-50">
+          <div className="space-y-3">
+            {/* Countries Dropdown */}
+            <div className="relative">
+              <div
+                className="flex items-center justify-between cursor-pointer p-3 bg-[#5DE0E6]/30 rounded-lg"
+                onClick={() => handleDropdownClick('countries')}
+              >
+                <span className="font-medium">Countries</span>
+                {showCountries ? <FaChevronUp /> : <FaChevronDown />}
+              </div>
+              {showCountries && (
+                <ul className="mt-2 bg-[#5DE0E6] text-black rounded-lg py-2 max-h-[300px] overflow-y-auto">
+                  {["West Indies", "Sri Lanka", "Bangladesh", "Afghanistan", "Zimbabwe", "Ireland", "India", "Australia", "England", "Pakistan", "New Zealand", "South Africa"]
+                    .map((country) => (
+                      <li 
+                        key={country} 
+                        className="px-4 py-2 cursor-pointer hover:bg-[#48C6EF]"
+                        onClick={() => {
+                          navigate(`/${country.replace(/\s+/g, "")}`);
+                          setMobileMenuOpen(false);
+                        }}
+                      >
+                        {country}
+                      </li>
+                    ))}
+                </ul>
+              )}
+            </div>
+
+            {/* ICC Dropdown */}
+            <div className="relative">
+              <div
+                className="flex items-center justify-between cursor-pointer p-3 bg-[#5DE0E6]/30 rounded-lg"
+                onClick={() => handleDropdownClick('icc')}
+              >
+                <span className="font-medium">ICC Teams</span>
+                {showICC ? <FaChevronUp /> : <FaChevronDown />}
+              </div>
+              {showICC && (
+                <div className="mt-2 bg-[#5DE0E6] text-black rounded-lg py-2 max-h-[300px] overflow-y-auto">
+                  {Object.entries(iccTeams).map(([continent, teams]) => (
+                    <div key={continent} className="mb-2">
+                      <h3 className="px-3 py-2 font-bold text-sm bg-[#1E2A78] text-white rounded-md">
+                        {continent}
+                      </h3>
+                      {teams.map((team) => (
+                        <div
+                          key={team}
+                          className="px-4 py-2 cursor-pointer hover:bg-[#48C6EF]"
+                          onClick={() => {
+                            navigate(`/${team.replace(/\s+/g, "")}`);
+                            setMobileMenuOpen(false);
+                          }}
+                        >
+                          {team}
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* T20 League Dropdown */}
+            <div className="relative">
+              <div
+                className="flex items-center justify-between cursor-pointer p-3 bg-[#5DE0E6]/30 rounded-lg"
+                onClick={() => handleDropdownClick('t20')}
+              >
+                <span className="font-medium">T20 League</span>
+                {showT20 ? <FaChevronUp /> : <FaChevronDown />}
+              </div>
+              {showT20 && (
+                <ul className="mt-2 bg-[#5DE0E6] text-black rounded-lg py-2 max-h-[300px] overflow-y-auto">
+                  {[
+                    "India vs Australia", "England vs Pakistan", "South Africa vs New Zealand",
+                    "West Indies vs Bangladesh", "Sri Lanka vs Afghanistan", "Zimbabwe vs Ireland"
+                  ].map((match) => (
+                    <li 
+                      key={match} 
+                      className="px-4 py-2 cursor-pointer hover:bg-[#48C6EF]"
+                      onClick={() => {
+                        navigate(`/${match.replace(/\s+/g, "-")}`);
+                        setMobileMenuOpen(false);
+                      }}
+                    >
+                      {match}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            {/* Women's Teams Dropdown */}
+            <div className="relative">
+              <div
+                className="flex items-center justify-between cursor-pointer p-3 bg-[#5DE0E6]/30 rounded-lg"
+                onClick={() => handleDropdownClick('womens')}
+              >
+                <span className="font-medium">Women's Teams</span>
+                {showWomens ? <FaChevronUp /> : <FaChevronDown />}
+              </div>
+              {showWomens && (
+                <ul className="mt-2 bg-[#5DE0E6] text-black rounded-lg py-2 max-h-[300px] overflow-y-auto">
+                  {[
+                    "India Women vs England Women", "Australia Women vs South Africa Women",
+                    "Pakistan Women vs West Indies Women", "New Zealand Women vs Sri Lanka Women",
+                    "Bangladesh Women vs Ireland Women"
+                  ].map((match) => (
+                    <li 
+                      key={match} 
+                      className="px-4 py-2 cursor-pointer hover:bg-[#48C6EF]"
+                      onClick={() => {
+                        navigate(`/${match.replace(/\s+/g, "-")}`);
+                        setMobileMenuOpen(false);
+                      }}
+                    >
+                      {match}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Live Score Section */}
       <div className="text-center font-sans text-xl mt-5">
@@ -177,9 +352,9 @@ const Golive = () => {
       </div>
 
       <div className="mt-8 relative bg-[rgba(71,156,182,0.7)] p-6 rounded-xl shadow-lg border border-white/20 w-[90%] max-w-[800px] mx-auto z-10">
-        <div className="flex justify-center items-center gap-8 bg-[#F0EDED] p-6 rounded-lg">
+        <div className="flex flex-col sm:flex-row justify-center items-center gap-4 sm:gap-8 bg-[#F0EDED] p-4 sm:p-6 rounded-lg">
           {/* Netherlands */}
-          <div className="flex flex-col items-center bg-[#1F048A] p-4 rounded-lg w-48">
+          <div className="flex flex-col items-center bg-[#1F048A] p-3 sm:p-4 rounded-lg w-full sm:w-48">
             <div className="bg-[#CDC6C6] p-2 rounded-full mb-2">
               <img
                 src={Netherland}
@@ -197,7 +372,7 @@ const Golive = () => {
           <div className="text-2xl font-bold text-gray-700">VS</div>
 
           {/* South Africa */}
-          <div className="flex flex-col items-center bg-[#1F048A] p-4 rounded-lg w-48">
+          <div className="flex flex-col items-center bg-[#1F048A] p-3 sm:p-4 rounded-lg w-full sm:w-48">
             <div className="bg-[#CDC6C6] p-2 rounded-full mb-2">
               <img
                 src={Southafrica}
@@ -215,21 +390,13 @@ const Golive = () => {
       </div>
 
       {/* Bottom Navigation Buttons */}
-      <div className="flex justify-center gap-6 items-center mt-10 w-full max-w-[800px] mx-auto px-4">
-        <button className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-full transition duration-300"
-          onClick={() => navigate("/landingpage")}>
+      <div className="flex flex-col sm:flex-row justify-center gap-4 sm:gap-6 items-center mt-8 sm:mt-10 w-full max-w-[800px] mx-auto px-4">
+        <button 
+          className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-full transition duration-300 w-full sm:w-auto"
+          onClick={() => navigate("/landingpage")}
+        >
           Cancel
         </button>
-        {/* <button className="bg-gray-400 hover:bg-gray-500 text-white px-6 py-2 rounded-full transition duration-300"
-          onClick={() => navigate("/national")}
-        >
-          Back
-        </button> */}
-        {/* <button
-          onClick={() => navigate("/")}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-full transition duration-300">
-          Skip
-        </button> */}
       </div>
     </div>
   );

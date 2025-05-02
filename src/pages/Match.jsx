@@ -133,9 +133,14 @@ const Match = () => {
   };
 
   return (
-    <div className="min-h-full bg-gradient-to-b from-black to-[#001A80] bg-fixed text-white p-5">
+    <div className="min-h-full bg-fixed text-white p-5" style={{
+      backgroundImage: 'linear-gradient(140deg,#080006 15%,#FF0077)',
+      backgroundRepeat: 'no-repeat',
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+    }}>
       {/* Top Navigation Bar */}
-      <div className="flex justify-between items-center p-4 bg-black/30 rounded-lg mb-5">
+      <div className="flex justify-between items-center p-4 rounded-lg mb-5">
         <div className="flex items-center gap-4">
           <img 
             src={logo}
@@ -155,7 +160,7 @@ const Match = () => {
         
         
       </div>
-      <div className="flex gap-330 py-2">
+      <div className="flex justify-between p-2">
       <button 
             className="text-white bg-gray-600 px-4 py-2 rounded-lg hover:bg-gray-500"
             onClick={() => navigate(-1)}
@@ -190,23 +195,25 @@ const Match = () => {
         </div>
 
         {/* Content Area */}
-        <div className="bg-[rgba(71,156,182,0.7)] p-8 rounded-xl shadow-lg border border-white/20">
+        <div className="p-8 rounded-xl border border-white/20 shadow-[0_10px_30px_rgba(0,0,0,0.8)] bg-white/5 backdrop-blur">
+
           {activeTab === "my-matches" && (
             <div>
               <h2 className="text-2xl font-bold text-center mb-6 font-['Alegreya']">My Matches</h2>
-              <div className="flex overflow-x-auto space-x-4 pb-4 scrollbar-thin scrollbar-thumb-cyan-300 scrollbar-track-gray-800">
+              <div className="flex overflow-x-auto md:justify-center item-center space-x-4 p-4 scrollbar-thin scrollbar-thumb-cyan-300 scrollbar-track-gray-800">
                 {subOptions.map((option) => (
                   <button
-                    key={option.id}
-                    className={`flex-shrink-0 px-6 py-3 rounded-lg text-base font-['Alegreya'] transition-all duration-300 shadow-md ${
-                      activeSubOption === option.id
-                        ? "bg-[#48C6EF] text-white"
-                        : "bg-[#5DE0E6] text-white hover:bg-[#48C6EF] hover:text-cyan-300"
-                    }`}
-                    onClick={() => setActiveSubOption(option.id)}
-                  >
-                    {option.label}
-                  </button>
+                  key={option.id}
+                  className={`flex-shrink-0 px-6 py-3 rounded-lg text-base font-['Alegreya'] transition-all duration-300 shadow-[0_5px_15px_rgba(0,0,0,0.8)] ${
+                    activeSubOption === option.id
+                      ? "bg-gradient-to-r from-[#48C6EF] to-[#6F86D6] text-white scale-105"
+                      : "bg-transparent text-white hover:bg-white/10 hover:scale-105"
+                  }`}
+                  onClick={() => setActiveSubOption(option.id)}
+                >
+                  {option.label}
+                </button>
+                
                 ))}
               </div>
               <div className="mt-6">
