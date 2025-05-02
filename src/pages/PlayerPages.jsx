@@ -57,10 +57,12 @@ function PlayerPages() {
 
   return (
     <div className="bg-gradient-to-r from-[#0a1f44] to-[#123456] scrollbar-hide min-h-screen">
+      <div className="bg-gradient-to-r from-[#0a1f44] to-[#123456] h-10 w-full">
       <Frame1321317519 />
+      </div>
       
       {/* Page Title */}
-      <h1 className="text-2xl sm:text-4xl font-bold text-white mb-4 sm:mb-6 px-4 sm:px-5 text-center">
+      <h1 className="text-2xl sm:text-4xl font-bold text-white mb-4 sm:mb-6 px-4 sm:px-5 text-center mt-15">
         Player Profiles
       </h1>
       

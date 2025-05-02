@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import '../../styles/SelectionCriteria.css';
 import Frame1321317519 from './Frame';
 
 const SelectionCriteria = () => {
-  const [openCategory, setOpenCategory] = useState(null); // Track which category is open
-
+  const [openCategory, setOpenCategory] = useState(null);
 
   const criteriaData = [
     {
@@ -127,25 +126,31 @@ const SelectionCriteria = () => {
   };
 
   return (
-    <div className="selection-criteria-container">
-      <Frame1321317519 />
-      <div className="selection-criteria-content">
-        <h1 className="page-title">Selection Criteria for Winners</h1>
+    <div className="selection-criteria-container bg-gradient-to-r from-[#0a1f44] to-[#123456] min-h-screen relative">
+      {/* Info icon positioned at top right */}
+      <div >
+        <Frame1321317519 />
+      </div>
 
-        <div className="criteria-dropdowns">
+      <div className="selection-criteria-content px-4 sm:px-6 py-6 max-w-4xl mx-auto pt-16" style={{marginTop:'130px',marginLeft:'10px',marginRight:'10px'}}>
+        <h1 className="page-title text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-6 text-center">
+          Selection Criteria for Winners
+        </h1>
+
+        <div className="criteria-dropdowns space-y-3 sm:space-y-4 mx-auto w-full md:w-5/6 lg:w-2/3">
           {criteriaData.map((criteria) => (
-            <div key={criteria.title} className="dropdown-item">
+            <div key={criteria.title} className="dropdown-item w-full">
               <button
-                className="dropdown-button"
+                className="dropdown-button w-full text-left text-sm sm:text-base px-4 py-3 sm:px-6 sm:py-4 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-all duration-200 flex justify-between items-center"
                 onClick={() => toggleCategory(criteria.title)}
               >
-                {criteria.title}
-                <span className="dropdown-arrow">
+                <span className="flex-grow text-center">{criteria.title}</span>
+                <span className="dropdown-arrow ml-2">
                   {openCategory === criteria.title ? '▲' : '▼'}
                 </span>
               </button>
               {openCategory === criteria.title && (
-                <div className="dropdown-content">
+                <div className="dropdown-content mt-2 p-4 sm:p-6 bg-white/5 text-white text-xs sm:text-sm rounded-lg">
                   {criteria.description}
                 </div>
               )}

@@ -212,6 +212,7 @@ const Winner25 = () => {
     paddingBottom: '1.5rem',// 6px
   },
   pageTitle1: {
+    marginTop:'50px',
     color: 'white',
     fontSize: '3rem',   // 5xl
     fontWeight: 'bold',

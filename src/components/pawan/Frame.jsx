@@ -9,9 +9,9 @@ const Frame1321317519 = () => {
     const navigate = useNavigate();
 
   return (
-    <div className="relative">
+    <div className="absolute top-0 left-0 w-full h-10 grid">
     {/* Header section with logo and menu icon */}
-    <div className="flex items-center h-[32px] pl-[10px] pt-3"> {/* Added left padding here */}
+    <div className="flex items-center justify-between h-[32px] pl-[10px] pt-3"> {/* Added left padding here */}
       {/* Picture3 1 2 Image now comes FIRST */}
       <img
         src={Picture312Image}
