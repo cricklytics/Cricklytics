@@ -8,8 +8,11 @@ import profImg from "../../../assets/sophita/HomePage/profpic.png";
 import { LockKeyholeIcon } from "lucide-react";
 
 import { auth, db } from "../../../firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc  } from "firebase/firestore";
 import { signOut } from "firebase/auth"; // ✅ Sign out import
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { FaPlus } from "react-icons/fa";
+
 
 const Sidebar = ({ isOpen, closeMenu }) => {
   const navigate = useNavigate();
@@ -18,6 +21,8 @@ const Sidebar = ({ isOpen, closeMenu }) => {
   const [userName, setUserName] = useState("Loading...");
   const [userEmail, setUserEmail] = useState("");
   const [userPhone, setUserPhone] = useState("");
+  const [profileImage, setProfileImage] = useState(null);
+
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -32,7 +37,9 @@ const Sidebar = ({ isOpen, closeMenu }) => {
             const userData = docSnap.data();
             setUserName(userData.firstName || "User");
             setUserPhone(userData.whatsapp || "No phone");
-          } else {
+            if (userData.profileImageUrl) setProfileImage(userData.profileImageUrl); // ✅
+          }
+           else {
             console.log("No such user document!");
             setUserName("User");
             setUserPhone("No phone");
@@ -51,6 +58,28 @@ const Sidebar = ({ isOpen, closeMenu }) => {
   
     fetchUserData();
   }, []);
+
+  
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+  
+    const storage = getStorage();
+    const storageRef = ref(storage, `profileImages/${auth.currentUser.uid}`);
+    
+    try {
+      await uploadBytes(storageRef, file);
+      const downloadURL = await getDownloadURL(storageRef);
+      setProfileImage(downloadURL);
+  
+      // Save image URL in Firestore
+      await updateDoc(doc(db, "users", auth.currentUser.uid), {
+        profileImageUrl: downloadURL,
+      });
+    } catch (err) {
+      console.error("Error uploading image:", err);
+    }
+  };
   
 
   // Sign out handler
@@ -80,9 +109,31 @@ const Sidebar = ({ isOpen, closeMenu }) => {
 
           {/* ✅ Dynamic Profile Section */}
           <div className="text-center py-4 px-4 mt-6 text-black">
-            <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-black text-white flex items-center justify-center text-2xl font-bold mb-4 mx-auto border-2 border-[#5DE0E6]">
-              {userName.charAt(0).toUpperCase()}
+            <div className="relative w-16 h-16 md:w-20 md:h-20 mx-auto mb-4">
+              {profileImage ? (
+                <img
+                  src={profileImage}
+                  alt="Profile"
+                  className="w-full h-full rounded-full object-cover border-2 border-[#5DE0E6]"
+                />
+              ) : (
+                <div className="w-full h-full rounded-full bg-black text-white flex items-center justify-center text-2xl font-bold border-2 border-[#5DE0E6]">
+                  {userName.charAt(0).toUpperCase()}
+                </div>
+              )}
+
+              {/* + Icon Overlay */}
+              <label className="absolute bottom-0 right-0 bg-white p-1 rounded-full cursor-pointer shadow-md">
+                <FaPlus className="text-black text-xs" />
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="hidden"
+                />
+              </label>
             </div>
+
 
             <h6 className="text-base md:text-lg font-bold">
               {userName}

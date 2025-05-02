@@ -364,7 +364,7 @@ const Landingpage = () => {
                     <input
                       type="text"
                       placeholder="Search"
-                      className="w-full bg-gray-100 rounded-lg py-1.5 pl-9 pr-3 text-sm focus:outline-none"
+                      className="w-full bg-gray-100 rounded-lg py-1.5 pl-9 pr-3 text-sm text-black focus:outline-none"
                     />
                   </div>
                 </div>
@@ -417,7 +417,7 @@ const Landingpage = () => {
                       <input
                         type="text"
                         placeholder="Write a message..."
-                        className="flex-1 border rounded-l-lg py-2 px-3 text-sm focus:outline-none"
+                        className="flex-1 border rounded-l-lg py-2 px-3 text-sm text-black-400 focus:outline-none"
                         value={messageInput}
                         onChange={(e) => setMessageInput(e.target.value)}
                       />
@@ -457,7 +457,7 @@ const Landingpage = () => {
             )}
           </div>
 
-            <FaUser className="cursor-pointer hover:scale-110" size={24} />
+            
           </div>
           
           
