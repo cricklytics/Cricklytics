@@ -28,10 +28,15 @@ export default function TeamDetails() {
   const teams = activeTab === 'myteam' ? myTeams : opponentTeams;
 
   return (
-<div className="min-h-screen p-4" style={{ backgroundColor: '#bfdaa4' }}>
+<div className="min-h-screen p-4" style={{
+      backgroundImage: 'linear-gradient(140deg,#080006 15%,#FF0077)',
+      backgroundRepeat: 'no-repeat',
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+    }}>
 
       {/* Top Navigation Bar */}
-      <div className="flex justify-between items-center p-4 bg-black/30 rounded-lg mb-5">
+      <div className="flex justify-between items-center p-4 rounded-lg mb-5">
         <div className="flex items-center gap-4" >
           <img 
             src={logo}
@@ -43,7 +48,7 @@ export default function TeamDetails() {
               e.target.src = "/images/Picture3 2.png";
             }}
           />
-          <span className="text-2xl font-bold text-black whitespace-nowrap text-shadow-[0_0_8px_rgba(93,224,230,0.4)] ">
+          <span className="text-2xl font-bold text-white whitespace-nowrap text-shadow-[0_0_8px_rgba(93,224,230,0.4)] ">
             Cricklytics
           </span>
         </div>
@@ -61,12 +66,12 @@ export default function TeamDetails() {
       
 
       {/* Tabs */}
-      <div className="flex justify-center space-x-12 text-black text-lg font-semibold border-b-4 border-black pb-2 mb-6">
+      <div className="flex justify-center space-x-12 text-white text-lg font-semibold border-b-4 border-white pb-2 mb-6" style={{marginTop:'70px'}}>
         {['myteam', 'opponent', 'following'].map((tab) => (
           <div
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`cursor-pointer ${activeTab === tab ? 'border-b-2 border-black' : ''}`}
+            className={`cursor-pointer ${activeTab === tab ? 'border-b-2 border-white text-blue-500' : ''}`}
           >
             {tab === 'myteam' ? 'My Team' : tab.charAt(0).toUpperCase() + tab.slice(1)}
           </div>
@@ -77,12 +82,12 @@ export default function TeamDetails() {
       <div className="max-w-xl mx-auto space-y-4">
         {activeTab === 'following' ? (
           <div>
-            <h2 className="text-black text-xl mb-4">Following Teams</h2>
+            <h2 className="text-white text-xl mb-4">Following Teams</h2>
             {followedTeams.length === 0 ? (
-              <p className="text-black">You are not following any teams yet.</p>
+              <p className="text-white">You are not following any teams yet.</p>
             ) : (
               followedTeams.map((teamName, idx) => (
-                <div key={idx} className="bg-white rounded-xl p-4 shadow-md">
+                <div key={idx} className="rounded-xl p-4 shadow-md shadow-[0_10px_30px_rgba(0,0,0,0.8)]">
                   <span className="text-lg font-semibold text-black">{teamName}</span>
                 </div>
               ))
@@ -92,7 +97,7 @@ export default function TeamDetails() {
           teams.map((team, idx) => (
             <div
               key={idx}
-              className="bg-white rounded-xl p-4 shadow-md relative overflow-hidden"
+              className="p-4 rounded-xl border border-white/20 shadow-[0_10px_30px_rgba(0,0,0,0.8)] bg-white/5 backdrop-blur"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
@@ -101,16 +106,16 @@ export default function TeamDetails() {
                     alt="team"
                     className="h-14 w-14 rounded-full mr-4 border-2 border-gray-300 object-cover"
                   />
-                  <span className="text-lg font-semibold text-black">{team.name}</span>
+                  <span className="text-lg font-semibold text-white">{team.name}</span>
                 </div>
 
-                <div className="text-right text-sm space-y-1 text-black">
+                <div className="text-right text-sm space-y-1 text-white">
                   <div className="flex items-center justify-end gap-2">
-                    <FaMapMarkerAlt className="text-black" />
+                    <FaMapMarkerAlt className="text-white" />
                     <span>{team.location}</span>
                   </div>
                   <div className="flex items-center justify-end gap-2">
-                    <FaRegCopyright className="text-black" />
+                    <FaRegCopyright className="text-white" />
                     <span>{team.captain}</span>
                   </div>
                 </div>
