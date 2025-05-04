@@ -14,9 +14,14 @@ const Stats = () => {
   };
 
   return (
-    <div className="min-h-full bg-gradient-to-b from-black to-[#001A80] bg-fixed text-white p-5">
+    <div className="min-h-full bg-fixed text-white p-5" style={{
+      backgroundImage: 'linear-gradient(140deg,#080006 15%,#FF0077)',
+      backgroundRepeat: 'no-repeat',
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+    }}>
       {/* Top Navigation Bar */}
-      <div className="flex justify-between items-center p-4 bg-black/30 rounded-lg mb-5">
+      <div className="flex justify-between items-center p-4 rounded-lg mb-5">
         <div className="flex items-center gap-4">
           <img 
             src={logo}
@@ -71,7 +76,7 @@ const Stats = () => {
       <div className="text-base sm:text-lg font-['Alegreya'] text-gray-300 mb-1 sm:mb-0">{user.location}</div>
       <div className="text-base sm:text-lg font-['Alegreya'] text-gray-300 mb-2 sm:mb-0 pr-0 sm:pr-4">{user.specification}</div>
       <button
-        className="px-6 py-2 bg-[#5DE0E6] text-white rounded-lg text-base sm:text-lg font-['Alegreya'] hover:bg-[#48C6EF] hover:text-cyan-300 transition-all duration-300"
+        className="p-4 rounded-xl bg-blue-500 text-white shadow-[0_10px_30px_rgba(0,0,0,0.9)] hover:-translate-y-1 transition transform"
         onClick={() => navigate("/insights")}
       >
         Insights
@@ -83,16 +88,18 @@ const Stats = () => {
 
 
         {/* Content Area */}
-        <div className="bg-[rgba(71,156,182,0.7)] p-8 rounded-xl shadow-lg border border-white/20">
+        <div className="p-8 rounded-xl border border-white/20 shadow-[0_10px_30px_rgba(0,0,0,0.8)] bg-white/5 backdrop-blur">
           <h2 className="text-2xl font-bold text-center mb-6 font-['Alegreya']">Player Stats Overview</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-[rgba(0,0,0,0.3)] p-6 rounded-lg shadow-md">
+          <div className="p-8 rounded-xl border border-white/50 shadow-inner shadow-[inset_0_20px_120px_rgba(0,0,0,1)] backdrop-blur">
+
               <h3 className="text-lg font-bold font-['Alegreya']">Recent Performance</h3>
               <p className="text-gray-300 mt-2">Last Match: 45 runs (30 balls), India vs Australia</p>
               <p className="text-gray-300">Average: 38.5</p>
               <p className="text-gray-300">Strike Rate: 135.2</p>
             </div>
-            <div className="bg-[rgba(0,0,0,0.3)] p-6 rounded-lg shadow-md">
+            <div className="p-8 rounded-xl border border-white/50 shadow-inner shadow-[inset_0_20px_120px_rgba(0,0,0,1)] backdrop-blur">
+
               <h3 className="text-lg font-bold font-['Alegreya']">Career Highlights</h3>
               <p className="text-gray-300 mt-2">Matches: 150</p>
               <p className="text-gray-300">Runs: 4,200</p>
