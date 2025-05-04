@@ -33,7 +33,7 @@ const Stats = () => {
         </div>
         
       </div>
-      <div className="flex gap-330 py-2">
+      <div className="flex justify-between p-2">
       <button 
             className="text-white bg-gray-600 px-4 py-2 rounded-lg hover:bg-gray-500"
             onClick={() => navigate(-1)}
@@ -48,29 +48,39 @@ const Stats = () => {
           </button>
           </div>
       {/* Horizontal Navigation Bar */}
-      <div className="max-w-5xl mx-auto">
-        <div className="flex items-center  gap-6 border-b border-white/20 mb-6 py-6">
-          <div className="flex items-center gap-2">
-            <img 
-              src={user.picture} 
-              alt="User Pic" 
-              className="w-25 h-25 rounded-full object-cover"
-              onError={(e) => {
-                e.target.onerror = null;
-                e.target.src = "/images/user-placeholder.png";
-              }}
-            />
-          </div>
-          <div className="text-4xl font-['Alegreya'] pr-70 text-gray-300">{user.name}</div>
-          <div className="text-lg font-['Alegreya'] text-gray-300">{user.location}</div>
-          <div className="text-lg font-['Alegreya'] text-gray-300">{user.specification}</div>
-          <button
-            className="px-6 py-2 bg-[#5DE0E6] text-white rounded-lg text-lg font-['Alegreya'] hover:bg-[#48C6EF] hover:text-cyan-300 transition-all duration-300"
-            onClick={() => navigate("/insights")}
-          >
-            Insights
-          </button>
-        </div>
+      <div className="max-w-5xl mx-auto px-4">
+  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6 border-b border-white/20 mb-6 py-6">
+    
+    {/* User Image and Name */}
+    <div className="flex items-center gap-3">
+    <img 
+  src={user.picture} 
+  alt="User Pic" 
+  className="w-24 h-24 rounded-full object-cover aspect-square"
+  onError={(e) => {
+    e.target.onerror = null;
+    e.target.src = "/images/user-placeholder.png";
+  }}
+/>
+
+      <div className="text-2xl sm:text-4xl font-['Alegreya'] text-gray-300">{user.name}</div>
+    </div>
+
+    {/* User Location, Spec and Button */}
+    <div className="flex flex-col sm:flex-row sm:items-center sm:gap-4 w-full sm:w-auto mt-4 sm:mt-0">
+      <div className="text-base sm:text-lg font-['Alegreya'] text-gray-300 mb-1 sm:mb-0">{user.location}</div>
+      <div className="text-base sm:text-lg font-['Alegreya'] text-gray-300 mb-2 sm:mb-0 pr-0 sm:pr-4">{user.specification}</div>
+      <button
+        className="px-6 py-2 bg-[#5DE0E6] text-white rounded-lg text-base sm:text-lg font-['Alegreya'] hover:bg-[#48C6EF] hover:text-cyan-300 transition-all duration-300"
+        onClick={() => navigate("/insights")}
+      >
+        Insights
+      </button>
+    </div>
+
+  </div>
+
+
 
         {/* Content Area */}
         <div className="bg-[rgba(71,156,182,0.7)] p-8 rounded-xl shadow-lg border border-white/20">

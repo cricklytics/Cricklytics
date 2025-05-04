@@ -16,11 +16,16 @@ export default function Highlights() {
   return (
     <div
     className="min-h-screen p-4 flex flex-col"
-    style={{ background: 'linear-gradient(to bottom right, #3e8e8e, #9b59b6)' }}
+    style={{
+      backgroundImage: 'linear-gradient(140deg,#080006 15%,#FF0077)',
+      backgroundRepeat: 'no-repeat',
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+    }}
   >
 
       {/* Top Navbar */}
-      <div className="flex justify-between items-center p-4 bg-black/30 rounded-lg mb-5">
+      <div className="flex justify-between items-center p-4 rounded-lg mb-5">
         <div className="flex items-center gap-4">
           <img
             src={logo}
@@ -31,7 +36,7 @@ export default function Highlights() {
               e.target.src = "/images/Picture3 2.png";
             }}
           />
-          <span className="text-2xl font-bold text-black whitespace-nowrap text-shadow-[0_0_8px_rgba(93,224,230,0.4)]">
+          <span className="text-2xl font-bold text-white whitespace-nowrap text-shadow-[0_0_8px_rgba(93,224,230,0.4)]">
             Cricklytics
           </span>
         </div>
@@ -49,22 +54,22 @@ export default function Highlights() {
 
 
       {/* Tabs */}
-      <div className="flex justify-center space-x-12 text-black text-lg font-semibold border-b-4 border-white pb-2 mb-6">
+      <div className="flex justify-center space-x-12 text-white text-lg font-semibold border-b-4 border-white pb-2 mt-5">
         <div
           onClick={() => setActiveTab('myteam')}
-          className={`cursor-pointer ${activeTab === 'myteam' ? 'border-b-2 border-white' : ''}`}
+          className={`cursor-pointer ${activeTab === 'myteam' ? 'border-b-2 border-white text-blue-500' : ''}`}
         >
           Highlights
         </div>
         <div
           onClick={() => setActiveTab('following')}
-          className={`cursor-pointer ${activeTab === 'following' ? 'border-b-2 border-white' : ''}`}
+          className={`cursor-pointer ${activeTab === 'following' ? 'border-b-2 border-white text-blue-500' : ''}`}
         >
           Photos
         </div>
         <div
           onClick={() => setActiveTab('all')}
-          className={`cursor-pointer ${activeTab === 'all' ? 'border-b-2 border-white' : ''}`}
+          className={`cursor-pointer ${activeTab === 'all' ? 'border-b-2 border-white text-blue-500' : ''}`}
         >
           Videos
         </div>
@@ -90,7 +95,7 @@ export default function Highlights() {
             <p className="text-lg font-medium mb-4 text-center text-black">
               We don’t have Highlights of this player yet but you can have yours!
             </p>
-            <button className="!bg-blue-600 text-white px-10 py-5 rounded-full text-xl font-semibold hover:bg-blue-700">
+            <button className="bg-[#70005A] text-white px-10 py-4 text-xl font-semibold rounded-md shadow-md shadow-black transition duration-300 hover:bg-[blue] hover:-translate-y-1">
               Go Live
             </button>
           </motion.div>

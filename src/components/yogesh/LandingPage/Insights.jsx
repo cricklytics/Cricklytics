@@ -121,9 +121,15 @@ const Insights = () => {
   };
 
   return (
-    <div className="min-h-full bg-gradient-to-b from-black to-[#001A80] bg-fixed text-white p-5">
+    <div className="min-h-full bg-fixed text-white p-5"
+    style={{
+      backgroundImage: 'linear-gradient(140deg,#080006 15%,#FF0077)',
+      backgroundRepeat: 'no-repeat',
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+    }}>
       {/* Top Navigation Bar */}
-      <div className="flex justify-between items-center p-4 bg-black/30 rounded-lg mb-5">
+      <div className="flex justify-between items-center p-4 rounded-lg mb-5">
         <div className="flex items-center gap-4">
           <img 
             src={logo}
@@ -140,7 +146,7 @@ const Insights = () => {
         </div>
        
       </div>
-      <div className="flex gap-330 py-2">
+      <div className="flex justify-between py-2">
       <button 
             className="text-white bg-gray-600 px-4 py-2 rounded-lg hover:bg-gray-500"
             onClick={() => navigate(-1)}
@@ -156,45 +162,47 @@ const Insights = () => {
           </div>
       {/* Horizontal Navigation Bar */}
       <div className="max-w-5xl mx-auto">
-        <div className="flex justify-center gap-4 border-b border-white/20 mb-6">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              className={`px-4 py-2 text-lg font-['Alegreya'] transition-all duration-300 ${
-                activeTab === tab.id
-                  ? "text-cyan-300 border-b-2 border-cyan-300"
-                  : "text-gray-300 hover:text-white"
-              }`}
-              onClick={() => {
-                setActiveTab(tab.id);
-                setActiveSubOption(tab.id === "overall" ? "default" : subOptions[tab.id][0].id);
-              }}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+      <div className="flex overflow-x-auto whitespace-nowrap gap-4 border-b border-white/20 mb-10 mt-10 px-4">
+  {tabs.map((tab) => (
+    <button
+      key={tab.id}
+      className={`px-4 py-2 text-lg font-['Alegreya'] transition-all duration-300 ${
+        activeTab === tab.id
+          ? "text-cyan-300 border-b-2 border-cyan-300"
+          : "text-gray-300 hover:text-white"
+      }`}
+      onClick={() => {
+        setActiveTab(tab.id);
+        setActiveSubOption(tab.id === "overall" ? "default" : subOptions[tab.id][0].id);
+      }}
+    >
+      {tab.label}
+    </button>
+  ))}
+</div>
+
 
         {/* Content Area */}
-        <div className="bg-[rgba(71,156,182,0.7)] p-8 rounded-xl shadow-lg border border-white/20">
+        <div className="p-8 rounded-xl border border-white/20 shadow-[0_15px_40px_rgba(0,0,0,0.9)] hover:-translate-y-2 transition duration-300">
           {activeTab !== "overall" && subOptions[activeTab].length > 0 && (
             <div>
               <h2 className="text-4xl font-bold text-center mb-6 font-['Alegreya']">{tabs.find(tab => tab.id === activeTab).label}</h2>
-              <div className="flex overflow-x-auto space-x-4 pb-4 scrollbar-thin scrollbar-thumb-cyan-300 scrollbar-track-gray-800">
-                {subOptions[activeTab].map((option) => (
-                  <button
-                    key={option.id}
-                    className={`flex-shrink-0 px-6 py-3 rounded-lg text-base font-['Alegreya'] transition-all duration-300 shadow-md ${
-                      activeSubOption === option.id
-                        ? "bg-[#48C6EF] text-white"
-                        : "bg-[#5DE0E6] text-white hover:bg-[#48C6EF] hover:text-cyan-300"
-                    }`}
-                    onClick={() => setActiveSubOption(option.id)}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
+              <div className="flex overflow-x-auto space-x-4 p-4 scrollbar-thin scrollbar-thumb-cyan-300 scrollbar-track-transparent">
+  {subOptions[activeTab].map((option) => (
+    <button
+      key={option.id}
+      className={`flex-shrink-0 px-6 py-3 rounded-lg text-base font-['Alegreya'] transition-all duration-300 shadow-[0_10px_30px_rgba(0,0,0,0.8)] ${
+        activeSubOption === option.id
+          ? "text-white bg-blue-500"
+          : " text-white hover:bg-[blue] hover:text-cyan-300"
+      }`}
+      onClick={() => setActiveSubOption(option.id)}
+    >
+      {option.label}
+    </button>
+  ))}
+</div>
+
             </div>
           )}
           <div className="mt-6">
