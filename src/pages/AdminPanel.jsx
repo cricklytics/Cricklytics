@@ -19,6 +19,13 @@ function AdminPanel() {
     image: '',
     videoUrl: ''
   });
+
+  const [aiData, setAiData] = useState({
+    prompt: '',
+    context: ''
+  });
+
+
   const [highlights, setHighlights] = useState([]);
 
   const handleChange = (e) => {
@@ -30,6 +37,10 @@ function AdminPanel() {
     setHighlightData(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleAiChange = (e) => {
+    const { name, value } = e.target;
+    setAiData(prev => ({ ...prev, [name]: value }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -77,23 +88,38 @@ function AdminPanel() {
       alert("Failed to add highlights");
     }
   };
+
+  const handleAiSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const aiId = aiData.prompt.toLowerCase().replace(/\s+/g, "_");
+      await setDoc(doc(db, "ai_assistance", aiId), aiData);
+      alert("AI data saved successfully!");
+      setAiData({
+        prompt: '',
+        context: ''
+      });
+    } catch (err) {
+      console.error("Error saving AI data:", err);
+      alert("Failed to save AI data");
+    }
+  };
   return (
     <div className="min-h-screen bg-gray-900 text-white p-10">
       <h2 className="text-3xl font-bold mb-6">Admin Panel - Add Player</h2>
-            {/* Toggle Buttons */}
+            {/* Toggle Tabs */}
       <div className="flex gap-4 mb-8">
-        <button
-          onClick={() => setActiveTab('player')}
-          className={`px-6 py-2 rounded ${activeTab === 'player' ? 'bg-blue-600' : 'bg-gray-700'}`}
-        >
-          Player
-        </button>
-        <button
-          onClick={() => setActiveTab('highlight')}
-          className={`px-6 py-2 rounded ${activeTab === 'highlight' ? 'bg-blue-600' : 'bg-gray-700'}`}
-        >
-          Highlights
-        </button>
+        {['player', 'highlight', 'ai'].map(tab => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`px-6 py-2 rounded capitalize ${
+              activeTab === tab ? 'bg-blue-600' : 'bg-gray-700'
+            }`}
+          >
+            {tab === 'ai' ? 'AI Assistance' : tab}
+          </button>
+        ))}
       </div>
 
       {activeTab === 'player' && (
@@ -159,6 +185,31 @@ function AdminPanel() {
           </form>
           </div>
           )}
+
+           {/* AI ASSISTANCE TAB */}
+      {activeTab === 'ai' && (
+        <form onSubmit={handleAiSubmit} className="space-y-4 max-w-xl">
+          {[
+            { label: "Prompt (question/input)", key: "prompt" },
+            { label: "Context or Description", key: "context" }
+          ].map(({ label, key }) => (
+            <div key={key}>
+              <label className="block mb-1">{label}</label>
+              <textarea
+                name={key}
+                value={aiData[key]}
+                onChange={handleAiChange}
+                className="w-full p-2 rounded bg-gray-800 border border-gray-700"
+                rows={4}
+                required
+              />
+            </div>
+          ))}
+          <button type="submit" className="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded text-white">
+            Save AI Prompt
+          </button>
+        </form>
+      )}
     </div>
   );
 }

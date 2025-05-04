@@ -1,9 +1,19 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import logo from '../../../assets/pawan/PlayerProfile/picture-312.png';
 import Userprof from '../../../assets/pawan/PlayerProfile/user-placeholder.png';
 import bot from '../../../assets/pawan/PlayerProfile/chitti_robot.png';
+import { db } from "../../../firebase"; // Adjust path if your firebase config is elsewhere
+import {
+  doc,
+  getDoc,
+  collection,
+  query as firestoreQuery, // Alias query to avoid conflict with function parameter
+  where,
+  getDocs,
+  limit
+} from "firebase/firestore";
 
 const AIAssistance = ({ isAIExpanded, setIsAIExpanded }) => {
   const navigate = useNavigate();
@@ -11,6 +21,8 @@ const AIAssistance = ({ isAIExpanded, setIsAIExpanded }) => {
   const [input, setInput] = useState("");
   const [isVoiceEnabled, setIsVoiceEnabled] = useState(false);
   const [isMinimized, setIsMinimized] = useState(true);
+
+  const audioRef = useRef(null);
 
   // Expanded dummy data for matches (scalable for real-time updates)
   const matches = [
@@ -41,53 +53,161 @@ const AIAssistance = ({ isAIExpanded, setIsAIExpanded }) => {
   ];
 
   // Expanded dummy API simulation for cricket-related queries
-  const getBotResponse = (query) => {
-    const lowerQuery = query.toLowerCase();
-    const responses = {
-      score: "India is at 120/2 after 15 overs vs Australia at Wankhede Stadium.",
-      "player stats": "Rohit Sharma: 4,200 runs, 8 centuries, 150 matches.",
-      hi: "Hello. I am Chitti, your cricket assistant. Ask about scores, stats, or match summaries!",
-      "match summary": "India vs Australia: India batting first, 50-run partnership between Rohit and Kohli.",
-      "upcoming matches": "Upcoming: Pakistan vs New Zealand on May 3, 2025, at Gaddafi Stadium.",
-      "team ranking": "Current T20I Rankings: 1. India, 2. Australia, 3. England.",
-      "player profile": "Virat Kohli: Right-hand batsman, 4,500 runs, 9 centuries, known for aggressive play.",
-      default: "Sorry, I didn't understand that. Try asking about scores, stats, or match summaries!",
+  const getBotResponse = async (userInput) => {
+    const lowerQuery = userInput.toLowerCase().trim();
+    const ultimateFallback = {
+        text: "Sorry, I couldn't find an answer for that right now.",
+        audioUrl: null
     };
 
-    for (const key in responses) {
-      if (lowerQuery.includes(key)) {
-        return responses[key];
-      }
+    if (!lowerQuery) {
+        return ultimateFallback;
     }
-    return responses.default;
-  };
+
+    try {
+        // 1. Query the collection for a document where the 'prompt' field matches the user input
+        const assistanceCol = collection(db, "ai_assistance");
+        const q = firestoreQuery(
+            assistanceCol,
+            where("prompt", "==", lowerQuery), // Query the 'prompt' field
+            limit(1) // We only expect/need one match
+        );
+
+        console.log(`Executing query: where("prompt", "==", "${lowerQuery}")`);
+        const querySnapshot = await getDocs(q);
+
+        if (!querySnapshot.empty) {
+            // Match found based on the 'prompt' field
+            const docSnap = querySnapshot.docs[0]; // Get the first matching document
+            const data = docSnap.data();
+            console.log(`Firestore Data found via query (Doc ID: ${docSnap.id}):`, data);
+            return {
+                text: data.context || "Response context is missing.",
+                audioUrl: data.audioUrl || null
+            };
+        } else {
+            // 2. No match found via query, try fetching the 'default' document by ID
+            console.log(`No document found matching prompt: "${lowerQuery}". Trying 'default'.`);
+            const defaultDocRef = doc(db, "ai_assistance", "default");
+            const defaultDocSnap = await getDoc(defaultDocRef);
+
+            if (defaultDocSnap.exists()) {
+                // Default document found, return its data
+                const defaultData = defaultDocSnap.data();
+                console.log("Firestore Data for 'default':", defaultData);
+                return {
+                    text: defaultData.context || "Default response context is missing.",
+                    audioUrl: defaultData.audioUrl || null
+                };
+            } else {
+                // 3. Neither specific prompt query nor 'default' document ID found
+                console.log("No 'default' document found either.");
+                return ultimateFallback;
+            }
+        }
+    } catch (error) {
+        console.error("Error fetching Firestore document:", error);
+        // Check if the error is about a missing index
+         if (error.code === 'failed-precondition') {
+             console.error("Firestore query failed. This often means you need to create an index. Check the Firebase console for a link to create it, usually for the 'prompt' field in the 'ai_assistance' collection.");
+             // You might want to return a more specific error message here
+             return {
+                 text: "Sorry, there was a configuration issue fetching the response. Please try again later.",
+                 audioUrl: null
+             };
+         }
+        // Return ultimate fallback on any other fetch error
+        return ultimateFallback;
+    }
+};
 
   // Handle sending a message
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!input.trim()) return;
 
-    const userMessage = { text: input, sender: "user", timestamp: new Date() };
-    setMessages([...messages, userMessage]);
-
-    // Simulate bot response
-    setTimeout(() => {
-      const botResponse = { 
-        text: getBotResponse(input), 
-        sender: "bot", 
-        timestamp: new Date() 
-      };
-      setMessages((prev) => [...prev, botResponse]);
-
-      // Read response aloud if voice is enabled
-      if (isVoiceEnabled && window.speechSynthesis) {
-        const utterance = new SpeechSynthesisUtterance(botResponse.text);
-        utterance.lang = "en-US";
-        window.speechSynthesis.speak(utterance);
-      }
-    }, 500);
-
+    const currentInput = input;
+    const userMessage = { text: currentInput, sender: "user", timestamp: new Date() };
+    setMessages((prev) => [...prev, userMessage]);
     setInput("");
+
+    const responseData = await getBotResponse(currentInput);
+
+    if (responseData.audioUrl) {
+        console.log("Audio URL:", responseData.audioUrl);
+    } else {
+        console.log("No audio URL found for this response.");
+    }
+
+    // Add the text message to the chat immediately (or after a short delay)
+    // We separate adding text and playing audio slightly
+     setTimeout(() => {
+        const botMessage = {
+            text: responseData.text,
+            sender: "bot",
+            timestamp: new Date()
+        };
+        setMessages((prev) => [...prev, botMessage]);
+
+        // Play audio from URL if voice is enabled and URL exists
+        if (isVoiceEnabled && responseData.audioUrl) {
+             // Optional: Stop any previously playing audio
+             if (audioRef.current) {
+                 audioRef.current.pause();
+                 audioRef.current.currentTime = 0; // Reset time
+             }
+
+            try {
+                // Create a new Audio object and store it in the ref
+                audioRef.current = new Audio(responseData.audioUrl);
+
+                // Attempt to play the audio
+                audioRef.current.play()
+                    .then(() => {
+                        console.log("Audio playback started successfully.");
+                        // Optional: Add event listener for when audio finishes
+                        audioRef.current.addEventListener('ended', () => {
+                            console.log("Audio playback finished.");
+                            audioRef.current = null; // Clear ref when done
+                        });
+                    })
+                    .catch(error => {
+                        console.error("Error playing audio:", error);
+                        // Handle playback error (e.g., browser policy, invalid URL)
+                        // Maybe show an error icon in the chat?
+                        audioRef.current = null; // Clear ref on error
+                    });
+            } catch (error) {
+                 console.error("Error creating Audio object:", error);
+                 // This might happen if the URL is fundamentally wrong
+            }
+
+        }
+        // Remove the old TTS logic completely
+        // if (isVoiceEnabled && window.speechSynthesis) {
+        //   const utterance = new SpeechSynthesisUtterance(botMessage.text);
+        //   utterance.lang = "en-US";
+        //   window.speechSynthesis.speak(utterance);
+        // }
+
+    }, 100); // Delay before showing bot message and playing audio
+};
+useEffect(() => {
+  return () => {
+      if (audioRef.current) {
+          audioRef.current.pause();
+          audioRef.current = null;
+          console.log("Audio stopped on component unmount/cleanup.");
+      }
   };
+}, []);
+
+useEffect(() => {
+   if (!isVoiceEnabled && audioRef.current) {
+      audioRef.current.pause();
+      // Optionally reset currentTime: audioRef.current.currentTime = 0;
+      console.log("Audio paused because voice was disabled.");
+   }
+}, [isVoiceEnabled]);
 
   return (
     <div className="min-h-full bg-gradient-to-b from-black to-[#001A80] bg-fixed text-white p-5">

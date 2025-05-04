@@ -243,3 +243,59 @@ exports.generateWelcomeAudio = onDocumentCreated("users/{userId}", async (event)
         log("❌ Failed to generate welcome audio", err.message);
     }
 });
+
+exports.generateAiAssistanceAudio = onDocumentCreated("ai_assistance/{aiId}", async (event) => {
+    const snap = event.data;
+    if (!snap) {
+        log("❌ No AI snapshot data received.");
+        return;
+    }
+
+    const aiData = snap.data();
+    const aiId = event.params.aiId;
+
+    const text = aiData.context;
+    if (!text || text.trim().length === 0) {
+        log("⚠️ No context text provided.");
+        return;
+    }
+
+    const request = {
+        input: { text },
+        voice: {
+            languageCode: "en-IN",
+            ssmlGender: "MALE",
+            name: "en-IN-Wavenet-C",
+        },
+        audioConfig: {
+            audioEncoding: "MP3",
+            speakingRate: 1.0,
+            pitch: 0.0,
+            volumeGainDb: 0.0,
+            effectsProfileId: ["handset-class-device"],
+        },
+    };
+
+    try {
+        const [response] = await client.synthesizeSpeech(request);
+        const fileName = `ai_audio/${aiId}.mp3`;
+        const tempFilePath = path.join("/tmp", `${aiId}.mp3`);
+
+        await util.promisify(fs.writeFile)(tempFilePath, response.audioContent, "binary");
+        log("💾 AI audio saved locally", tempFilePath);
+
+        await storage.bucket().upload(tempFilePath, {
+            destination: fileName,
+            metadata: { contentType: "audio/mpeg" },
+        });
+        log("🚀 AI audio uploaded to Firebase Storage", fileName);
+
+        const fileUrl = `https://firebasestorage.googleapis.com/v0/b/${storage.bucket().name}/o/${encodeURIComponent(fileName)}?alt=media`;
+
+        await db.collection("ai_assistance").doc(aiId).update({ audioUrl: fileUrl });
+        log("✅ AI audio URL updated in Firestore", fileUrl);
+    } catch (error) {
+        log("❌ Error generating/storing AI voice", error.message);
+    }
+});
+
