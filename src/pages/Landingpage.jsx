@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { FaBell, FaUser, FaSearch, FaComment, FaTimes, FaPaperPlane } from "react-icons/fa";
+import { FaBell, FaUser, FaSearch, FaComment, FaTimes, FaPaperPlane, FaPlus, FaUpload } from "react-icons/fa";
 import { Search } from 'lucide-react'; 
 import Sidebar from "../components/sophita/HomePage/Sidebar";
 import mImg from '../assets/sophita/HomePage/player.png';
@@ -31,11 +31,29 @@ const Landingpage = () => {
     { id: 3, image: fr1, name: 'Friend 3' }
   ]);
   const [editingProfileId, setEditingProfileId] = useState(null);
+  const [activeTab, setActiveTab] = useState("forYou"); // "forYou", "following", "reels"
  
   const [highlightsData, setHighlightsData] = useState([]);
+  const [followersData, setFollowersData] = useState([
+    { id: 1, name: "Virat Kohli", image: fr1, isFollowing: true },
+    { id: 2, name: "MS Dhoni", image: fr2, isFollowing: true },
+    { id: 3, name: "Rohit Sharma", image: fr1, isFollowing: false },
+    { id: 4, name: "Jasprit Bumrah", image: fr2, isFollowing: true },
+    { id: 5, name: "Hardik Pandya", image: fr1, isFollowing: false },
+  ]);
+  const [reelsData, setReelsData] = useState([
+    { id: 1, title: "Best Wickets of IPL 2023", videoUrl: "https://example.com/reel1", likes: 1245 },
+    { id: 2, title: "Top 6s in World Cup", videoUrl: "https://example.com/reel2", likes: 876 },
+    { id: 3, title: "Fielding Masterclass", videoUrl: "https://example.com/reel3", likes: 543 },
+    { id: 4, title: "Captaincy Moments", videoUrl: "https://example.com/reel4", likes: 321 },
+    { id: 3, title: "Fielding Masterclass", videoUrl: "https://example.com/reel3", likes: 543 },
+    { id: 4, title: "Captaincy Moments", videoUrl: "https://example.com/reel4", likes: 321 },
+  ]);
+
   const highlightRef = useRef(null);
   const searchBarRef = useRef(null);
   const fileInputRef = useRef(null);
+  const reelInputRef = useRef(null);
  
   const [isAIExpanded, setIsAIExpanded] = useState(false);
 
@@ -47,6 +65,8 @@ const Landingpage = () => {
   const searchRef = useRef(null);
   const chatRef = useRef(null);
   const inputRef = useRef(null);
+
+  const stickyHeaderRef = useRef(null);
 
   const handleToggleSearch = () => {
     setShowSearch(!showSearch);
@@ -187,17 +207,19 @@ const Landingpage = () => {
   }, [highlightVisible]);
  
   const handleMainClick = (e) => {
-    // Don't hide highlights if clicking on profile image or file input
+    // Don't hide highlights if clicking on specific elements OR within the sticky header
     if (
       isPriceVisible ||
       profileStoryVisible ||
       (highlightRef.current && highlightRef.current.contains(e.target)) ||
       (searchBarRef.current && searchBarRef.current.contains(e.target)) ||
-      e.target.closest('.profile-image-container') ||
+      (stickyHeaderRef.current && stickyHeaderRef.current.contains(e.target)) || // <-- Add this check
+     //  e.target.closest('.profile-image-container') || // This is now covered by stickyHeaderRef, can be removed if desired
       e.target === fileInputRef.current
     ) {
-      return;
+      return; // Do nothing if click is inside these areas
     }
+    // Only hide if the click is truly on the background
     setHighlightVisible(false);
   };
  
@@ -219,6 +241,24 @@ const Landingpage = () => {
     fileInputRef.current.click();
     setHighlightVisible(true); // Ensure highlights remain visible
   };
+
+  const handleReelUploadClick = () => {
+    reelInputRef.current.click();
+  };
+
+  const handleReelUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Here you would typically upload to your backend
+      const newReel = {
+        id: reelsData.length + 1,
+        title: `My Reel ${reelsData.length + 1}`,
+        videoUrl: URL.createObjectURL(file),
+        likes: 0
+      };
+      setReelsData(prev => [newReel, ...prev]);
+    }
+  };
  
   const handleImageChange = (e) => {
     const file = e.target.files[0];
@@ -236,6 +276,16 @@ const Landingpage = () => {
     }
     setEditingProfileId(null);
   };
+
+  const toggleFollow = (id) => {
+    setFollowersData(prev => 
+      prev.map(follower => 
+        follower.id === id 
+          ? { ...follower, isFollowing: !follower.isFollowing } 
+          : follower
+      )
+    );
+  };
  
   return (
     <div className="bg-[#02101E]">
@@ -244,12 +294,19 @@ const Landingpage = () => {
         onClick={handleMainClick}
         className={`fixed inset-0 z-10 bg-[#02101E] transition-all duration-700 ease-in-out ${highlightVisible ? "bg-opacity-40 backdrop-blur-md" : ""}`}
       >
-        {/* Hidden file input */}
+        {/* Hidden file inputs */}
         <input
           type="file"
           ref={fileInputRef}
           onChange={handleImageChange}
           accept="image/*"
+          style={{ display: 'none' }}
+        />
+        <input
+          type="file"
+          ref={reelInputRef}
+          onChange={handleReelUpload}
+          accept="video/*"
           style={{ display: 'none' }}
         />
  
@@ -474,21 +531,23 @@ const Landingpage = () => {
           }`}
           style={{ height: "calc(100vh - 4rem)" }}
         >
-          <div className={`sticky w-full md:w-[80%] top-0 z-20 bg-[rgba(2,16,30,0.7)] bg-opacity-40 backdrop-blur-md pb-2 md:pb-4 ${highlightVisible && !showChat ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
+          <div
+          ref={stickyHeaderRef}
+          className={`sticky w-full md:w-[80%] top-0 z-20 bg-[rgba(2,16,30,0.7)] bg-opacity-40 backdrop-blur-md pb-2 md:pb-4 ${highlightVisible && !showChat ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
             <div className="w-full flex justify-center pt-2 md:pt-4 caret-none">
               <div className="w-full md:w-[50%] flex justify-center gap-2 md:gap-3 md:ml-5 text-white text-sm md:text-xl">
                 {profileImages.map((profile) => (
                   <div key={profile.id} className="relative profile-image-container">
                     <button
-  id="profiles-of-users"
-  className="w-13 h-13 md:w-20 md:h-20 rounded-full bg-cover bg-center"
-  style={{ backgroundImage: `url(${profile.image})` }}
-  onClick={(e) => {
-    e.stopPropagation();
-    handleProfileClick(profile);
-  }}
->
-</button>
+                      id="profiles-of-users"
+                      className="w-13 h-13 md:w-20 md:h-20 rounded-full bg-cover bg-center"
+                      style={{ backgroundImage: `url(${profile.image})` }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleProfileClick(profile);
+                      }}
+                    >
+                    </button>
  
                     <button
                       className="absolute -top-1 -right-1 h-5 w-5 rounded-full pb-2 bg-gray-800 flex items-center justify-center text-xl text-white font-bold"
@@ -504,66 +563,167 @@ const Landingpage = () => {
             {/* Tabs */}
             <div className="w-full flex justify-center mt-2 md:mt-4">
               <div className="w-full md:w-[50%] flex justify-around text-white text-sm md:text-xl underline cursor-pointer">
-                <span className="text-base md:text-2xl font-bold hover:text-[#800080]">For You</span>
-                <span className="text-base md:text-2xl font-bold hover:text-[#800080]">Following</span>
-                <span className="text-base md:text-2xl font-bold hover:text-[#800080]">Reels</span>
+                <span 
+                  className={`text-base md:text-2xl font-bold hover:text-[#800080] ${activeTab === 'forYou' ? 'text-[#800080]' : ''}`}
+                  onClick={() => setActiveTab('forYou')}
+                >
+                  For You
+                </span>
+                <span 
+                  className={`text-base md:text-2xl font-bold hover:text-[#800080] ${activeTab === 'following' ? 'text-[#800080]' : ''}`}
+                  onClick={() => setActiveTab('following')}
+                >
+                  Following
+                </span>
+                <span 
+                  className={`text-base md:text-2xl font-bold hover:text-[#800080] ${activeTab === 'reels' ? 'text-[#800080]' : ''}`}
+                  onClick={() => setActiveTab('reels')}
+                >
+                  Reels
+                </span>
               </div>
             </div>
           </div>
  
-          {/* Highlights */}
+          {/* Content based on active tab */}
           <div
             id="highlight"
             ref={highlightRef}
             className={`transition-opacity duration-700 ease-in-out mt-10 md:mt-0 flex justify-center flex-wrap w-full h-full overflow-y-auto scrollbar-hide gap-2 md:gap-4
               ${highlightVisible && !isAIExpanded ? "opacity-100" : "opacity-0"} flex-grow`}
           >
-            {highlightsData.length > 0 ? highlightsData.map((item) => (
-              <div
-                key={item.id}
-                className="relative h-100 sm:w-[90%] md:w-[45%] bg-gradient-to-b from-[#0A5F68] to-[#000000] aspect-video rounded-lg md:rounded-xl mx-2 md:mx-100 my-4 md:my-10 overflow-hidden shadow-lg md:shadow-2xl border border-white/20 group cursor-pointer transition-transform hover:scale-[1.02]"
-                onMouseEnter={() => setHovered(item.id)}
-                onMouseLeave={() => setHovered(null)}
-              >
-                {hovered === item.id ? (
-                  <iframe
-                    src={item.videoUrl}
-                    title={`Highlight ${item.title}`}
-                    frameBorder="0"
-                    allow="autoplay; encrypted-media"
-                    allowFullScreen
-                    className="absolute inset-0 w-full h-[90%] p-2 md:p-5 pb-2 md:pb-12 brightness-125"
-                  />
-                ) : (
-                  <>
-                    <img
-                      src={item.image}
-                      alt={`Thumbnail ${item.title}`}
-                      className="w-full h-[90%] object-cover brightness-110 p-2 md:p-5 pb-12 md:pb-20"
+            {activeTab === 'forYou' && (
+              highlightsData.length > 0 ? highlightsData.map((item) => (
+                <div
+                  key={item.id}
+                  className="relative h-100 sm:w-[90%] md:w-[45%] bg-gradient-to-b from-[#0A5F68] to-[#000000] aspect-video rounded-lg md:rounded-xl mx-2 md:mx-100 my-4 md:my-10 overflow-hidden shadow-lg md:shadow-2xl border border-white/20 group cursor-pointer transition-transform hover:scale-[1.02]"
+                  onMouseEnter={() => setHovered(item.id)}
+                  onMouseLeave={() => setHovered(null)}
+                >
+                  {hovered === item.id ? (
+                    <iframe
+                      src={item.videoUrl}
+                      title={`Highlight ${item.title}`}
+                      frameBorder="0"
+                      allow="autoplay; encrypted-media"
+                      allowFullScreen
+                      className="absolute inset-0 w-full h-[90%] p-2 md:p-5 pb-2 md:pb-12 brightness-125"
                     />
-                   
-                  </>
-                 
-                )}
-                 
+                  ) : (
+                    <>
+                      <img
+                        src={item.image}
+                        alt={`Thumbnail ${item.title}`}
+                        className="w-full h-[90%] object-cover brightness-110 p-2 md:p-5 pb-12 md:pb-20"
+                      />
+                    </>
+                  )}
  
-                <div className="absolute h-full inset-0 grid items-end justify-start">
-                  <div className="grid">
-                  <h3 className="text-white text-sm md:text-lg font-bold m-0 ml-3 md:mr-9">
-                      {item.title}
-                    </h3>
-                    <div className="flex justify-evenly items-end  h-12 w-40 md:w-60 mr-2 mt-3 md:mr-5 mb-2 md:mb-5">
-                    <button onClick={() => toggleLike(item.id)} className="z-10">
-                      <img src={likedVideos[item.id] ? alike : blike} alt="Like" className="w-6 h-6 md:w-8 md:h-8" />
-                    </button>
-                    <img src={comment} alt="Comment" className="w-6 h-6 md:w-8 md:h-8 z-10" />
-                    <img src={share} alt="Share" className="w-6 h-6 md:w-8 md:h-8 z-7" />
+                  <div className="absolute h-full inset-0 grid items-end justify-start">
+                    <div className="grid">
+                      <h3 className="text-white text-sm md:text-lg font-bold m-0 ml-3 md:mr-9">
+                        {item.title}
+                      </h3>
+                      <div className="flex justify-evenly items-end  h-12 w-40 md:w-60 mr-2 mt-3 md:mr-5 mb-2 md:mb-5">
+                        <button onClick={() => toggleLike(item.id)} className="z-10">
+                          <img src={likedVideos[item.id] ? alike : blike} alt="Like" className="w-6 h-6 md:w-8 md:h-8" />
+                        </button>
+                        <img src={comment} alt="Comment" className="w-6 h-6 md:w-8 md:h-8 z-10" />
+                        <img src={share} alt="Share" className="w-6 h-6 md:w-8 md:h-8 z-7" />
+                      </div>
+                    </div>
                   </div>
                 </div>
+              )) : (
+                <p className="text-white mt-10">No highlights yet. Please add some!</p>
+              )
+            )}
+
+{activeTab === 'following' && (
+  <div className="w-1/2 p-4 overflow-y-auto">
+    <h2 className="text-white text-2xl font-bold mb-6 ml-4">People You Follow</h2>
+    <div className="flex flex-col gap-4 px-4">
+      {followersData.map(follower => (
+        <div key={follower.id} className="bg-[#0D171E] rounded-lg p-4 flex items-center justify-between">
+          <div className="flex items-center">
+            <img 
+              src={follower.image} 
+              alt={follower.name}
+              className="w-12 h-12 rounded-full object-cover mr-4"
+            />
+            <div>
+              <h3 className="text-white font-semibold">{follower.name}</h3>
+              <p className="text-gray-400 text-sm">
+                {follower.isFollowing ? "Following" : "Not Following"}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => toggleFollow(follower.id)}
+            className={`px-4 py-2 rounded-full text-sm font-medium ${
+              follower.isFollowing 
+                ? "bg-gray-700 text-white hover:bg-gray-600"
+                : "bg-blue-600 text-white hover:bg-blue-700"
+            }`}
+          >
+            {follower.isFollowing ? "Unfollow" : "Follow"}
+          </button>
+        </div>
+      ))}
+    </div>
+  </div>
+)}
+
+            {activeTab === 'reels' && (
+              <div className="w-full md:w-[80%]">
+                {/* Upload Reel Button */}
+                <div className="p-4 flex justify-center">
+                  <button
+                    onClick={handleReelUploadClick}
+                    className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-full font-medium hover:opacity-90 transition-opacity"
+                  >
+                    <FaUpload />
+                    Upload Reel
+                  </button>
+                </div>
+
+                {/* Reels Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-4">
+                  {reelsData.map(reel => (
+                    <div key={reel.id} className="bg-[#0D171E] rounded-xl overflow-hidden shadow-lg">
+                      <div className="relative pt-[177.78%]"> {/* 16:9 aspect ratio */}
+                        <iframe
+                          src={reel.videoUrl}
+                          title={reel.title}
+                          frameBorder="0"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                          className="absolute top-0 left-0 w-full h-full"
+                        ></iframe>
+                      </div>
+                      <div className="p-4">
+                        <h3 className="text-white font-semibold mb-2">{reel.title}</h3>
+                        <div className="flex justify-between items-center">
+                          <div className="flex items-center">
+                            <button onClick={() => toggleLike(reel.id)} className="mr-2">
+                              <img src={likedVideos[reel.id] ? alike : blike} alt="Like" className="w-5 h-5" />
+                            </button>
+                            <span className="text-white text-sm">{reel.likes} likes</span>
+                          </div>
+                          <div className="flex gap-3">
+                            <button className="text-white">
+                              <img src={comment} alt="Comment" className="w-5 h-5" />
+                            </button>
+                            <button className="text-white">
+                              <img src={share} alt="Share" className="w-5 h-5" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
-            )) : (
-              <p className="text-white mt-10">No highlights yet. Please add some!</p>
             )}
           </div>
         </div>
@@ -572,11 +732,7 @@ const Landingpage = () => {
         isAIExpanded={isAIExpanded}
         setIsAIExpanded={setIsAIExpanded}
       />
-
-
-      
     </div>
-    
   );
 };
  

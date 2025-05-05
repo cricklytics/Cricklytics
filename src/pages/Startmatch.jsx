@@ -22,12 +22,12 @@ const PlayerSelector = ({ teamA, teamB }) => {
     "Paul van Meekeren"
   ];
 
-  const currentDate = new Date();
-  const formattedDate = currentDate.toLocaleDateString('en-US', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric'
-  });
+  // const currentDate = new Date();
+  // const formattedDate = currentDate.toLocaleDateString('en-US', {
+  //   day: 'numeric',
+  //   month: 'short',
+  //   year: 'numeric'
+  // });
 
   const filteredLeftPlayers = players.filter(player =>
     player.toLowerCase().includes(leftSearch.toLowerCase())
@@ -47,41 +47,27 @@ const PlayerSelector = ({ teamA, teamB }) => {
       return newSelection;
     });
   };
+  const handleActualStartMatch = () => {
+    // Logic before navigating (e.g., save selected players)
+    console.log("Starting match with players:", selectedPlayers);
+    // Navigate to the actual scoring page/component route
+    navigate('/StartMatchPlayers'); // Keep this navigation for now
+};
 
   return (
-    <div className="fixed inset-0 overflow-y-auto" style={{
-      backgroundImage: `url(${bgImg})`,
-      backgroundSize: 'cover',
-      backgroundPosition: 'center',
-      backgroundRepeat: 'no-repeat',
-      minHeight: '100vh'
-    }}>
-      <div className="relative min-h-screen w-full">
-        {/* Header - Same as in Startmatch */}
-        <motion.div 
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="flex justify-between items-center p-4 w-full bg-opacity-80"
-        >
-          <div className="flex items-center">
-            <motion.img
-              src={logo}
-              alt="Cricklytics Logo"
-              className="h-7 w-7 md:h-10 object-contain block select-none"
-              whileHover={{ scale: 1.05 }}
-            />
-            <span className="text-2xl font-bold text-white pl-3">Cricklytics</span>
-          </div>
-          <motion.div 
-            className="text-white bg-opacity-100 text-center w-33 md:w-40 px-4 py-2 rounded-lg font-medium"
-            whileHover={{ scale: 1.05 }}
-          >
-            Schedule: {formattedDate}
-          </motion.div>
-        </motion.div>
-
-        {/* Player Selector Content */}
+    <div
+      className="w-full relative py-8" // Use padding instead of margin on inner elements now
+      style={{
+        backgroundImage: `url(${bgImg})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+        backgroundAttachment: 'fixed', // Make background fixed relative to viewport if desired
+        minHeight: 'calc(100vh - H - N)', // Rough calculation: Viewport height minus header/nav height
+                                         // Replace H, N with actual pixel values or use refs if needed
+                                         // Or simply use a large value like minHeight: '80vh'
+      }}
+    >
         <div className="w-full px-4 md:px-8 py-8 mx-auto max-w-7xl">
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
@@ -206,18 +192,17 @@ const PlayerSelector = ({ teamA, teamB }) => {
         className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all duration-300 w-full"
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
-        onClick={() => navigate('/match-start')}
+        onClick={handleActualStartMatch}
       >
         Start Match
       </motion.button>
     </div>
           </motion.div>
-        </div>
-      </div>
+    </div>
     </div>
   );
 };
-const Startmatch = () => {
+const Startmatch = ({ initialTeamA = '', initialTeamB = '', onMatchSetupComplete }) => {
   const [selectedTeamA, setSelectedTeamA] = useState('');
   const [selectedTeamB, setSelectedTeamB] = useState('');
   const [tossWinner, setTossWinner] = useState('');
@@ -225,17 +210,25 @@ const Startmatch = () => {
   const [overs, setOvers] = useState('');
   const [scorer, setScorer] = useState('');
   const [showPlayerSelector, setShowPlayerSelector] = useState(false);
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
 
   const teams = ['India', 'Australia', 'England', 'Pakistan', 'New Zealand', 'Netherlands', 'South Africa'];
   const scorers = ['John Doe', 'Jane Smith', 'Mike Johnson'];
 
-  const currentDate = new Date();
-  const formattedDate = currentDate.toLocaleDateString('en-US', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric'
-  });
+  // const currentDate = new Date();
+  // const formattedDate = currentDate.toLocaleDateString('en-US', {
+  //   day: 'numeric',
+  //   month: 'short',
+  //   year: 'numeric'
+  // });
+  // Effect to update state if props change after initial render (optional but good practice)
+  useEffect(() => {
+    setSelectedTeamA(initialTeamA);
+}, [initialTeamA]);
+
+useEffect(() => {
+    setSelectedTeamB(initialTeamB);
+}, [initialTeamB]);
 
   const handleNext = () => {
     if (!selectedTeamA || !selectedTeamB || !overs) {
@@ -245,19 +238,48 @@ const Startmatch = () => {
     setShowPlayerSelector(true);
   };
 
+  // If showing player selector, render it (it's now modified to fit inline)
   if (showPlayerSelector) {
-    return <PlayerSelector teamA={selectedTeamA} teamB={selectedTeamB} />;
+    return (
+      <PlayerSelector
+        teamA={selectedTeamA}
+        teamB={selectedTeamB}
+        // Pass the callback if needed for Option 2 in PlayerSelector
+        // onStartMatchClick={onMatchSetupComplete}
+       />
+     );
   }
+  const hasValue = (value) => value !== '' && value !== null && value !== undefined;
+
 
   return (
-    <div className="fixed inset-0 overflow-y-auto" style={{
-      backgroundImage: `url(${bgImg})`,
-      backgroundSize: 'cover',
-      backgroundPosition: 'center',
-      backgroundRepeat: 'no-repeat',
-      minHeight: '100vh'
-    }}>
-      <div className="relative min-h-screen w-full">        
+    // <div className="fixed inset-0 overflow-y-auto" style={{
+    //   backgroundImage: `url(${bgImg})`,
+    //   backgroundSize: 'cover',
+    //   backgroundPosition: 'center',
+    //   backgroundRepeat: 'no-repeat',
+    //   minHeight: '100vh'
+    // }}>
+    <div
+      className="w-full relative py-8" // Use padding instead of margin on inner elements now
+      style={{
+        backgroundImage: `url(${bgImg})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+        backgroundAttachment: 'fixed', // Make background fixed relative to viewport if desired
+        minHeight: 'calc(100vh - H - N)', // Rough calculation: Viewport height minus header/nav height
+                                         // Replace H, N with actual pixel values or use refs if needed
+                                         // Or simply use a large value like minHeight: '80vh'
+      }}
+    >
+    <motion.div
+       initial={{ opacity: 0 }}
+       animate={{ opacity: 1 }}
+       transition={{ duration: 0.5 }}
+       className="w-full" // Takes width from parent (<main>)
+     >
+      {/* <div className="relative min-h-screen w-full">         */}
         {/* Main Content */}
         <div className="w-full px-4 md:px-8 py-8 mx-auto max-w-7xl">
           <motion.h1 
@@ -288,7 +310,7 @@ const Startmatch = () => {
         <div className="w-full">
           <label className="block text-gray-700 mb-2 font-medium">Team A</label>
           <select
-            className="w-full p-3 border-2 border-blue-200 rounded-lg bg-white text-gray-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
+            className={`w-full p-3 border-2 border-blue-200 rounded-lg text-gray-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 ${hasValue(selectedTeamA) ? 'bg-gray-200 text-gray-700' : 'bg-white'}`}
             value={selectedTeamA}
             onChange={(e) => setSelectedTeamA(e.target.value)}
           >
@@ -302,7 +324,7 @@ const Startmatch = () => {
         <div className="w-full">
           <label className="block text-gray-700 mb-2 font-medium">Team B</label>
           <select
-            className="w-full p-3 border-2 border-blue-200 rounded-lg bg-white text-gray-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
+            className={`w-full p-3 border-2 border-blue-200 rounded-lg text-gray-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 ${hasValue(selectedTeamB) ? 'bg-gray-200 text-gray-700' : 'bg-white'}`}
             value={selectedTeamB}
             onChange={(e) => setSelectedTeamB(e.target.value)}
           >
@@ -325,7 +347,7 @@ const Startmatch = () => {
         <input
           type="number"
           placeholder="Enter overs (e.g. 20)"
-          className="w-full p-3 border-2 border-blue-200 rounded-lg bg-white text-gray-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
+          className={`w-full p-3 border-2 border-blue-200 rounded-lg text-gray-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 ${hasValue(overs) ? 'bg-gray-200 text-gray-700' : 'bg-white'}`}
           value={overs}
           onChange={(e) => setOvers(e.target.value)}
           min="1"
@@ -353,7 +375,7 @@ const Startmatch = () => {
         <div className="w-full">
           <label className="block text-gray-700 mb-2 font-medium">Record Toss & Decision</label>
           <select
-            className="w-full p-3 border-2 border-blue-200 rounded-lg bg-white text-gray-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 mb-4"
+            className={`w-full p-3 border-2 border-blue-200 rounded-lg text-gray-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 mb-4 ${hasValue(tossWinner) ? 'bg-gray-200 text-gray-700' : 'bg-white'}`}
             value={tossWinner}
             onChange={(e) => setTossWinner(e.target.value)}
           >
@@ -401,7 +423,7 @@ const Startmatch = () => {
       <h2 className="text-xl font-semibold mb-4 text-blue-800">Assign Scorer</h2>
       <div className="w-full">
         <select
-          className="w-full p-3 border-2 border-blue-200 rounded-lg bg-white text-gray-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
+          className={`w-full p-3 border-2 border-blue-200 rounded-lg text-gray-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 ${hasValue(scorer) ? 'bg-gray-200 text-gray-700' : 'bg-white'}`}
           value={scorer}
           onChange={(e) => setScorer(e.target.value)}
         >
@@ -433,8 +455,10 @@ const Startmatch = () => {
             </motion.button>
           </motion.div>
         </div>
-      </div>
-    </div>
+      {/* </div> */}
+    {/* </div> */}
+    </motion.div>
+  </div>
   );
 };
 
