@@ -104,7 +104,7 @@ export default function TeamDetails() {
                   <img
                     src={team.image}
                     alt="team"
-                    className="h-14 w-14 rounded-full mr-4 border-2 border-gray-300 object-cover"
+                    className="aspect-square w-14 rounded-full mr-4 border-2 border-gray-300 object-cover"
                   />
                   <span className="text-lg font-semibold text-white">{team.name}</span>
                 </div>

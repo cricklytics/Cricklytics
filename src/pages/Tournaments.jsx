@@ -41,9 +41,14 @@ export default function Tournaments() {
   const teams = activeTab === 'myteam' || activeTab === 'all' ? myTeams : [];
 
   return (
-    <div className="min-h-screen p-4" style={{ backgroundColor: '#bfdaa4' }}>
+    <div className="min-h-screen p-4" style={{
+      backgroundImage: 'linear-gradient(140deg,#080006 15%,#FF0077)',
+      backgroundRepeat: 'no-repeat',
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+    }}>
       {/* Top Navbar */}
-      <div className="flex justify-between items-center p-4 bg-black/30 rounded-lg mb-5">
+      <div className="flex justify-between items-center p-4 rounded-lg mb-5">
         <div className="flex items-center gap-4">
           <img
             src={logo}
@@ -71,22 +76,22 @@ export default function Tournaments() {
       </div>
 
       {/* Tabs */}
-      <div className="flex justify-center space-x-12 text-white text-lg font-semibold border-b-4 border-white pb-2 mb-6">
+      <div className="flex justify-center space-x-12 text-white text-lg font-semibold border-b-4 border-white pb-2 mb-6"style={{marginTop:'70px'}}>
         <div
           onClick={() => setActiveTab('myteam')}
-          className={`cursor-pointer ${activeTab === 'myteam' ? 'border-b-2 border-white' : ''}`}
+          className={`cursor-pointer ${activeTab === 'myteam' ? 'border-b-2 border-white text-blue-500' : ''}`}
         >
           My Tournament
         </div>
         <div
           onClick={() => setActiveTab('following')}
-          className={`cursor-pointer ${activeTab === 'following' ? 'border-b-2 border-white' : ''}`}
+          className={`cursor-pointer ${activeTab === 'following' ? 'border-b-2 border-white text-blue-500' : ''}`}
         >
           Following
         </div>
         <div
           onClick={() => setActiveTab('all')}
-          className={`cursor-pointer ${activeTab === 'all' ? 'border-b-2 border-white' : ''}`}
+          className={`cursor-pointer ${activeTab === 'all' ? 'border-b-2 border-white text-blue-500' : ''}`}
         >
           All
         </div>
@@ -100,24 +105,28 @@ export default function Tournaments() {
           </div>
         ) : (
           teams.map((team, idx) => (
-            <div key={idx} className="bg-white rounded-xl p-4 shadow-md relative overflow-hidden">
+            <div
+            key={idx}
+            className="rounded-xl bg-white/5 border border-white/20 shadow-lg shadow-black/50 p-4 backdrop-blur relative overflow-hidden transition-transform duration-300 ease-in-out hover:-translate-y-1"
+          >
+          
               <div className="flex items-center justify-between">
                 <div className="flex items-center">
                   <img
                     src={team.image}
                     alt="team"
-                    className="h-14 w-14 rounded-full mr-4 border-2 border-gray-300 object-cover"
+                    className="aspect-square w-14 rounded-full mr-4 border-2 border-gray-300 object-cover"
                   />
-                  <span className="text-lg font-semibold text-gray-800">{team.name}</span>
+                  <span className="text-lg font-semibold text-white">{team.name}</span>
                 </div>
 
-                <div className="text-right text-sm space-y-1 text-gray-700">
+                <div className="text-right text-sm space-y-1 text-white">
                   <div className="flex items-center justify-end gap-2">
-                    <FaMapMarkerAlt className="text-gray-600" />
+                    <FaMapMarkerAlt className="text-white" />
                     <span>{team.location}</span>
                   </div>
                   <div className="flex items-center justify-end gap-2">
-                    <FaRegCopyright className="text-gray-600" />
+                    <FaRegCopyright className="text-white" />
                     <span>{team.captain}</span>
                   </div>
                 </div>

@@ -184,8 +184,8 @@ const Match = () => {
               key={tab.id}
               className={`px-4 py-2 text-lg font-['Alegreya'] transition-all duration-300 ${
                 activeTab === tab.id
-                  ? "text-cyan-300 border-b-2 border-cyan-300"
-                  : "text-gray-300 hover:text-white"
+                  ? "text-blue-500 border-b-2 border-cyan-300"
+                  : "text-white hover:text-white"
               }`}
               onClick={() => setActiveTab(tab.id)}
             >
