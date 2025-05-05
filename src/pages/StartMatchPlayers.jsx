@@ -402,7 +402,7 @@ function StartMatchPlayers() {
           )}
 
           {striker && nonStriker && !bowlerVisible && (
-            <button id="choosebowler" onClick={() => setBowlerVisible(true)} className="w-40 rounded-3xl h-14 mt-20 text-white text-lg font-bold shadow-lg transform transition duration-200 hover:scale-105 hover:shadow-xl active:scale-95 active:shadow-md"
+            <button id="choosebowler" onClick={() => setBowlerVisible(true)} className="w-40 rounded-3xl h-14 mt-20 bg-black text-white text-lg font-bold shadow-lg transform transition duration-200 hover:scale-105 hover:shadow-xl active:scale-95 active:shadow-md"
             style={{ backgroundImage: `url(${btnbg})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
