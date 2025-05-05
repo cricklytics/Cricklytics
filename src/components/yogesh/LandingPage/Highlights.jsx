@@ -20,7 +20,7 @@ const Highlights = () => {
 
   return (
     <section className="px-4 py-8 bg-[#0a192f] min-h-screen text-white">
-      <h2 className="text-2xl font-bold mb-6">Highlights</h2>
+      <h2 className="text-h2 lg:text-h2-lg font-bold mb-6">Highlights</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {highlightsData.map((item) => (
           <div
@@ -45,7 +45,7 @@ const Highlights = () => {
                 className="w-full h-full object-cover"
               />
             )}
-            <div className="absolute bottom-2 right-2 z-20 bg-black/70 px-3 py-1 rounded text-sm text-white">
+            <div className="absolute bottom-2 right-2 z-20 bg-black/70 px-3 py-1 rounded text-caption lg:text-caption-lg text-white">
               Hover to Play
             </div>
           </div>
