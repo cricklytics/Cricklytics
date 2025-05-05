@@ -19,6 +19,7 @@ import ipl2018 from '../assets/sophita/HomePage/2018.jpeg';
 import advertisement1 from '../assets/sophita/HomePage/Advertisement1.webp'
 import { useNavigate } from 'react-router-dom';
 import { useLocation } from 'react-router-dom';
+import Startmatch  from '../pages/Startmatch';
 
 const IPLCards = () => {
   const cards = [
@@ -220,10 +221,7 @@ const FixtureGenerator = () => {
     }
   }, [targetTab]);
 
-  const teams = [
-    'Team A', 'Team B', 'Team C', 'Team D',
-    'Team E', 'Team F', 'Team G', 'Team H', 'Team I'
-  ];
+  const teams = ['India', 'Australia', 'England', 'Pakistan', 'New Zealand', 'Netherlands', 'South Africa'];
 
   // Sample data for charts
   const runsComparisonData = [
@@ -268,10 +266,9 @@ const FixtureGenerator = () => {
     setShowFixtures(true);
   };
 
-  const handleNextClick = () => {
-    setGeneratedFixtures([]);
-    setShowFixtures(false);
-    navigate('/StartMatchPlayers');
+  const handleFixtureNextClick = () => { // Renamed to be specific
+    // Switch the tab to show the Startmatch component
+    setActiveTab('Start Match');
   };
 
   const groupedFixtures = generatedFixtures.reduce((acc, fixture) => {
@@ -311,7 +308,7 @@ const FixtureGenerator = () => {
         <div className="w-full max-w-7xl px-2 sm:px-8 py-2 mx-auto">
           <div className="overflow-x-auto flex kustify-start md:justify-center">
             <ul className="flex justify-evenly gap-x-5 md:gap-x-0 w-[1100px] md:w-[70%] px-2">
-              {['Fixture Generator', 'Live Score', 'Match Results', 'Highlights', 'Match Analytics'].map((tab) => (
+              {['Fixture Generator', 'Start Match', 'Live Score', 'Match Results', 'Highlights', 'Match Analytics'].map((tab) => (
                 <li key={tab} className="flex-shrink-0">
                   <button
                     className={`py-2 px-3 rounded-lg transition whitespace-nowrap text-sm sm:text-base ${
@@ -331,6 +328,13 @@ const FixtureGenerator = () => {
       </nav>
 
       {/* Main Content */}
+      {activeTab === 'Start Match' ? (
+            // Render Startmatch, passing the selected teams
+            <Startmatch
+                initialTeamA={selectedTeamA}
+                initialTeamB={selectedTeamB}
+            />
+       ) : (
       <main className="w-full max-w-7xl px-4 sm:px-8 py-8 mx-auto">
         {activeTab === 'Fixture Generator' && (
           <motion.div
@@ -417,7 +421,7 @@ const FixtureGenerator = () => {
                     className="px-6 py-3 bg-gradient-to-r from-green-500 to-teal-500 text-white font-semibold rounded-lg shadow-md hover:from-green-600 hover:to-teal-600 transition-all"
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    onClick={handleNextClick}
+                    onClick={handleFixtureNextClick}
                   >
                     Next
                   </motion.button>
@@ -652,6 +656,7 @@ const FixtureGenerator = () => {
           </div>
         )}
       </main>
+      )}
     </div>
   );
 };
