@@ -393,15 +393,11 @@ function StartMatchPlayers() {
           )}
 
           {striker && nonStriker && !bowlerVisible && (
-<<<<<<< HEAD
             <button id="choosebowler" onClick={() => setBowlerVisible(true)} className="w-40 rounded-3xl h-14 mt-20 bg-black text-white text-lg font-bold shadow-lg transform transition duration-200 hover:scale-105 hover:shadow-xl active:scale-95 active:shadow-md"
             style={{ backgroundImage: `url(${btnbg})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             backgroundRepeat: 'no-repeat', }}>
-=======
-            <button id="choosebowler" onClick={() => setBowlerVisible(true)} className="w-40 h-14 mt-20 text-white text-lg font-bold bg-[url('../assets/button.png')] bg-cover bg-center shadow-lg transform transition duration-200 hover:scale-105 hover:shadow-xl active:scale-95 active:shadow-md">
->>>>>>> 4bad18d9e3da02db42841ce8426a402a70976f70
               {isChasing ? 'Choose Bowler' : 'Choose Bowler'}
             </button>
           )}
