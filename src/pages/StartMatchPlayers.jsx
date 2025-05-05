@@ -136,7 +136,7 @@ function StartMatchPlayers() {
     // Check if innings is complete (2 overs)
     if (overNumber > 2) {
       if (!isChasing) {
-        setTargetScore(playerScore);
+        setTargetScore(playerScore+1);
         setIsChasing(true);
         resetInnings();
         displayModal('Innings Break', `You need to chase ${playerScore} runs`);
@@ -152,7 +152,6 @@ function StartMatchPlayers() {
       return;
     }
 
-    // Check if chasing team has won
     if (isChasing && playerScore >= targetScore && targetScore > 0) {
       displayModal('Match Result', 'You win the match!');
       setGameFinished(true);
@@ -304,15 +303,8 @@ function StartMatchPlayers() {
             <p className="text-white mb-6">{modalContent.message}</p>
             <div className="flex justify-center">
               <button 
+                onClick={() => setShowModal(false)} 
                 className="w-40 h-12 bg-[#FF62A1] text-white font-bold text-lg rounded-lg border-2 border-white"
-                onClick={() => {
-                    if (gameFinished) {
-                      navigate('/match-start', { state: { targetTab: 'Match Results' } });
-                    } else {
-                      // Optionally: show alert or do nothing
-                      setShowModal(false)
-                    }
-                  }}
               >
                 OK
               </button>
@@ -324,9 +316,8 @@ function StartMatchPlayers() {
       {!showThirdButtonOnly && (
         <div className="w-[90%] py-10 flex flex-col items-center">
           <div className="w-full max-w-2xl h-16 flex justify-around mb-10">
-            <button onClick={() => handleButtonClick('toss')} className="bg-[#FF62A1] w-32 h-10 text-white font-bold text-xl rounded-2xl shadow-[0px_0px_13px_0px_#FF94C8] border-2 border-white">Toss</button>
-            <button onClick={() => handleButtonClick('startInnings')} className="bg-[#4C0025] w-37 px-2 h-10 text-white font-bold text-xl rounded-2xl border-2 border-white">Start Innings</button>
-            <button onClick={() => handleButtonClick('start')} className="bg-[#4C0025] w-32 h-10 text-white font-bold text-xl rounded-2xl border-2 border-white">Start</button>
+            <button onClick={() => handleButtonClick('toss')} className="bg-[#FF62A1] w-20 h-10 text-sm md:w-32 h-10 md:text-xl text-white font-boldrounded-2xl rounded-2xl shadow-[0px_0px_13px_0px_#FF94C8] border-2 border-white">Toss</button>
+            <button onClick={() => handleButtonClick('start')} className="bg-[#4C0025] text-white w-20 h-10 h-10 text-sm md:w-37 h-10 font-bold rounded-2xl border-2 border-white">Start</button>
           </div>
         </div>
       )}
@@ -334,8 +325,8 @@ function StartMatchPlayers() {
       {currentView === 'toss' && !showThirdButtonOnly && (
         <>
           <div id="toss" className="text-center mb-12">
-            <h2 className="text-white font-bold text-[3rem]">{bowlerVisible ? (isChasing ? "Team A" : "Team B") : isChasing ? "Choose to Chase" : "The Team A won the Toss"}</h2>
-            <h2 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-b from-[#F0167C] to-white text-center">
+            <h2 className="text-white font-bold  text-3xl md:text-[3rem]">{bowlerVisible ? (isChasing ? "Team A" : "Team B") : isChasing ? "Choose to Chase" : "The Team A won the Toss"}</h2>
+            <h2 className="text-2xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-b from-[#F0167C] to-white text-center">
               {bowlerVisible ? (isChasing ? "Choose the Batsmen" : "Choose the Bowler") : isChasing ? "Select Batsmen" : "Choosed to Bat"}
             </h2>
           </div>
@@ -344,11 +335,11 @@ function StartMatchPlayers() {
             {!bowlerVisible && (
               <>
                 <div>
-                  <button className="w-40 h-14 text-white text-lg font-bold bg-gradient-to-l from-[#12BFA5] to-[#000000] rounded-[1rem] shadow-lg">Striker</button>
+                  <button className="w-30 h-10 text-white text-lg md:w-40 md:h-14 font-bold bg-gradient-to-l from-[#12BFA5] to-[#000000] rounded-[1rem] shadow-lg">Striker</button>
                   {striker && (
                     <div className="text-white text-center mt-2 relative">
                       <div className="relative inline-block">
-                        <img src={striker.image} alt="Striker" className="w-20 h-20 rounded-full mx-auto" />
+                        <img src={striker.image} alt="Striker" className="w-24 h-24 md:w-32 md:h-32 lg:w-40 lg:h-40  rounded-full mx-auto" />
                         <button onClick={cancelStriker} className="absolute -top-2 -right-2 w-6 h-6 bg-white text-black font-bold rounded-full flex items-center justify-center">×</button>
                       </div>
                       <div>{striker.name}</div>
@@ -357,11 +348,11 @@ function StartMatchPlayers() {
                   )}
                 </div>
                 <div>
-                  <button className="w-40 h-14 text-white text-lg font-bold bg-gradient-to-l from-[#12BFA5] to-[#000000] rounded-[1rem] shadow-lg">Non-Striker</button>
+                  <button className=" text-white w-30 h-10 text-white text-lg md:w-40 md:h-14 font-bold bg-gradient-to-l from-[#12BFA5] to-[#000000] rounded-[1rem] shadow-lg">Non-Striker</button>
                   {nonStriker && (
                     <div className="text-white text-center mt-2 relative">
                       <div className="relative inline-block">
-                        <img src={nonStriker.image} alt="Non-striker" className="w-20 h-20 rounded-full mx-auto" />
+                        <img src={nonStriker.image} alt="Non-striker" className="w-24 h-24 md:w-32 md:h-32 lg:w-40 lg:h-40  rounded-full mx-auto" />
                         <button onClick={cancelNonStriker} className="absolute -top-2 -right-2 w-6 h-6 bg-white text-black font-bold rounded-full flex items-center justify-center">×</button>
                       </div>
                       <div>{nonStriker.name}</div>
@@ -402,11 +393,7 @@ function StartMatchPlayers() {
           )}
 
           {striker && nonStriker && !bowlerVisible && (
-            <button id="choosebowler" onClick={() => setBowlerVisible(true)} className="w-40 rounded-3xl h-14 mt-20 text-white text-lg font-bold shadow-lg transform transition duration-200 hover:scale-105 hover:shadow-xl active:scale-95 active:shadow-md"
-            style={{ backgroundImage: `url(${btnbg})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat', }}>
+            <button id="choosebowler" onClick={() => setBowlerVisible(true)} className="w-40 h-14 mt-20 text-white text-lg font-bold bg-[url('../assets/button.png')] bg-cover bg-center shadow-lg transform transition duration-200 hover:scale-105 hover:shadow-xl active:scale-95 active:shadow-md">
               {isChasing ? 'Choose Bowler' : 'Choose Bowler'}
             </button>
           )}
@@ -434,11 +421,7 @@ function StartMatchPlayers() {
               </div>
 
               {selectedBowler && (
-                <button onClick={() => handleButtonClick('start')} className="w-40 h-14 mt-20 text-white text-lg font-bold rounded-3xl shadow-lg transform transition duration-200 hover:scale-105 hover:shadow-xl active:scale-95 active:shadow-md"
-                style={{ backgroundImage: `url(${btnbg})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            backgroundRepeat: 'no-repeat', }}>
+                <button onClick={() => handleButtonClick('start')} className="w-40 h-14 mt-20 text-white text-lg font-bold bg-[url('../assets/button.png')] bg-cover bg-center shadow-lg transform transition duration-200 hover:scale-105 hover:shadow-xl active:scale-95 active:shadow-md">
                   Let's Play
                 </button>
               )}
@@ -448,8 +431,8 @@ function StartMatchPlayers() {
       )}
 
       {showThirdButtonOnly && (
-         <div id="start" className="relative flex flex-col w-full h-full items-center px-4 mt-20">
-                  <h2 className=" gap-5 text-2xl md:text-3xl lg:text-5xl text-white font-bold text-center">Score Board</h2>
+         <div id="start" className="relative flex flex-col w-full h-full items-center px-4 mt-5 md:mt-20 ">
+                  <h2 className=" gap-5 text-4xl md:text-3xl lg:text-5xl text-white font-bold text-center">Score Board</h2>
                   <div className="mt-10 flex  md:flex-row w-full md:w-1/2 justify-around gap-20 h-fit pt-5">
                     <div className=" flex items-center justify-center mb-4 md:mb-0">
                       <img src={isChasing ? flag2 : flag1} className="w-16 h-16 md:w-30 md:h-30" alt="Flag" />
@@ -470,8 +453,8 @@ function StartMatchPlayers() {
                     </div>
                   </div>
         
-                  <div className="w-[90%] flex flex-col md:flex-row md:w-[50%] justify-around mt-6 md:mt-10 md:pr-15">
-                    <div className='flex flex-row justify-between md:flex-row md:items-center gap-4 md:gap-8 mb-6 md:mb-0'>
+                  <div className="w-full flex flex-col md:justify-between md:flex-row md:w-[50%] justify-around mt-6 md:mt-10 md:pr-15">
+                    <div className='flex flex-row px-[4.8%] md:p-0 justify-between md:flex-row md:items-center gap-4 md:gap-8 mb-6 md:mb-0'>
                       <div className="text-white text-center">
                         <h3 className={`text-lg md:text-xl font-bold ${striker ? 'text-yellow-300' : 'text-gray-400'}`}>Striker</h3>
                         {striker && (
@@ -534,7 +517,7 @@ function StartMatchPlayers() {
                         </div>
                       )}
                     </div>
-                    <div className="hidden sm:block text-white text-center">
+                    <div className="hidden sm:block w-20  text-white text-center">
                       <h3 className="text-lg md:text-xl font-bold">Bowler</h3>
                       {selectedBowler && (
                         <div className="flex flex-col items-center">
@@ -546,7 +529,7 @@ function StartMatchPlayers() {
                   </div>
         
                   <div className="mt-6 md:mt-10 flex flex-wrap justify-center gap-2 md:gap-4">
-                    {[0, 1, 2, 3, 6].map((num) => (
+                    {[0, 1, 2, 4, 6].map((num) => (
                       <button key={num} onClick={() => handleScoreButtonClick(num)} className="w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 bg-[#4C0025] text-white font-bold text-lg md:text-xl rounded-full border-2 border-white flex items-center justify-center">
                         {num}
                       </button>
