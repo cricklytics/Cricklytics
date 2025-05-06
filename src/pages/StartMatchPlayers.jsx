@@ -627,7 +627,7 @@ function StartMatchPlayers() {
                 {selectedBowler && (
                   <button
                     onClick={() => handleButtonClick('start')}
-                    className="w-40 h-14 mt-20 text-white text-lg font-bold bg-[url('../assets/kumar/button.png')] bg-cover bg-center shadow-lg transform transition duration-200 hover:scale-105 hover:shadow-xl active:scale-95 active:shadow-md"
+                    className="w-40 h-14 mt-20 text-white text-lg font-bold rounded-3xl bg-black bg-[url('../assets/kumar/button.png')] bg-cover bg-center shadow-lg transform transition duration-200 hover:scale-105 hover:shadow-xl active:scale-95 active:shadow-md"
                   >
                     Let's Play
                   </button>
