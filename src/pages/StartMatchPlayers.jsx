@@ -101,7 +101,7 @@ function StartMatchPlayers() {
     } else if (striker) {
       cancelStriker();
     } else {
-      setCurrentView('toss');
+      navigate(-1); // Navigate back when on the starting page
     }
   };
 
@@ -389,6 +389,16 @@ function StartMatchPlayers() {
         }}
       >
         {HeaderComponent ? <HeaderComponent /> : <div className="text-white">Header Missing</div>}
+
+        {/* Added cancel cross icon at top right corner */}
+        {currentView === 'toss' && !striker && !nonStriker && !bowlerVisible && !showThirdButtonOnly && (
+          <button
+            onClick={goBack}
+            className="absolute right-4 top-24 md:right-10 md:top-32 z-10 w-10 h-10 flex items-center justify-center"
+          >
+            <span className="h-7 w-7 md:h-10 w-10 text-white text-3xl font-bold">×</span>
+          </button>
+        )}
 
         {showModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
