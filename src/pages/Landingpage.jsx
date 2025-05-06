@@ -640,7 +640,7 @@ const Landingpage = () => {
             )}
 
 {activeTab === 'following' && (
-  <div className="w-1/2 p-4 overflow-y-auto">
+  <div className="w-full md:w-1/2 p-4 overflow-y-auto">
     <h2 className="text-white text-2xl font-bold mb-6 ml-4">People You Follow</h2>
     <div className="flex flex-col gap-4 px-4">
       {followersData.map(follower => (
