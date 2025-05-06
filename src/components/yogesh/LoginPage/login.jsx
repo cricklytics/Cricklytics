@@ -151,15 +151,15 @@ const Login = () => {
           <h2 className="text-3xl font-bold text-blue-800 mb-4">Cricklytics</h2>
           <p className="text-gray-400 mb-6">Express sign in via Google and WhatsApp</p>
 
-          <div className="flex gap-4 mb-6">
+          <div className="flex justify-around mb-6">
             <button
               onClick={handleGoogleSignIn}
-              className="flex items-center justify-center bg-white w-1/2 py-2 rounded-lg shadow-md hover:bg-blue-200"
+              className="flex items-center justify-center bg-white w-full py-2 rounded-lg shadow-md hover:bg-blue-200"
             >
               <span className="text-blue-600 font-semibold">GOOGLE</span>
               <img src={googleImg} alt="Google" className="w-5 h-5 ml-2" />
             </button>
-            <button
+            {/* <button
               className="flex items-center justify-center bg-white w-1/2 py-2 rounded-lg shadow-md hover:bg-blue-200"
               disabled
             >
@@ -169,7 +169,7 @@ const Login = () => {
                 alt="Facebook"
                 className="w-10 h-10 ml-2"
               />
-            </button>
+            </button> */}
           </div>
 
           <div className="py-2 rounded-lg shadow-md text-white">
