@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef  } from 'react';
 import { motion } from 'framer-motion';
 import FireworksCanvas from '../components/sophita/HomePage/FireworksCanvas';
 import { FaChevronDown, FaChevronUp, FaTrophy, FaHeart, FaCommentDots, FaShareAlt } from 'react-icons/fa';
@@ -20,6 +20,7 @@ import advertisement1 from '../assets/sophita/HomePage/Advertisement1.webp'
 import { useNavigate } from 'react-router-dom';
 import { useLocation } from 'react-router-dom';
 import Startmatch  from '../pages/Startmatch';
+import nav from '../assets/kumar/right-chevron.png';
 
 const IPLCards = () => {
   const cards = [
@@ -63,8 +64,64 @@ const IPLCards = () => {
     },
   ];
 
+  // Create refs for file inputs (optional, but a common pattern)
+  const photoInputRef = useRef(null);
+  const videoInputRef = useRef(null);
+
+  const handlePhotoUploadClick = () => {
+    // Trigger the hidden file input for photos
+    photoInputRef.current.click();
+  };
+
+  const handleVideoUploadClick = () => {
+    // Trigger the hidden file input for videos
+    videoInputRef.current.click();
+  };
+
+  const handleFileChange = (event) => {
+    const files = event.target.files;
+    if (files.length > 0) {
+      // Process the uploaded files here
+      console.log("Uploaded files:", files);
+      // You would typically upload these files to a server or display them
+    }
+    // Clear the input value so the same file can be selected again
+    event.target.value = null;
+  };
+
   return (
     <div className="min-h-screen flex flex-col justify-center items-center p-6 py-0">
+       {/* Buttons for Upload */}
+       <div className="flex justify-center gap-6 mb-6">
+        <button
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg text-lg"
+          onClick={handlePhotoUploadClick}
+        >
+          Upload Photo
+        </button>
+        <button
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg text-lg"
+          onClick={handleVideoUploadClick}
+        >
+          Upload Video
+        </button>
+
+        {/* Hidden file input elements */}
+        <input
+          type="file"
+          accept="image/*" // Accept image files
+          ref={photoInputRef}
+          className="hidden" // Hide the input
+          onChange={handleFileChange}
+        />
+        <input
+          type="file"
+          accept="video/*" // Accept video files
+          ref={videoInputRef}
+          className="hidden" // Hide the input
+          onChange={handleFileChange}
+        />
+      </div>
       <div className="flex flex-wrap justify-center gap-6 mb-12">
         {cards.map((card, index) => (
           <motion.div
@@ -213,7 +270,9 @@ const FixtureGenerator = () => {
   const navigate = useNavigate();
 
   const location = useLocation();
-  const targetTab = location.state?.targetTab;
+  const targetTab = location.state?.activeTab;
+
+  const teamsFromTournament = location.state?.selectedTeams || [];
 
   useEffect(() => {
     if (targetTab) {
@@ -221,7 +280,12 @@ const FixtureGenerator = () => {
     }
   }, [targetTab]);
 
-  const teams = ['India', 'Australia', 'England', 'Pakistan', 'New Zealand', 'Netherlands', 'South Africa'];
+  // Default list of teams if none are passed from TournamentPage
+  const defaultTeams = ['India', 'Australia', 'England', 'Pakistan', 'New Zealand', 'Netherlands', 'South Africa'];
+
+  // Determine which team list to use
+  const availableTeams = teamsFromTournament.length > 0 ? teamsFromTournament : defaultTeams;
+
 
   // Sample data for charts
   const runsComparisonData = [
@@ -254,6 +318,11 @@ const FixtureGenerator = () => {
       alert('Please select both teams');
       return;
     }
+    // Check if selected teams are the same
+    if (selectedTeamA === selectedTeamB) {
+      alert('Please select different teams for the fixture');
+      return;
+    }
 
     const newFixture = {
       id: Date.now(),
@@ -271,11 +340,50 @@ const FixtureGenerator = () => {
     setActiveTab('Start Match');
   };
 
-  const groupedFixtures = generatedFixtures.reduce((acc, fixture) => {
-    if (!acc[fixture.round]) {
-      acc[fixture.round] = [];
+  // Handler for the Back button
+  const handleBack = () => {
+    switch (activeTab) {
+      case 'Fixture Generator':
+        // Navigate back to the tournament page
+        // Assuming the route for TournamentPage is '/tournament'
+        navigate('/TournamentPage'); // Use your actual tournament page route
+        break;
+      case 'Start Match': // If currently on the Start Match (Score Setup) tab
+        // Navigate back to Fixture Generator tab
+        setActiveTab('Fixture Generator');
+        break;
+      case 'Live Score': // If currently on Live Score tab
+        // Navigate back to Start Match (Score Setup) tab
+        setActiveTab('Start Match');
+        break;
+      case 'Match Results': // If currently on Match Results tab
+        // Navigate back to Live Score tab
+        setActiveTab('Live Score');
+        break;
+      case 'Highlights': // If currently on Highlights tab
+          // Navigate back to Match Results tab (or Live Score, adjust as needed)
+          setActiveTab('Match Results'); // Or setActiveTab('Live Score'); depending on flow
+          break;
+      case 'Match Analytics': // If currently on Match Analytics tab
+          // Navigate back to Match Results tab (or Live Score, adjust as needed)
+          setActiveTab('Highlights'); // Or setActiveTab('Live Score'); depending on flow
+          break;
+      default:
+        // Fallback: navigate back in browser history or to a default page
+        navigate(-1); // Go back one step in history
+        // or navigate('/'); // Go to home
+        break;
     }
-    acc[fixture.round].push(fixture);
+  };
+
+  // This grouping logic seems for display, keeping it for now
+  const groupedFixtures = generatedFixtures.reduce((acc, fixture) => {
+    // Assuming you might add a 'round' property later if doing multi-round tournaments
+    const round = fixture.round || 'Round 1'; // Default to Round 1 if no round property
+    if (!acc[round]) {
+      acc[round] = [];
+    }
+    acc[round].push(fixture);
     return acc;
   }, {});
 
@@ -284,23 +392,34 @@ const FixtureGenerator = () => {
       {/* Header */}
       <header className="w-screen shadow-md">
         <div className="w-full max-w-7xl px-4 sm:px-8 py-4 flex justify-between items-center">
-          <div className="flex items-center">
-            <motion.img
-              src={logo}
-              alt="Cricklytics Logo"
-              className="h-7 w-7 md:h-10 object-contain block select-none"
-              whileHover={{ scale: 1.05 }}
+          <div className="flex flex-col items-start gap-1">
+            <div className="flex items-center">
+              <motion.img
+                src={logo}
+                alt="Cricklytics Logo"
+                className="h-7 w-7 md:h-10 object-contain block select-none"
+                whileHover={{ scale: 1.05 }}
+              />
+              <h1 className="text-2xl font-bold text-gray-800 pl-3">Cricklytics</h1>
+            </div>
+            <img
+              src={nav}
+              alt="Frame 1321317522"
+              loading="lazy"
+              className="w-10 h-10 -scale-x-100 cursor-pointer mt-[5px] ml-[5px]" 
+              onClick={handleBack}
             />
-            <h1 className="text-2xl font-bold text-gray-800 pl-3">Cricklytics</h1>
           </div>
-          <div className="text-gray-600">
-            {new Date().toLocaleDateString('en-US', {
-              day: 'numeric',
-              month: 'short',
-              year: 'numeric'
-            })}
-          </div>
-        </div>
+
+        {/* Optional right-side content */}
+        {/* <div className="text-gray-600">
+          {new Date().toLocaleDateString('en-US', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric'
+          })}
+        </div> */}
+      </div>
       </header>
 
       {/* Navigation */}
@@ -354,8 +473,9 @@ const FixtureGenerator = () => {
                   onChange={(e) => setSelectedTeamA(e.target.value)}
                 >
                   <option value="">Select Team</option>
-                  {teams.map(team => (
-                    <option key={`teamA-${team}`} value={team}>{team}</option>
+                  {/* MODIFIED: Use availableTeams here */}
+                  {availableTeams.map(teamName => (
+                    <option key={`teamA-${teamName}`} value={teamName}>{teamName}</option>
                   ))}
                 </select>
               </div>
@@ -368,8 +488,8 @@ const FixtureGenerator = () => {
                   onChange={(e) => setSelectedTeamB(e.target.value)}
                 >
                   <option value="">Select Team</option>
-                  {teams.filter(t => t !== selectedTeamA).map(team => (
-                    <option key={`teamB-${team}`} value={team}>{team}</option>
+                  {availableTeams.filter(t => t !== selectedTeamA).map(teamName => (
+                    <option key={`teamB-${teamName}`} value={teamName}>{teamName}</option>
                   ))}
                 </select>
               </div>

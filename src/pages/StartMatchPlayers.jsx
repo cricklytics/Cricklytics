@@ -101,7 +101,7 @@ function StartMatchPlayers() {
     } else if (striker) {
       cancelStriker();
     } else {
-      navigate(-1); // Navigate back when on the starting page
+      navigate('/match-start', { state: { activeTab: 'Start Match' } }); // Navigate back when on the starting page
     }
   };
 
@@ -376,6 +376,17 @@ function StartMatchPlayers() {
       </div>
     );
   }
+  const handleModalOkClick = () => {
+    if (gameFinished && modalContent.title === 'Match Result') {
+        // Navigate to the match-start page.
+        // To activate a specific tab, you might need to pass state or a query parameter.
+        // For example, using state:
+        navigate('/match-start', { state: { activeTab: 'Match Results' } });
+    } else {
+        // Close the modal for other cases
+        setShowModal(false);
+    }
+};
 
   return (
     <ErrorBoundary>
@@ -407,7 +418,7 @@ function StartMatchPlayers() {
               <p className="text-white mb-6">{modalContent.message}</p>
               <div className="flex justify-center">
                 <button
-                  onClick={() => setShowModal(false)}
+                  onClick={handleModalOkClick}
                   className="w-40 h-12 bg-[#FF62A1] text-white font-bold text-lg rounded-lg border-2 border-white"
                 >
                   OK
