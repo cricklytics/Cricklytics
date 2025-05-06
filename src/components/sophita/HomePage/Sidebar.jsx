@@ -191,7 +191,7 @@ const Sidebar = ({ isOpen, closeMenu }) => {
               <FaTrophy className="min-w-[20px]" /> Tournament/Series
             </li>
             <li className="px-4 py-2 md:px-6 md:py-3 flex items-center gap-2 md:gap-3 cursor-pointer hover:bg-[rgba(0,0,0,0.1)] transition-all duration-300"
-              onClick={() => navigate("/start-match")}>
+              onClick={() => navigate('/match-start', { state: { targetTab: 'Fixture Generator' } })}>
               <FaUsers className="min-w-[20px]" /> Start a Match
             </li>
 

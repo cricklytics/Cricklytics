@@ -47,6 +47,12 @@ $turn-time: 4s;
   overflow: hidden;
 }
 
+@keyframes gradientShift {
+  0% { background-position: 0% 0%; }
+  50% { background-position: 100% 100%; }
+  100% { background-position: 0% 0%; }
+}
+
 .lottie-background {
   position: fixed;
   top: 0;
@@ -71,15 +77,18 @@ $turn-time: 4s;
 
 #greet {
   text-align: center;
-  font-size: 5rem;
+  font-size: clamp(3rem, 8vw, 5rem); 
   font-weight: bold;
-  color: rgb(192, 213, 255);
+  background: linear-gradient(90deg, #ffd700, #ffea00); /* Golden gradient */
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
   caret-color: transparent;
-  text-shadow:
-    1px 1px 0 #000,
-    2px 2px 1px #333,
-    3px 3px 2px #666,
-    4px 4px 3px #999;
+  text-shadow: 
+    0 0 5px #ffd700,
+    0 0 10px #ffea00,
+    0 0 20px #ffd700,
+    0 0 30px #ffea00;
+  animation: flicker 3s infinite alternate;
   margin-bottom: 2rem;
 }
 
@@ -101,6 +110,7 @@ $turn-time: 4s;
 .flipped {
   transform: perspective(1000px) rotateX(360deg);
 }
+
 
 @keyframes flip-motion {
   0% {
@@ -124,7 +134,23 @@ $turn-time: 4s;
   100% {
     transform: perspective(1000px) rotateX(360deg);
   }
+  
 }
+@keyframes flicker {
+  0%, 54%, 100% {
+    opacity: 1;
+    text-shadow:
+      0 0 5px #ffd700,
+      0 0 10px #ffea00,
+      0 0 20px #ffd700,
+      0 0 30px #ffea00;
+  }
+  20%, 24%, 55% {
+    opacity: 0.8;
+    text-shadow: none;
+  }
+}
+
 
 .coin__front,
 .coin__back {
@@ -192,22 +218,21 @@ $turn-time: 4s;
   filter: blur(5px);
 }
 
-.coin__front h2,
-.coin__back h2 {
+.coin__front h2, .coin__back h2 {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   font-size: 3rem;
-  font-weight: bold;
-  color: rgb(13, 47, 114);
+  font-weight: 900;
+  color: #000000; /* Changed to black */
   caret-color: transparent;
-  text-shadow:
-    1px 1px 0 #000,
-    2px 2px 1px #333,
-    3px 3px 2px #666,
-    4px 4px 3px #999;
+  text-shadow: none; /* Removed gold shadows for clean black text */
+  letter-spacing: 1px;
+  text-rendering: optimizeLegibility;
+  -webkit-text-stroke: 0; /* Removed gold stroke */
 }
+
 
 .coin-text {
   text-align: center;
@@ -228,9 +253,12 @@ $turn-time: 4s;
   $coin-diameter: 18rem;
   $coin-thickness: 0.6rem;
 
-  #greet {
-    font-size: 2.5rem;
-    margin-bottom: 1rem;
+
+    #greet {
+      font-size: 4rem; // ✅ Larger and still responsive
+      font-family: 'Arial', sans-serif;
+      margin-bottom: 1rem;
+    
   }
 
   .coin {
