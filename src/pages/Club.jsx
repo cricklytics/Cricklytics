@@ -3,6 +3,7 @@ import { FaChevronDown, FaChevronUp, FaUserFriends, FaCalendarAlt, FaPlus } from
 import { motion } from 'framer-motion';
 import cricketImage from '../assets/sophita/Homepage/cricket1.png';
 import logo from '../assets/sophita/HomePage/Picture3.png';
+import backButton from '../assets/kumar/right-chevron.png'
 
 const ClubPage = () => {
   const [showTeamsDropdown, setShowTeamsDropdown] = useState(false);
