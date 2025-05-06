@@ -9,6 +9,9 @@ import SearchBarAft from './components/yogesh/LandingPage/SearchBar';
 import Landingpage from './pages/Landingpage';
 import Sidebar from './components/sophita/HomePage/Sidebar';
 import Golive from './pages/Golive';
+import Club from './pages/Club';
+
+
 import Startmatch from './pages/Startmatch';
 import Tournaments from './pages/Tournaments';
 import TeamDetails from './pages/TeamDetails';
@@ -78,6 +81,8 @@ function App() {
           <Route path="/landingpage" element={<Landingpage menuOpen={isSidebarOpen} setMenuOpen={setIsSidebarOpen} />} />
           <Route path="/go-live" element={<Golive />} />
           <Route path="/start-match" element={<Startmatch />} />
+          <Route path="/club" element={<Club />} />
+
           <Route path="/tournament" element={<Tournaments/>} />
           <Route path="/team" element={<TeamDetails/>} />
           <Route path="/highlights" element={<Highlights/>} />
