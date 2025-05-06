@@ -33,8 +33,6 @@ function Tournament_nextpg() {
     const isFormValid = (
       selectedhmd !== null &&
       selectedmpd !== null &&
-      selectedbpr !== null &&
-      selectedpm !== null &&
       selectedof !== null
     );
 
@@ -306,11 +304,8 @@ function Tournament_nextpg() {
         </div>
       )}
       
-      <div className="z-20 flex overflow-hidden justify-center w-full p-4 md:p-[5rem] relative">
+      <div className="z-20 flex overflow-hidden justify-center w-full pt-2 px-4 pb-4 md:pt-[2rem] md:px-[5rem] md:pb-[5rem] relative">
         <form onSubmit={handleSubmit} className="z-30 gap-4 md:gap-10 bg-[#1A2B4C] rounded-xl md:rounded-[2rem] shadow-[8px_-5px_0px_2px_#253A6E] md:shadow-[22px_-14px_0px_5px_#253A6E] flex flex-col items-start justify-around w-full max-w-[90rem] p-4 md:pl-[5rem] md:pr-[5rem] md:pt-[5rem] md:pb-[2rem]">
-          <button onClick={home} className='hover:cursor-pointer absolute top-4 md:top-8 left-4 md:left-5'>
-            <img src={nav} className='w-8 h-8 md:w-10 md:h-10 -scale-x-100' alt="Back"></img>
-          </button>
           <h1 className="text-2xl md:text-4xl text-white font-bold mt-12 md:mt-5 w-full text-center md:text-left">Add Tournament/Series</h1>
 
           {showValidationError && (
@@ -395,21 +390,13 @@ function Tournament_nextpg() {
             <div id='bpr' className="w-full relative flex-col items-center justify-between mt-3 md:mt-[2rem]">
               <label className="text-lg md:text-xl text-white">Per Day*</label>
               <div className='w-full md:w-[40%] lg:w-[50%] relative flex flex-wrap items-center justify-start mt-2 md:mt-4'>
-                {bproptions.map((bpr) => ( 
-                  <input
-                    key={bpr}
-                    type="text"
-                    className={`rounded-xl w-20 md:w-24 h-8 md:h-10 m-1 cursor-pointer text-center font-bold placeholder-white placeholder-opacity-100 caret-transparent text-xs md:text-base
-                      ${selectedbpr === bpr ? 'bg-[#73DDD8]' : 'bg-blue-300'}`}
-                    name='user'
-                    placeholder={bpr}
-                    onClick={() => handlebprClick(bpr)}
-                  />
-                ))}
+                <input
+                className="w-full md:w-64 h-10 md:h-12 border-2 border-white text-white p-2 rounded-xl mt-[.5rem] text-sm md:text-base"
+                type="number"
+                min="1"
+                placeholder="Enter the Amount"
+              />
               </div>
-              {showValidationError && selectedbpr === null && (
-                <p className="text-red-500 text-sm mt-1">Please select budget per day</p>
-              )}
             </div>
             <div id='pm'className="w-full relative flex-col items-center justify-between mt-3 md:mt-[2rem]">
               <div className='flex-col items-center gap-2 mt-2'>
@@ -427,21 +414,13 @@ function Tournament_nextpg() {
                 </div>
                 
                 <div className='w-full md:w-[40%] lg:w-[50%] relative flex flex-wrap items-center justify-star mt-5'>
-                  {pmoptions.map((pm) => ( 
-                    <input
-                      key={pm}
-                      type="text"
-                      className={`rounded-xl w-20 md:w-24 h-8 md:h-10 m-1 cursor-pointer text-center font-bold placeholder-white placeholder-opacity-100 caret-transparent text-xs md:text-base
-                        ${selectedpm === pm ? 'bg-[#73DDD8]' : 'bg-blue-300'}`}
-                      name='user'
-                      placeholder={pm}
-                      onClick={() => handlepmClick(pm)}
-                    />
-                  ))}
+                  <input
+                  className="w-full md:w-64 h-10 md:h-12 border-2 border-white text-white p-2 rounded-xl mt-[.5rem] text-sm md:text-base"
+                  type="number"
+                  min="1"
+                  placeholder="Enter the Amount"
+                />
                 </div>
-                {showValidationError && selectedpm === null && (
-                  <p className="text-red-500 text-sm mt-1">Please select budget per match</p>
-                )}
               </div>
             </div>
 

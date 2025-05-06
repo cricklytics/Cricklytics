@@ -12,6 +12,7 @@ import iconDesignArchiveAwards3 from '../../assets/pawan/PlayerProfile/icon-desi
 import jamInfo from '../../assets/pawan/PlayerProfile/jam-info.svg';
 import Picture32 from '../../assets/pawan/PlayerProfile/picture-312.png';
 import subtract from '../../assets/pawan/PlayerProfile/subtract.svg';
+import FrameImage from '../../assets/kumar/right-chevron.png';
  
 import Picture312Image from '../../assets/pawan/PlayerProfile/picture-312.png';
 import { useNavigate } from "react-router-dom";
@@ -42,13 +43,26 @@ const Awards = () => {
      
         {/* Header Section */}
         <div className="relative w-full h-fit flex flex-col items-center">
-          <div className="absolute top-0 w-full flex justify-between items-center mb-4">
-            <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate("/landingpage")}>
+        <div className="absolute top-0 w-full flex justify-between items-center mb-4">
+          {/* Logo + Title + Back Button */}
+          <div className="flex flex-col items-start gap-2">
+            <div className="flex items-center gap-2 cursor-pointer py-2 ml-[5px]" onClick={() => navigate("/landingpage")}>
               <img src={Picture312Image} alt="Logo" className="w-6 h-6 md:w-8 md:h-8 object-cover" />
               <span className="font-raleway font-bold text-white text-lg md:text-2xl">Cricklytics</span>
             </div>
-            <img src={jamInfo} alt="Jam info" className="w-6 h-12 md:w-8 md:h-16" />
+              <img
+                    src={FrameImage}
+                    alt="Frame 1321317522"
+                    loading="lazy"
+                    className="w-10 h-10 -scale-x-100 cursor-pointer mt-[5px] ml-[5px]" 
+                    onClick={() => navigate("/landingpage")}
+                  />
           </div>
+
+          {/* Right-side info icon */}
+          <img src={jamInfo} alt="Jam info" className="w-6 h-12 md:w-8 md:h-16" />
+        </div>
+
           <img src={Kudos} alt="Kudos Banner" className="w-full h-full md:h-[540px] object-cover" />
        
  
