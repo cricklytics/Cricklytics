@@ -46,7 +46,7 @@ const Frame1321317519 = () => {
       alt="Frame 1321317522"
       loading="lazy"
       className="w-10 h-10 -scale-x-100 cursor-pointer mt-[20px] ml-[10px]" 
-      onClick={() => navigate("/awards")}
+      onClick={() => navigate("/landingpage")}
     />
   </div>
   );

@@ -450,12 +450,25 @@ function Tournament_nextpg() {
           <div className="w-full md:w-[50%] lg:w-[75%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-5 mt-3 md:mt-0">
             <label className="text-lg md:text-xl text-white">Entry Fees</label>
             <div className="w-full md:w-[95%] lg:w-[65%] relative flex items-center md:items-end justify-center gap-3 md:gap-5 mb-4 md:mb-6">
-              <button id="view-rules" className="rounded-xl w-20 md:w-24 bg-gradient-to-l bg-blue-300 h-8 md:h-9 text-white mr-2 md:mr-6 cursor-pointer px=100 placeholder-black text-sm md:text-base" onClick={toggleDivVisibility}>optional
-              </button>
-              <button id="view-rules" className="rounded-xl w-24 md:w-29 bg-gradient-to-l from-[#5DE0E6] to-[#004AAD] h-8 md:h-9 text-white mr-2 md:mr-6 cursor-pointer text-sm md:text-base" onClick={toggleDivVisibility}>
+              {/* Optional checkbox */}
+              <label className="flex items-center gap-2 text-sm md:text-base text-white">
+                <input
+                  type="checkbox"
+                  className="form-checkbox h-6 w-6 text-blue-500"
+                  // You can add an onChange handler if needed
+                />
+              </label>
+
+              {/* Make Payment button */} 
+              <button
+                id="view-rules"
+                className="rounded-xl w-24 md:w-29 bg-gradient-to-l from-[#5DE0E6] to-[#004AAD] h-8 md:h-9 text-white mr-2 md:mr-6 cursor-pointer text-sm md:text-base"
+                onClick={toggleDivVisibility}
+              >
                 {isRulesVisible ? 'Hide Rules' : 'Make Payment'}
               </button>
             </div>
+
           </div>
 
           <div className="w-full md:w-[80%] lg:w-[86%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-5">

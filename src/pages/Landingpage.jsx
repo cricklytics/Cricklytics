@@ -25,6 +25,27 @@ const Landingpage = () => {
   const [isPriceVisible, setIsPriceVisible] = useState(false);
   const [profileStoryVisible, setProfileStoryVisible] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState(null);
+  const [isContactOpen, setIsContactOpen] = useState(false); // State for toggling contact details
+  const contactRef = useRef(null);
+
+  const toggleContact = () => {
+    setIsContactOpen(!isContactOpen);
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (contactRef.current && !contactRef.current.contains(event.target)) {
+        setIsContactOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+
   const [profileImages, setProfileImages] = useState([
     { id: 1, image: fr1, name: 'Friend 1' },
     { id: 2, image: fr2, name: 'Friend 2' },
@@ -382,7 +403,37 @@ const Landingpage = () => {
                 <Search className="text-white w-4 h-4 md:w-6 md:h-6" />
               </button>
             </div>
-            <span className="text-sm md:text-2xl font-bold cursor-pointer hover:text-[#3edcff] hidden sm:inline">Contact</span>
+        <div className="relative mb-4 sm:mb-0 sm:mr-4">
+          <button
+            onClick={toggleContact}
+            className="text-white hover:text-gray-300 text-xl transition-colors"
+          >
+            Contact
+          </button>
+          {/* Contact Details Dropdown (Visible only on click) */}
+          {isContactOpen && (
+            <div className="absolute top-full right-0 mt-2 w-[calc(100%-2rem)] sm:w-64 max-w-[90vw] mx-auto min-w-[200px] bg-gray-800 rounded-lg shadow-lg p-4 z-60">
+              <p className="text-white text-sm flex flex-col">
+                <span className="font-semibold">Email:</span>
+                <a
+                  href="mailto:support_cricklytics@creativityventures.co.in"
+                  className="hover:text-gray-300 transition-colors break-words"
+                >
+                  support_cricklytics@creativityventures.co.in
+                </a>
+              </p>
+              <p className="text-white text-sm mt-2 flex flex-col">
+                <span className="font-semibold">Ph-no:</span>
+                <a
+                  href="tel:+917397362027"
+                  className="hover:text-gray-300 transition-colors"
+                >
+                  +91 7397362027
+                </a>
+              </p>
+            </div>
+          )}
+        </div>
             <FaBell className="cursor-pointer hover:scale-110" size={24} />
 
              {/* Message Icon with dropdown */}

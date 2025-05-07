@@ -122,9 +122,9 @@ const TournamentPage = () => {
               </button>
               <h2 className="text-xl md:text-2xl font-semibold mb-4 text-center">Team List</h2>
               <ul className="w-full space-y-2 mb-4">
-                {teams.map((team) => (
-                  <li key={team.id} className="bg-white/10 px-4 py-2 rounded text-sm md:text-base">
-                    {team.name}
+              {selectedTeams.map((teamName, index) => (
+                  <li key={index} className="bg-white/10 px-4 py-2 rounded text-sm md:text-base">
+                    {teamName}
                   </li>
                 ))}
               </ul>
@@ -142,10 +142,13 @@ const TournamentPage = () => {
               {showTeamCards && (
                 <div className="flex flex-col w-full justify-center md:items-center h-fit my-4 md:my-10 gap-3 md:gap-5">
                   {[
-                    { id: 'team1', name: 'Team 1', img: frd1 },
-                    { id: 'team2', name: 'Team 2', img: frd1 },
-                    { id: 'team3', name: 'Team 3', img: frd2 },
-                    { id: 'team4', name: 'Team 4', img: frd2 },
+                    { id: 'team1', name: 'India', img: frd1 },
+                    { id: 'team2', name: 'Australia', img: frd1 },
+                    { id: 'team3', name: 'England', img: frd2 },
+                    { id: 'team4', name: 'Pakistan', img: frd2 },
+                    { id: 'team5', name: 'New Zealand', img: frd1 },
+                    { id: 'team6', name: 'Netherlands', img: frd1 },
+                    { id: 'team7', name: 'South Africa', img: frd1 },
                   ].map((team) => (
                     <div
                       key={team.id}
@@ -170,15 +173,33 @@ const TournamentPage = () => {
                       Cancel
                     </button>
                     <button
-                      type="submit"
+                      type="button"
                       className="rounded-xl w-32 md:w-44 bg-gradient-to-l from-[#5DE0E6] to-[#004AAD] h-8 md:h-9 text-white cursor-pointer hover:shadow-[0px_0px_13px_0px_#5DE0E6] text-sm md:text-base"
-                    onClick={()=> navigate('/match-start')}
+                      onClick={() => navigate('/match-start', { state: { selectedTeams: selectedTeams } })}
                     >
                       Next
                     </button>
                   </div>
                 </div>
               )}
+              {!showTeamCards && ( // Only show if cards are hidden
+                 <div className="flex justify-center w-full gap-4 mt-20">
+                     <button
+                       type="button"
+                       className="rounded-xl w-32 md:w-44 bg-gray-500 h-8 md:h-9 text-white cursor-pointer hover:shadow-[0px_0px_13px_0px_#5DE0E6] text-sm md:text-base"
+                       onClick={handleCancel}
+                     >
+                       Cancel
+                     </button>
+                     <button
+                       type="button" // Changed to button type
+                       className="rounded-xl w-32 md:w-44 bg-gradient-to-l from-[#5DE0E6] to-[#004AAD] h-8 md:h-9 text-white cursor-pointer hover:shadow-[0px_0px_13px_0px_#5DE0E6] text-sm md:text-base"
+                       onClick={() => navigate('/match-start', { state: { selectedTeams: selectedTeams } })}
+                     >
+                       Next
+                     </button>
+                   </div>
+               )}
             </div>
           )}
  
