@@ -403,7 +403,7 @@ const Landingpage = () => {
                 <Search className="text-white w-4 h-4 md:w-6 md:h-6" />
               </button>
             </div>
-        <div className="relative mb-4 sm:mb-0 sm:mr-4">
+        <div className="relative mb-4 md:mb-4 mt-4">
           <button
             onClick={toggleContact}
             className="text-white hover:text-gray-300 text-xl transition-colors"
