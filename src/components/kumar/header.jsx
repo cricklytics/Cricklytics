@@ -15,7 +15,7 @@ const HeaderComponent = () => {
   };
 
   return (
-    <div className="flex justify-between items-center p-4 rounded-lg mb-5">
+    <div className="flex justify-between items-center pt-2 px-4 pb-0 rounded-lg mb-1">
       <div className="flex flex-col items-start gap-2">
         <div
           className="flex items-center gap-4 cursor-pointer select-none"

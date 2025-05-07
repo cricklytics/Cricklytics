@@ -304,9 +304,9 @@ function Tournament_nextpg() {
         </div>
       )}
       
-      <div className="z-20 flex overflow-hidden justify-center w-full pt-2 px-4 pb-4 md:pt-[2rem] md:px-[5rem] md:pb-[5rem] relative">
-        <form onSubmit={handleSubmit} className="z-30 gap-4 md:gap-10 bg-[#1A2B4C] rounded-xl md:rounded-[2rem] shadow-[8px_-5px_0px_2px_#253A6E] md:shadow-[22px_-14px_0px_5px_#253A6E] flex flex-col items-start justify-around w-full max-w-[90rem] p-4 md:pl-[5rem] md:pr-[5rem] md:pt-[5rem] md:pb-[2rem]">
-          <h1 className="text-2xl md:text-4xl text-white font-bold mt-12 md:mt-5 w-full text-center md:text-left">Add Tournament/Series</h1>
+      <div className="z-20 flex overflow-hidden justify-center w-full -mt-5 px-[1rem] pt-[1rem] pb-[1rem] md:px-[5rem] md:pt-[1rem] md:pb-[1rem] relative">
+        <form onSubmit={handleSubmit} className="z-30 gap-4 md:gap-5 bg-[#1A2B4C] rounded-xl md:rounded-[2rem] shadow-[8px_-5px_0px_2px_#253A6E] md:shadow-[22px_-14px_0px_5px_#253A6E] flex flex-col items-start justify-around w-full max-w-[90rem] pl-[1rem] pr-[1rem] pt-[2rem] pb-[1rem] md:pl-[3rem] md:pr-[5rem] md:pt-[3rem] md:pb-[2rem]">
+          <h1 className="text-2xl md:text-4xl text-white font-bold mt-1 md:mt-1 w-full text-center md:text-left">Add Tournament/Series</h1>
 
           {showValidationError && (
             <div className="w-full bg-red-500 text-white p-2 rounded-lg mb-4 text-sm md:text-base">
@@ -314,9 +314,9 @@ function Tournament_nextpg() {
             </div>
           )}
 
-          <div className="w-full md:w-[80%] lg:w-[60%] relative flex flex-col md:flex-col items-start md:items-start justify-between gap-2 md:gap-5">
+          <div className="w-full md:w-[80%] lg:w-[50%] relative flex flex-col md:flex-col items-start md:items-start justify-between gap-2 md:gap-5">
             <label className="text-lg md:text-xl text-white">What You need?</label>
-            <div className="flex flex-wrap gap-2 md:gap-0">
+            <div className="flex flex-wrap gap-2 md:gap-0 md:-mt-3">
               <div className="flex items-center">
                 <input className="accent-cyan-500 w-4 h-4 md:w-[1rem] md:h-[1rem]" type="checkbox" name="umpire" id="weekdays" />
                 <label className="text-sm md:text-xl text-white ml-2 md:ml-[1rem]" htmlFor="weekdays">Umpire</label>
@@ -339,9 +339,9 @@ function Tournament_nextpg() {
             </div>
           </div>
 
-          <div id='hdm' className="w-full relative flex-col items-center justify-between gap-3 md:gap-5 mt-4 md:mt-[2rem]">
+          <div id='hdm' className="w-full relative flex-col items-center justify-between gap-3 md:gap-5 mt-2 md:-mt-[.5rem]">
             <label className="text-lg md:text-xl text-white">Match Type*</label>
-            <div className='w-full md:w-[50%] relative flex items-center justify-start mt-2 md:mt-4'>
+            <div className='w-full md:w-[50%] relative flex items-center justify-start mt-2 md:mt-2'>
               {hmdoptions.map((hdm) => ( 
                 <input
                   key={hdm}
@@ -359,9 +359,9 @@ function Tournament_nextpg() {
             )}
           </div>
 
-          <div id='mpd' className="w-full md:w-[80%] lg:w-[60%] relative flex flex-col md:flex-col items-start md:items-start justify-start gap-2 md:gap-5">
+          <div id='mpd' className="w-full md:w-[80%] lg:w-[50%] relative flex flex-col md:flex-col items-start md:items-start justify-start gap-2 md:gap-5 md:-mt-[.5rem]">
             <label className="text-lg md:text-xl text-white">How Many Days*</label>
-            <div className='w-full md:w-[50%] relative flex items-center justify-start mt-2 md:mt-4'>
+            <div className='w-full md:w-[50%] relative flex items-center justify-start mt-2 md:-mt-3'>
               {mpdoptions.map((mpd) => ( 
                 <input
                   key={mpd}
@@ -379,17 +379,17 @@ function Tournament_nextpg() {
             )}
           </div>
 
-          <div className='w-full flex flex-col'>
+          <div className='w-full flex flex-col md:-mt-[.5rem]'>
             <div className='flex flex-col md:flex-row justify-between items-start md:items-center'>
-              <h2 className="text-xl md:text-3xl font-bold text-white mt-4 md:mt-[2rem]">Budget Range</h2> 
-              <div className='w-full md:w-[80%] lg:w-[60%] h-10 flex items-center justify-start mt-2 md:mt-0'>
+              <h2 className="text-xl md:text-2xl font-bold text-white mt-3 md:mt-[1rem]">Budget Range</h2> 
+              <div className='w-full md:w-[80%] lg:w-[80%] h-10 flex items-center justify-start mt-2 md:pt-2'>
                 <input className="accent-cyan-500 w-4 h-4 md:w-[1rem] md:h-[1rem]" type="checkbox" name="range" id="budgetrange" />
                 <label htmlFor="" className='ml-2 md:ml-[1rem] text-sm md:text-xl text-white'>Same Budget For All</label>
               </div>
             </div>
-            <div id='bpr' className="w-full relative flex-col items-center justify-between mt-3 md:mt-[2rem]">
+            <div id='bpr' className="w-full relative flex-col items-center justify-between mt-3 md:mt-[1rem]">
               <label className="text-lg md:text-xl text-white">Per Day*</label>
-              <div className='w-full md:w-[40%] lg:w-[50%] relative flex flex-wrap items-center justify-start mt-2 md:mt-4'>
+              <div className='w-full md:w-[40%] lg:w-[50%] relative flex flex-wrap items-center justify-start mt-2 md:mt-2'>
                 <input
                 className="w-full md:w-64 h-10 md:h-12 border-2 border-white text-white p-2 rounded-xl mt-[.5rem] text-sm md:text-base"
                 type="number"
@@ -398,7 +398,7 @@ function Tournament_nextpg() {
               />
               </div>
             </div>
-            <div id='pm'className="w-full relative flex-col items-center justify-between mt-3 md:mt-[2rem]">
+            <div id='pm'className="w-full relative flex-col items-center justify-between mt-3 md:mt-[1rem]">
               <div className='flex-col items-center gap-2 mt-2'>
                 <div className='w-full md:w-[40%] lg:w-[50%] relative flex items-center justify-start'>
                 <label className="flex gap-2 md:gap-5 text-lg md:text-xl text-white">Per Match*</label>
@@ -413,7 +413,7 @@ function Tournament_nextpg() {
                   </select>
                 </div>
                 
-                <div className='w-full md:w-[40%] lg:w-[50%] relative flex flex-wrap items-center justify-star mt-5'>
+                <div className='w-full md:w-[40%] lg:w-[50%] relative flex flex-wrap items-center justify-star mt-2'>
                   <input
                   className="w-full md:w-64 h-10 md:h-12 border-2 border-white text-white p-2 rounded-xl mt-[.5rem] text-sm md:text-base"
                   type="number"
@@ -424,9 +424,9 @@ function Tournament_nextpg() {
               </div>
             </div>
 
-            <div id='of' className="w-full relative flex-col items-center justify-between gap-3 md:gap-5 mt-3 md:mt-[2rem]">
+            <div id='of' className="w-full relative flex-col items-center justify-between gap-3 md:gap-5 mt-3 md:mt-[1rem]">
               <label className="text-lg md:text-xl text-white">How Can Official Handle You*</label>
-              <div className='w-full md:w-[40%] lg:w-[50%] relative flex flex-wrap items-center justify-start mt-2 md:mt-4'>
+              <div className='w-full md:w-[40%] lg:w-[50%] relative flex flex-wrap items-center justify-start mt-2 md:mt-2'>
                 {ofoptions.map((of) => ( 
                   <input
                     key={of}
@@ -443,13 +443,13 @@ function Tournament_nextpg() {
                 <p className="text-red-500 text-sm mt-1">Please select official handling method</p>
               )}
               
-              <input className="w-full md:w-70 h-10 md:h-12 border-2 border-white text-white p-2 rounded-xl mt-3 md:mt-[2rem] placeholder-white placeholder-opacity-100 text-sm md:text-base" type="number" placeholder='Contact Number'/>
+              <input className="w-full md:w-70 h-10 md:h-12 border-2 border-white text-white p-2 rounded-xl mt-3 md:mt-[1rem] placeholder-white placeholder-opacity-100 text-sm md:text-base" type="number" placeholder='Contact Number'/>
             </div>
           </div>
 
-          <div className="w-full md:w-[50%] lg:w-[75%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-5 mt-3 md:mt-0">
+          <div className="w-full md:w-[50%] lg:w-[50%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-5 mt-3 md:mt-0">
             <label className="text-lg md:text-xl text-white">Entry Fees</label>
-            <div className="w-full md:w-[95%] lg:w-[65%] relative flex items-center md:items-end justify-center gap-3 md:gap-5 mb-4 md:mb-6">
+            <div className="w-full md:w-[95%] lg:w-[65%] relative flex items-center md:items-end justify-center gap-3 md:gap-5 mb-4 md:mb-4">
               {/* Optional checkbox */}
               <label className="flex items-center gap-2 text-sm md:text-base text-white">
                 <input
@@ -471,17 +471,17 @@ function Tournament_nextpg() {
 
           </div>
 
-          <div className="w-full md:w-[80%] lg:w-[86%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-5">
+          <div className="w-full md:w-[80%] lg:w-[60%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-5">
             <label className="text-lg md:text-xl text-white">Prize details</label>
-            <div className="w-full md:w-[55%] lg:w-[55%] relative flex items-center justify-start md:justify-between gap-3 md:gap-5 mb-4 md:mb-6">
+            <div className="w-full md:w-[55%] lg:w-[50%] relative flex items-center justify-start md:justify-between gap-3 md:gap-5 mb-4 md:mb-4">
               <button id="view-rules" className="rounded-xl w-20 md:w-24 bg-gradient-to-l from-[#5DE0E6] to-[#004AAD] h-8 md:h-9 text-white mr-2 md:mr-6 cursor-pointer text-sm md:text-base" onClick={togglepriceVisibility}>
                 {ispriceVisible ? 'Hide price' : 'View price'}
               </button>
             </div>
           </div>
 
-          <div className="w-full md:w-[80%] lg:w-[60%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-5">
-            <label htmlFor="location" className="text-lg md:text-xl text-white mb-4 md:mb-9">Active Tournaments</label>
+          <div className="w-full md:w-[80%] lg:w-[50%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-5">
+            <label htmlFor="location" className="text-lg md:text-xl text-white mb-4 md:mb-5">Active Tournaments</label>
             <select
               id="location"
               name="location"
@@ -494,7 +494,7 @@ function Tournament_nextpg() {
             </select>
           </div>
 
-          <div className="w-full md:w-[80%] lg:w-[60%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-5">
+          <div className="w-full md:w-[80%] lg:w-[50%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-5">
             <label className="text-lg md:text-xl text-white">Add rounds</label>
             <input
               className="w-full md:w-64 h-10 md:h-12 border-2 border-white text-white p-2 rounded-xl mt-[.5rem] text-sm md:text-base"
@@ -503,7 +503,7 @@ function Tournament_nextpg() {
             />
           </div>
 
-          <div className="w-full md:w-[80%] lg:w-[86%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-5">
+          <div className="w-full md:w-[80%] lg:w-[65%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-5">
             <label className="text-lg md:text-xl text-white">Team Profiles</label>
             <div className="w-full md:w-[55%] lg:w-[55%] relative flex items-center justify-start md:justify-between gap-3 md:gap-5 mb-4 md:mb-6">
               <button

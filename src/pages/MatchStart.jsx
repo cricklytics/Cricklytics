@@ -22,7 +22,7 @@ import { useLocation } from 'react-router-dom';
 import Startmatch  from '../pages/Startmatch';
 import nav from '../assets/kumar/right-chevron.png';
 
-const IPLCards = () => {
+const IPLCards = ({ setActiveTab }) => {
   const cards = [
     {
       image: ipl2,
@@ -89,39 +89,49 @@ const IPLCards = () => {
     event.target.value = null;
   };
 
+    // Handler for the Next button
+    const handleNextClick = () => {
+      setActiveTab('Match Analytics');
+    };
+  
+
   return (
     <div className="min-h-screen flex flex-col justify-center items-center p-6 py-0">
        {/* Buttons for Upload */}
-       <div className="flex justify-center gap-6 mb-6">
-        <button
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg text-lg"
-          onClick={handlePhotoUploadClick}
-        >
-          Upload Photo
+       <div className="flex justify-center gap-6 mb-6 w-full max-w-md"> {/* Adjusted width and added justify-center */}
+       <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg text-lg"
+        onClick={handlePhotoUploadClick}>Upload Photo
         </button>
-        <button
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg text-lg"
-          onClick={handleVideoUploadClick}
-        >
-          Upload Video
-        </button>
+        <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg text-lg"
+          onClick={handleVideoUploadClick}>Upload Video
+          </button>
+           {/* Added Next button */}
+          <motion.button
+            className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg text-sm sm:text-base flex-1" // Added flex-1 and green color
+            onClick={handleNextClick}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            Next
+          </motion.button>
 
-        {/* Hidden file input elements */}
-        <input
-          type="file"
-          accept="image/*" // Accept image files
-          ref={photoInputRef}
-          className="hidden" // Hide the input
-          onChange={handleFileChange}
-        />
-        <input
-          type="file"
-          accept="video/*" // Accept video files
-          ref={videoInputRef}
-          className="hidden" // Hide the input
-          onChange={handleFileChange}
-        />
-      </div>
+
+          {/* Hidden file input elements */}
+          <input
+            type="file"
+            accept="image/*" // Accept image files
+            ref={photoInputRef}
+            className="hidden" // Hide the input
+            onChange={handleFileChange}
+          />
+          <input
+            type="file"
+            accept="video/*" // Accept video files
+            ref={videoInputRef}
+            className="hidden" // Hide the input
+            onChange={handleFileChange}
+          />
+        </div>
       <div className="flex flex-wrap justify-center gap-6 mb-12">
         {cards.map((card, index) => (
           <motion.div
@@ -274,11 +284,31 @@ const FixtureGenerator = () => {
 
   const teamsFromTournament = location.state?.selectedTeams || [];
 
-  useEffect(() => {
-    if (targetTab) {
-      setActiveTab(targetTab);
-    }
-  }, [targetTab]);
+  const [cameFromSidebar, setCameFromSidebar] = useState(false);
+
+ // Effect to check location state on mount and update activeTab
+ useEffect(() => {
+  const initialTabFromState = location.state?.initialTab;
+  const cameFromSidebarState = location.state?.fromSidebar; // Check for the sidebar flag
+
+  if (initialTabFromState) {
+    setActiveTab(initialTabFromState);
+  }
+
+  // Set the cameFromSidebar state based on location state
+  if (cameFromSidebarState) {
+     setCameFromSidebar(true);
+  } else {
+     setCameFromSidebar(false);
+  }
+
+  // Clean up state if you navigate away (optional but good practice)
+  return () => {
+      // You might want to reset some state here if needed when the component unmounts
+  };
+
+}, [location.state?.initialTab, location.state?.fromSidebar, setActiveTab]); // Depend on initialTab and fromSidebar in location state
+
 
   // Default list of teams if none are passed from TournamentPage
   const defaultTeams = ['India', 'Australia', 'England', 'Pakistan', 'New Zealand', 'Netherlands', 'South Africa'];
@@ -340,39 +370,37 @@ const FixtureGenerator = () => {
     setActiveTab('Start Match');
   };
 
-  // Handler for the Back button
+  // Handler for the Back button - Modified logic
   const handleBack = () => {
-    switch (activeTab) {
-      case 'Fixture Generator':
-        // Navigate back to the tournament page
-        // Assuming the route for TournamentPage is '/tournament'
-        navigate('/TournamentPage'); // Use your actual tournament page route
-        break;
-      case 'Start Match': // If currently on the Start Match (Score Setup) tab
-        // Navigate back to Fixture Generator tab
-        setActiveTab('Fixture Generator');
-        break;
-      case 'Live Score': // If currently on Live Score tab
-        // Navigate back to Start Match (Score Setup) tab
-        setActiveTab('Start Match');
-        break;
-      case 'Match Results': // If currently on Match Results tab
-        // Navigate back to Live Score tab
-        setActiveTab('Live Score');
-        break;
-      case 'Highlights': // If currently on Highlights tab
-          // Navigate back to Match Results tab (or Live Score, adjust as needed)
-          setActiveTab('Match Results'); // Or setActiveTab('Live Score'); depending on flow
+    // If the initial navigation was from the sidebar, go back in browser history
+    if (cameFromSidebar) {
+      navigate(-1); // This will navigate to the previous page (your homepage)
+    } else {
+      // If not from sidebar, use the original tab cycling logic
+      switch (activeTab) {
+        case 'Fixture Generator':
+          navigate('/TournamentPage'); // Go back to Tournament page from Fixture Generator
           break;
-      case 'Match Analytics': // If currently on Match Analytics tab
-          // Navigate back to Match Results tab (or Live Score, adjust as needed)
-          setActiveTab('Highlights'); // Or setActiveTab('Live Score'); depending on flow
+        case 'Start Match':
+          // If came to Start Match from Fixture Generator, go back to Fixture Generator tab
+          setActiveTab('Fixture Generator');
           break;
-      default:
-        // Fallback: navigate back in browser history or to a default page
-        navigate(-1); // Go back one step in history
-        // or navigate('/'); // Go to home
-        break;
+        case 'Live Score':
+          setActiveTab('Start Match');
+          break;
+        case 'Match Results':
+          setActiveTab('Live Score');
+          break;
+        case 'Highlights':
+          setActiveTab('Match Results');
+          break;
+        case 'Match Analytics':
+          setActiveTab('Highlights');
+          break;
+        default:
+          navigate(-1); // Fallback to history if tab is unexpected
+          break;
+      }
     }
   };
 
@@ -387,11 +415,18 @@ const FixtureGenerator = () => {
     return acc;
   }, {});
 
+
+  const allTabs = ['Fixture Generator', 'Start Match', 'Live Score', 'Match Results', 'Highlights', 'Match Analytics'];
+  const tabsExceptFixtureGenerator = ['Start Match', 'Live Score', 'Match Results', 'Highlights', 'Match Analytics'];
+
+
   return (
     <div className="w-screen min-h-screen bg-gradient-to-br from-green-400 via-blue-400 to-blue-200 overflow-x-hidden">
       {/* Header */}
       <header className="w-screen shadow-md">
-        <div className="w-full max-w-7xl px-4 sm:px-8 py-4 flex justify-between items-center">
+        {/* Added mx-auto here */}
+        <div className="w-full max-w-7xl py-4 flex justify-between items-center">
+          {/* Left side: Logo, Title, and Back Button */}
           <div className="flex flex-col items-start gap-1">
             <div className="flex items-center">
               <motion.img
@@ -403,48 +438,55 @@ const FixtureGenerator = () => {
               <h1 className="text-2xl font-bold text-gray-800 pl-3">Cricklytics</h1>
             </div>
             <img
-              src={nav}
-              alt="Frame 1321317522"
+              src={nav} // Assuming 'nav' here is the back arrow icon variable
+              alt="Back"
               loading="lazy"
-              className="w-10 h-10 -scale-x-100 cursor-pointer mt-[5px] ml-[5px]" 
+              className="w-10 h-10 -scale-x-100 cursor-pointer mt-[5px] ml-[5px]"
               onClick={handleBack}
             />
           </div>
 
-        {/* Optional right-side content */}
-        {/* <div className="text-gray-600">
-          {new Date().toLocaleDateString('en-US', {
-            day: 'numeric',
-            month: 'short',
-            year: 'numeric'
-          })}
-        </div> */}
-      </div>
-      </header>
-
-      {/* Navigation */}
-      <nav className="w-screen shadow-sm">
-        <div className="w-full max-w-7xl px-2 sm:px-8 py-2 mx-auto">
-          <div className="overflow-x-auto flex kustify-start md:justify-center">
-            <ul className="flex justify-evenly gap-x-5 md:gap-x-0 w-[1100px] md:w-[70%] px-2">
-              {['Fixture Generator', 'Start Match', 'Live Score', 'Match Results', 'Highlights', 'Match Analytics'].map((tab) => (
-                <li key={tab} className="flex-shrink-0">
-                  <button
-                    className={`py-2 px-3 rounded-lg transition whitespace-nowrap text-sm sm:text-base ${
-                      activeTab === tab
-                        ? 'bg-blue-600 text-white font-semibold shadow-md'
-                        : 'bg-gray-100 text-black hover:bg-gray-200'
-                    }`}
-                    onClick={() => setActiveTab(tab)}
-                  >
-                    {tab}
-                  </button>
-                </li>
-              ))}
+          {/* Right side: Navigation Tabs */}
+          <div className="flex items-center overflow-x-auto mt-8 md:mt-8 -ml-20 md:-ml-20">
+          <ul className="flex gap-x-2 sm:gap-x-3 md:gap-x-4 lg:gap-x-5">
+              {/* Render tabs based on whether we came from the sidebar to Start Match */}
+              {cameFromSidebar && activeTab === 'Start Match' ? (
+                 // If came from sidebar AND active tab is Start Match, show all except Fixture Generator
+                 tabsExceptFixtureGenerator.map((tab) => (
+                   <li key={tab} className="flex-shrink-0"> {/* flex-shrink-0 prevents tabs from shrinking */}
+                     <button
+                       className={`py-2 px-3 rounded-lg transition whitespace-nowrap text-sm sm:text-base ${
+                         activeTab === tab
+                           ? 'bg-blue-600 text-white font-semibold shadow-md'
+                           : 'bg-gray-100 text-black hover:bg-gray-200'
+                       }`}
+                       onClick={() => setActiveTab(tab)}
+                     >
+                       {tab}
+                     </button>
+                   </li>
+                 ))
+              ) : (
+                 // In all other cases, show ALL tabs
+                 allTabs.map((tab) => (
+                   <li key={tab} className="flex-shrink-0"> {/* flex-shrink-0 prevents tabs from shrinking */}
+                     <button
+                       className={`py-2 px-3 rounded-lg transition whitespace-nowrap text-sm sm:text-base ${
+                         activeTab === tab
+                           ? 'bg-blue-600 text-white font-semibold shadow-md'
+                           : 'bg-gray-100 text-black hover:bg-gray-200'
+                       }`}
+                       onClick={() => setActiveTab(tab)}
+                     >
+                       {tab}
+                     </button>
+                   </li>
+                 ))
+              )}
             </ul>
           </div>
         </div>
-      </nav>
+      </header>
 
       {/* Main Content */}
       {activeTab === 'Start Match' ? (
@@ -646,12 +688,12 @@ const FixtureGenerator = () => {
             <FireworksCanvas />
             <div className="absolute top-4 right-4 z-30">
               <motion.button
-                onClick={() => setActiveTab('Fixture Generator')}
+                onClick={() => setActiveTab('Highlights')}
                 className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-full shadow-md transition-all"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
-                Cancel
+                Next
               </motion.button>
             </div>
             <div className="relative z-20 text-center p-8">
@@ -676,7 +718,7 @@ const FixtureGenerator = () => {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5 }}
           >
-            <IPLCards />
+            <IPLCards setActiveTab={setActiveTab} />
           </motion.div>
         )}
 
@@ -685,19 +727,19 @@ const FixtureGenerator = () => {
             {/* Tab Navigation */}
             <div className="flex border-b border-gray-700 mb-6">
               <button 
-                className={`py-2 px-4 mr-2 ${activeAnalyticsTab === 'scorecard' ? 'border-b-2 border-yellow-500 font-semibold' : 'text-gray-400'}`}
+                className={`py-2 px-4 mr-2 ${activeAnalyticsTab === 'scorecard' ? 'border-b-2 border-yellow-500 font-semibold' : 'text-black'}`}
                 onClick={() => setActiveAnalyticsTab('scorecard')}
               >
                 Scorecard
               </button>
               <button 
-                className={`py-2 px-4 mr-2 ${activeAnalyticsTab === 'wagonwheel' ? 'border-b-2 border-yellow-500 font-semibold' : 'text-gray-400'}`}
+                className={`py-2 px-4 mr-2 ${activeAnalyticsTab === 'wagonwheel' ? 'border-b-2 border-yellow-500 font-semibold' : 'text-black'}`}
                 onClick={() => setActiveAnalyticsTab('wagonwheel')}
               >
                 Wagon Wheel & Heat Map
               </button>
               <button 
-                className={`py-2 px-4 ${activeAnalyticsTab === 'fallofwickets' ? 'border-b-2 border-yellow-500 font-semibold' : 'text-gray-400'}`}
+                className={`py-2 px-4 ${activeAnalyticsTab === 'fallofwickets' ? 'border-b-2 border-yellow-500 font-semibold' : 'text-black'}`}
                 onClick={() => setActiveAnalyticsTab('fallofwickets')}
               >
                 Fall of Wickets

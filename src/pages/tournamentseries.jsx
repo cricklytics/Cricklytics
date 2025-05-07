@@ -6,6 +6,7 @@ import location from '../assets/kumar/loc.png';
 import ball1 from '../assets/kumar/cricket-ball.png';
 import ball2 from '../assets/kumar/ball-others.png';
 import others from '../assets/kumar/icons8-tennis-ball-96.png';
+import '../styles/Scroll.css'
 
 function Tournamentseries() {
     const navigate = useNavigate();
@@ -169,9 +170,9 @@ function Tournamentseries() {
 
             <div className="absolute left-[-25%] top-[30%] w-[80rem] h-[50rem] rounded-full bg-[radial-gradient(circle,rgba(69,218,255,0.5)_40%,rgba(69,218,255,0.1)_60%,rgba(69,218,255,0.1)_100%)] blur-lg -z-10"></div>
 
-            <div className="z-20 flex overflow-hidden justify-center w-full p-[1rem] md:p-[5rem] relative">
-                <form className="z-30 gap-5 md:gap-10 bg-[#1A2B4C] rounded-[1rem] md:rounded-[2rem] shadow-[11px_-7px_0px_3px_#253A6E] md:shadow-[22px_-14px_0px_5px_#253A6E] flex flex-col items-start justify-around w-full max-w-[90rem] pl-[1rem] pr-[1rem] pt-[2rem] pb-[1rem] md:pl-[5rem] md:pr-[5rem] md:pt-[5rem] md:pb-[2rem]">
-                    <h1 className="text-4xl text-white font-bold text-center">Add Tournament/Series</h1>
+            <div className="z-20 flex overflow-hidden justify-center w-full -mt-5 px-[1rem] pt-[1rem] pb-[1rem] md:px-[5rem] md:pt-[1rem] md:pb-[1rem] relative">
+                <form className="z-30 gap-5 md:gap-6 bg-[#1A2B4C] rounded-[1rem] md:rounded-[2rem] shadow-[11px_-7px_0px_3px_#253A6E] md:shadow-[22px_-14px_0px_5px_#253A6E] flex flex-col items-start justify-around w-full max-w-[90rem] pl-[1rem] pr-[1rem] pt-[2rem] pb-[1rem] md:pl-[3rem] md:pr-[5rem] md:pt-[3rem] md:pb-[2rem]">
+                    <h1 className="text-3xl md:text-4xl text-white font-bold text-center">Add Tournament/Series</h1>
                     
                     {showValidationError && (
                       <div className="w-full bg-red-500 text-white p-3 rounded-lg mb-4">
@@ -179,10 +180,10 @@ function Tournamentseries() {
                       </div>
                     )}
                     
-                    <div className="w-full md:w-[80%] lg:w-[60%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-5">
-                        <label className="text-xl text-white mt-10">Tournament/ Series Name*</label>
+                    <div className="w-full md:w-[80%] lg:w-[50%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-8">
+                        <label className="text-xl text-white mt-5">Tournament/ Series Name*</label>
                         <input 
-                          className="w-64 h-12 border-2 border-white text-white p-2 rounded-xl mt-2" 
+                          className="w-[16rem] h-12 border-2 border-white text-white p-2 rounded-xl mt-4" 
                           type="text" 
                           placeholder="Tournament/Series Name" 
                           value={tournamentName}
@@ -195,7 +196,7 @@ function Tournamentseries() {
                           <p className="text-red-500 text-sm absolute bottom-[-20px] right-0">This field is required</p>
                         )}
                     </div>
-                    <div className="md:w-[80%] lg:w-[60%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-5">
+                    <div className="md:w-[80%] lg:w-[45%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-5">
                         <h2 className="text-xl mb-4 text-start text-white">Upload an Image</h2>
                         <div className="w-full md:w-[35%] relative flex items-center justify-between gap-5 mb-6">
                         <div className="w-[10rem] h-fit p-2 bg-white rounded-2xl shadow-lg">
@@ -212,7 +213,7 @@ function Tournamentseries() {
                         </div>
                     </div>
 
-                    <div className="w-full md:w-[80%] lg:w-[60%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-5">
+                    <div className="w-full md:w-[80%] lg:w-[50%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-5">
                         <label htmlFor="location" className="flex text-lg font-medium text-white mb-2">Choose your location*</label>
                         <select 
                           id="location" 
@@ -234,7 +235,7 @@ function Tournamentseries() {
                         )}
                     </div>
 
-                    <div className="w-full md:w-[80%] lg:w-[60%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-5">
+                    <div className="w-full md:w-[80%] lg:w-[50%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-5">
                         <label className="text-xl text-white">No of Teams*</label>
                         <input 
                           className="w-64 h-12 border-2 border-white text-white p-2 rounded-xl mt-[.5rem]" 
@@ -251,9 +252,9 @@ function Tournamentseries() {
                         )}
                     </div>
 
-                    <div className="relative flex flex-col md:flex-row justify-between w-full gap-2 md:gap-0">
-                    <label className="text-lg md:text-xl text-white">Dates*</label>
-                    <div className="w-full md:absolute md:left-[35%] flex flex-col md:flex-row gap-2 md:gap-0 md:w-[90%] h-fit">                    
+                    <div className="relative flex flex-col md:flex-row justify-between w-full  gap-2 md:gap-0">
+                    <label className="text-lg md:text-xl text-white mt-5">Dates*</label>
+                    <div className="w-full md:absolute md:left-[30%] flex flex-col md:flex-row gap-2 md:gap-0 md:w-[90%] h-fit">                    
                             <div className="flex items-center w-[30%]">
                                 <label className="text-xl text-white">Start Date</label>
                                 <input 
@@ -287,8 +288,8 @@ function Tournamentseries() {
                         </div>
                     </div>
 
-                    <div className="w-full md:w-[80%] lg:w-[60%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-5">
-                        <label className="text-xl text-white">Location*</label>
+                    <div className="w-full md:w-[80%] lg:w-[50%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-5">
+                        <label className="text-xl text-white md:mt-6">Location*</label>
                         <input
                             className="w-64 h-12 border-2 border-white text-white p-2 rounded-xl mt-2 bg-no-repeat pl-10 pr-12 py-2 placeholder-white"
                             type="text"
@@ -309,8 +310,8 @@ function Tournamentseries() {
                         )}
                     </div>
 
-                    <div className="w-full md:w-[80%] lg:w-[60%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-5">
-                        <label className="text-xl text-white">Schedule</label>
+                    <div className="w-full md:w-[80%] lg:w-[50%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-5">
+                        <label className="text-xl text-white md:mt-6">Schedule</label>
                         <div>
                             <input 
                               className="accent-cyan-500 w-[1rem] h-[1rem]" 
@@ -340,8 +341,8 @@ function Tournamentseries() {
                         </div>
                     </div>
 
-                    <div className="w-full md:w-[80%] lg:w-[60%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-5">
-                        <label htmlFor="timing" className="flex text-lg font-medium text-white mb-2">Choose your Timing*</label>
+                    <div className="w-full md:w-[80%] lg:w-[50%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-5">
+                        <label htmlFor="timing" className="flex text-lg font-medium text-white md:mt-6">Choose your Timing*</label>
                         <select 
                           id="timing" 
                           name="timing" 
@@ -362,9 +363,9 @@ function Tournamentseries() {
                         )}
                     </div>
 
-                    <div className="w-full md:w-[80%] lg:w-[60%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-5">
+                    <div className="w-full md:w-[80%] lg:w-[50%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-5">
                         <label className="text-xl text-white">Rules and Descrimination</label>
-                        <div className="w-[40%] relative flex items-center justify-between gap-5 mb-6">
+                        <div className="w-[40%] relative flex items-center justify-between gap-5  mb-6">
                        <button id="view-rules" className="rounded-xl w-24 bg-gradient-to-l from-[#5DE0E6] to-[#004AAD] h-9 text-white mr-6 cursor-pointer" onClick={toggleDivVisibility}>
                        {isRulesVisible ? 'Hide Rules' : 'View Rules'}
                        </button>

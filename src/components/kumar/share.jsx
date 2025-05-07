@@ -58,10 +58,10 @@ const TournamentPage = () => {
   };
  
   return (
-    <section className="bg-gradient-to-b from-[#0D171E] to-[#283F79] text-white p-4 md:p-8 min-h-screen flex items-center w-full overflow-hidden z-0 relative">
-      <div className="z-20 flex overflow-hidden justify-center w-full p-2 md:p-[5rem] relative">
-        <form className="z-30 gap-5 md:gap-10 bg-[#1A2B4C] rounded-xl md:rounded-[2rem] shadow-[8px_-5px_0px_2px_#253A6E] md:shadow-[22px_-14px_0px_5px_#253A6E] flex flex-col items-center justify-around w-full max-w-[70rem] m-2 md:m-4 p-4 md:pl-[5rem] md:pr-[5rem] md:pt-[5rem] md:pb-[2rem] text-start">
-          <h1 className="text-2xl md:text-4xl font-bold mb-4 md:mb-6 mt-4 md:mt-10 text-center">Tournament Setup</h1>
+    <section className="bg-gradient-to-b from-[#0D171E] to-[#283F79] text-white p-4 md:px-8 md:pb-1 min-h-screen flex items-center w-full overflow-hidden z-0 relative">
+      <div className="z-20 flex overflow-hidden justify-center w-full p-2 md:px-[5rem] md:pt-[1rem] relative">
+        <form className="z-30 gap-5 md:gap-10 bg-[#1A2B4C] rounded-xl md:rounded-[2rem] shadow-[8px_-5px_0px_2px_#253A6E] md:shadow-[22px_-14px_0px_5px_#253A6E] flex flex-col items-center justify-around w-full max-w-[70rem] m-2 md:m-4 p-4 md:pl-[5rem] md:pr-[5rem] md:pt-[5rem] md:pb-[1rem] text-start">
+          <h1 className="text-2xl md:text-5xl font-bold mb-4 md:mb-2 mt-4 md:-mt-8 text-center">Tournament Setup</h1>
  
           {step === 'menu' && (
             <div className="flex flex-row md:flex-col gap-4 md:gap-10 w-[50%] justify-center">
@@ -93,7 +93,7 @@ const TournamentPage = () => {
                     <button
                       type="button"
                       className="rounded-xl w-32 md:w-44 bg-gray-500 h-8 md:h-9 text-white cursor-pointer hover:shadow-[0px_0px_13px_0px_#5DE0E6] text-sm md:text-base"
-                      onClick={handleCancel}
+                      onClick={() => navigate("/landingpage")}
                     >
                       Cancel
                     </button>
@@ -120,7 +120,7 @@ const TournamentPage = () => {
               >
                 <img src={nav} className="w-8 h-8 md:w-10 md:h-10 -scale-x-100" alt="Back" />
               </button>
-              <h2 className="text-xl md:text-2xl font-semibold mb-4 text-center">Team List</h2>
+              <h2 className="text-xl md:text-2xl font-semibold mb-1 text-center">Team List</h2>
               <ul className="w-full space-y-2 mb-4">
               {selectedTeams.map((teamName, index) => (
                   <li key={index} className="bg-white/10 px-4 py-2 rounded text-sm md:text-base">
@@ -140,7 +140,7 @@ const TournamentPage = () => {
               </button>
  
               {showTeamCards && (
-                <div className="flex flex-col w-full justify-center md:items-center h-fit my-4 md:my-10 gap-3 md:gap-5">
+                <div className="grid w-full grid-cols-1 sm:grid-cols-2 md:grid-cols-3 h-fit my-4 md:mt-10 gap-3 md:gap-5">
                   {[
                     { id: 'team1', name: 'India', img: frd1 },
                     { id: 'team2', name: 'Australia', img: frd1 },
@@ -170,7 +170,7 @@ const TournamentPage = () => {
                       className="rounded-xl w-32 md:w-44 bg-gray-500 h-8 md:h-9 text-white cursor-pointer hover:shadow-[0px_0px_13px_0px_#5DE0E6] text-sm md:text-base"
                       onClick={handleCancel}
                     >
-                      Cancel
+                      Clear
                     </button>
                     <button
                       type="button"
@@ -189,7 +189,7 @@ const TournamentPage = () => {
                        className="rounded-xl w-32 md:w-44 bg-gray-500 h-8 md:h-9 text-white cursor-pointer hover:shadow-[0px_0px_13px_0px_#5DE0E6] text-sm md:text-base"
                        onClick={handleCancel}
                      >
-                       Cancel
+                       Clear
                      </button>
                      <button
                        type="button" // Changed to button type
@@ -284,7 +284,7 @@ const TournamentPage = () => {
                       className="rounded-xl w-32 md:w-44 bg-gray-500 h-8 md:h-9 text-white cursor-pointer hover:shadow-[0px_0px_13px_0px_#5DE0E6] text-sm md:text-base"
                       onClick={handleCancel}
                     >
-                      Cancel
+                      Clear
                     </button>
                     <button
                       type="submit"
