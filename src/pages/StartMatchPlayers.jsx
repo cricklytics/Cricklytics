@@ -391,7 +391,7 @@ function StartMatchPlayers() {
   return (
     <ErrorBoundary>
       <section
-        className="min-h-screen w-full flex flex-col items-center py-[10rem] pb-[5rem]"
+        className="min-h-screen w-full flex flex-col items-center  pb-[5rem]"
         style={{
           backgroundImage: 'linear-gradient(140deg,#080006 15%,#FF0077)',
           backgroundRepeat: 'no-repeat',
