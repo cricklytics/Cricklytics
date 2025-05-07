@@ -101,7 +101,7 @@ function StartMatchPlayers() {
     } else if (striker) {
       cancelStriker();
     } else {
-      navigate('/match-start', { state: { activeTab: 'Start Match' } }); // Navigate back when on the starting page
+      navigate('/match-start', { state: { activeTab: 'Start Match' } });
     }
   };
 
@@ -368,7 +368,14 @@ function StartMatchPlayers() {
     setCurrentOverBalls(prev => prev.slice(0, -1));
   };
 
-  // Fallback UI if nothing renders
+  const handleModalOkClick = () => {
+    if (gameFinished && modalContent.title === 'Match Result') {
+      navigate('/match-start', { state: { activeTab: 'Match Results' } });
+    } else {
+      setShowModal(false);
+    }
+  };
+
   if (!currentView && !showThirdButtonOnly) {
     return (
       <div className="text-white text-center p-4">
@@ -376,32 +383,22 @@ function StartMatchPlayers() {
       </div>
     );
   }
-  const handleModalOkClick = () => {
-    if (gameFinished && modalContent.title === 'Match Result') {
-        // Navigate to the match-start page.
-        // To activate a specific tab, you might need to pass state or a query parameter.
-        // For example, using state:
-        navigate('/match-start', { state: { activeTab: 'Match Results' } });
-    } else {
-        // Close the modal for other cases
-        setShowModal(false);
-    }
-};
 
   return (
     <ErrorBoundary>
       <section
-        className="min-h-screen w-full flex flex-col items-center  pb-[5rem]"
+        className="w-full flex flex-col items-center"
         style={{
           backgroundImage: 'linear-gradient(140deg,#080006 15%,#FF0077)',
           backgroundRepeat: 'no-repeat',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
+          minHeight: '100vh',
+          overflow: 'hidden',
         }}
       >
         {HeaderComponent ? <HeaderComponent /> : <div className="text-white">Header Missing</div>}
 
-        {/* Added cancel cross icon at top right corner */}
         {currentView === 'toss' && !striker && !nonStriker && !bowlerVisible && !showThirdButtonOnly && (
           <button
             onClick={goBack}
@@ -438,8 +435,8 @@ function StartMatchPlayers() {
         )}
 
         {!showThirdButtonOnly && (
-          <div className="w-[90%] py-10 flex flex-col items-center">
-            <div className="w-full max-w-2xl h-16 flex justify-around mb-10">
+          <div className="w-[90%] py-4 flex flex-col items-center">
+            <div className="w-full max-w-2xl h-16 flex justify-around mt-12 md:mt-3">
               <button
                 onClick={() => handleButtonClick('toss')}
                 className="bg-[#FF62A1] w-20 h-10 text-sm md:w-32 h-10 md:text-xl text-white font-bold rounded-2xl shadow-[0px_0px_13px_0px_#FF94C8] border-2 border-white"
@@ -458,7 +455,7 @@ function StartMatchPlayers() {
 
         {currentView === 'toss' && !showThirdButtonOnly && (
           <>
-            <div id="toss" className="text-center mb-12">
+            <div id="toss" className="text-center mb-4">
               <h2 className="text-white font-bold text-3xl md:text-[3rem]">
                 {bowlerVisible ? (isChasing ? 'Team A' : 'Team B') : isChasing ? 'Choose to Chase' : 'The Team A won the Toss'}
               </h2>
@@ -467,25 +464,25 @@ function StartMatchPlayers() {
               </h2>
             </div>
 
-            <div className="flex gap-10">
+            <div className="flex gap-4">
               {!bowlerVisible && (
                 <>
                   <div>
-                    <button className="w-30 h-10 text-white text-lg md:w-40 md:h-14 font-bold bg-gradient-to-l from-[#12BFA5] to-[#000000] rounded-[1rem] shadow-lg">
+                    <button className="w-15 h-8 text-white text-lg md:w-25 md:h-10 font-bold bg-gradient-to-l from-[#12BFA5] to-[#000000] rounded-[1rem] shadow-lg">
                       Striker
                     </button>
                     {striker && (
-                      <div className="text-white text-center mt-2 relative">
-                        <div className="relative inline-block">
+                      <div className="relative text-white text-center mt-2 relative">
+                        <div className="inline-block">
                           <img
                             src={striker.image}
                             alt="Striker"
-                            className="w-24 h-24 md:w-32 md:h-32 lg:w-40 lg:h-40 rounded-full mx-auto object-cover aspect-square"
+                            className="w-20 h-20 md:w-10 md:h-10 lg:w-10 lg:h-10 rounded-full mx-auto object-cover aspect-square"
                             onError={(e) => (e.target.src = '')}
                           />
                           <button
                             onClick={cancelStriker}
-                            className="absolute -top-2 -right-2 w-6 h-6 text-black font-bold flex items-center justify-center text-xl"
+                            className="absolute -top-2 right-4 w-6 h-6 text-white font-bold flex items-center justify-center text-xl"
                           >
                             ×
                           </button>
@@ -496,21 +493,21 @@ function StartMatchPlayers() {
                     )}
                   </div>
                   <div>
-                    <button className="w-30 h-10 text-white text-lg md:w-40 md:h-14 font-bold bg-gradient-to-l from-[#12BFA5] to-[#000000] rounded-[1rem] shadow-lg">
+                    <button className="w-15 h-18 text-white text-lg md:w-25 md:h-10 font-bold bg-gradient-to-l from-[#12BFA5] to-[#000000] rounded-[1rem] shadow-lg">
                       Non-Striker
                     </button>
                     {nonStriker && (
-                      <div className="text-white text-center mt-2 relative">
-                        <div className="relative inline-block">
+                      <div className="relative text-white text-center mt-2 relative">
+                        <div className=" inline-block">
                           <img
                             src={nonStriker.image}
                             alt="Non-striker"
-                            className="w-24 h-24 md:w-32 md:h-32 lg:w-40 lg:h-40 rounded-full mx-auto object-cover aspect-square"
+                            className="w-20 h-20 md:w-15 md:h-15 lg:w-10 lg:h-10 rounded-full mx-auto object-cover aspect-square"
                             onError={(e) => (e.target.src = '')}
                           />
                           <button
                             onClick={cancelNonStriker}
-                            className="absolute -top-2 -right-2 w-6 h-6 text-black font-bold flex items-center justify-center text-xl"
+                            className="absolute -top-2 right-4 w-6 h-6 text-white font-bold flex items-center justify-center text-xl"
                           >
                             ×
                           </button>
@@ -525,14 +522,14 @@ function StartMatchPlayers() {
             </div>
 
             {!bowlerVisible && isChasing && (
-              <div id="bowling" className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-10 mt-10">
+              <div id="bowling" className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-4">
                 {playerNames.map((name, index) => (
                   <div
                     key={index}
                     onClick={() => handlePlayerSelect(index)}
                     className={`cursor-pointer flex flex-col items-center text-white text-center ${selectedBatsmenIndices.includes(index) ? 'opacity-50' : ''}`}
                   >
-                    <div className="w-24 h-24 md:w-32 md:h-32 lg:w-40 lg:h-40 rounded-full border-[5px] border-[#white] overflow-hidden flex items-center justify-center aspect-square">
+                    <div className="w-20 h-20 md:w-15 md:h-15 lg:w-15 lg:h-15 rounded-full border-[5px] border-[#white] overflow-hidden flex items-center justify-center aspect-square">
                       <img
                         src={playerImages[index]}
                         alt="Player"
@@ -548,14 +545,14 @@ function StartMatchPlayers() {
             )}
 
             {!bowlerVisible && !isChasing && (
-              <div id="batting" className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-10 mt-10">
+              <div id="batting" className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-4">
                 {playerNames.map((name, index) => (
                   <div
                     key={index}
                     onClick={() => handlePlayerSelect(index)}
                     className={`cursor-pointer flex flex-col items-center text-white text-center ${selectedBatsmenIndices.includes(index) ? 'opacity-50' : ''}`}
                   >
-                    <div className="w-24 h-24 md:w-32 md:h-32 lg:w-40 lg:h-40 rounded-full border-[5px] border-[#F0167C] overflow-hidden flex items-center justify-center aspect-square">
+                    <div className="w-20 h-20 md:w-15 md:h-15 lg:w-15 lg:h-15 rounded-full border-[5px] border-[#F0167C] overflow-hidden flex items-center justify-center aspect-square">
                       <img
                         src={playerImages[index]}
                         alt="Player"
@@ -574,9 +571,8 @@ function StartMatchPlayers() {
               <button
                 id="choosebowler"
                 onClick={() => setBowlerVisible(true)}
-                className="w-40 rounded-3xl h-14 mt-20 bg-black text-white text-lg font-bold shadow-lg  bg-[url('../assets/kumar/button.png')] transform transition duration-200 hover:scale-105 hover:shadow-xl active:scale-95 active:shadow-md"
+                className="w-30 rounded-3xl h-10 mt-4 bg-black text-white text-sm font-bold shadow-lg bg-[url('../assets/kumar/button.png')] transform transition duration-200 hover:scale-105 hover:shadow-xl active:scale-95 active:shadow-md"
                 style={{
-
                   backgroundSize: 'cover',
                   backgroundPosition: 'center',
                   backgroundRepeat: 'no-repeat',
@@ -591,7 +587,7 @@ function StartMatchPlayers() {
                 <img
                   src={selectedBowler.image}
                   alt="Bowler"
-                  className="w-24 h-24 md:w-32 md:h-32 lg:w-40 lg:h-40 rounded-full mx-auto object-cover aspect-square"
+                  className="w-20 h-20 md:w-15 md:h-15 lg:w-15 lg:h-15 rounded-full mx-auto object-cover aspect-square"
                   onError={(e) => (e.target.src = '')}
                 />
                 <div>{selectedBowler.name}</div>
@@ -601,7 +597,7 @@ function StartMatchPlayers() {
 
             {bowlerVisible && (
               <>
-                <div id={isChasing ? 'bowling' : 'bowling'} className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-10 mt-10">
+                <div id={isChasing ? 'bowling' : 'bowling'} className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-4">
                   {playerNames.map((name, index) => (
                     <div
                       key={index}
@@ -609,7 +605,7 @@ function StartMatchPlayers() {
                       className={`cursor-pointer flex flex-col items-center text-white text-center ${selectedBowler?.index === index ? 'opacity-50' : ''}`}
                     >
                       <div
-                        className={`w-24 h-24 md:w-32 md:h-32 lg:w-40 lg:h-40 rounded-full border-[5px] ${isChasing ? 'border-[#12BFA5]' : 'border-[#12BFA5]'} overflow-hidden flex items-center justify-center aspect-square`}
+                        className={`w-20 h-20 md:w-15 md:h-15 lg:w-15 lg:h-15 rounded-full border-[5px] ${isChasing ? 'border-[#12BFA5]' : 'border-[#12BFA5]'} overflow-hidden flex items-center justify-center aspect-square`}
                       >
                         <img
                           src={playerImages[index]}
@@ -627,7 +623,7 @@ function StartMatchPlayers() {
                 {selectedBowler && (
                   <button
                     onClick={() => handleButtonClick('start')}
-                    className="w-40 h-14 mt-20 text-white text-lg font-bold rounded-3xl bg-black bg-[url('../assets/kumar/button.png')] bg-cover bg-center shadow-lg transform transition duration-200 hover:scale-105 hover:shadow-xl active:scale-95 active:shadow-md"
+                    className="w-30 h-10 mt-4 text-white text-lg font-bold rounded-3xl bg-black bg-[url('../assets/kumar/button.png')] bg-cover bg-center shadow-lg transform transition duration-200 hover:scale-105 hover:shadow-xl active:scale-95 active:shadow-md"
                   >
                     Let's Play
                   </button>
@@ -638,9 +634,9 @@ function StartMatchPlayers() {
         )}
 
         {showThirdButtonOnly && (
-          <div id="start" className="relative flex flex-col w-full h-full items-center px-4 mt-5 md:mt-20">
+          <div id="start" className="relative flex flex-col w-full h-full items-center px-4 mt-20 md:mt-10">
             <h2 className="gap-5 text-4xl md:text-3xl lg:text-5xl text-white font-bold text-center">Score Board</h2>
-            <div className="mt-10 flex md:flex-row w-full md:w-1/2 justify-around gap-20 h-fit pt-5">
+            <div className="mt-4 flex md:flex-row w-full md:w-1/2 justify-around gap-20 h-fit pt-2">
               <div className="flex items-center justify-center mb-4 md:mb-0">
                 <img
                   src={isChasing ? flag2 : flag1}
@@ -670,8 +666,8 @@ function StartMatchPlayers() {
               </div>
             </div>
 
-            <div className="w-full flex flex-col md:justify-between md:flex-row md:w-[50%] justify-around mt-6 md:mt-10 md:pr-15">
-              <div className="flex flex-row px-[4.8%] md:p-0 justify-between md:flex-row md:items-center gap-4 md:gap-8 mb-6 md:mb-0">
+            <div className="w-full flex flex-col md:justify-between md:flex-row md:w-[50%] justify-around mt-2 md:pr-15">
+              <div className="flex flex-row px-[4.8%] md:p-0 justify-between md:flex-row md:items-center gap-4 md:gap-8 mb-4 md:mb-0">
                 <div className="text-white text-center">
                   <h3 className={`text-lg md:text-xl font-bold ${striker ? 'text-yellow-300' : 'text-gray-400'}`}>Striker</h3>
                   {striker && (
@@ -708,7 +704,7 @@ function StartMatchPlayers() {
                   )}
                 </div>
               </div>
-              <div className="flex flex-col justify-center items-center w-full md:w-[20%] mb-6 md:mb-0">
+              <div className="flex flex-col justify-center items-center w-full md:w-[20%] mb-4 md:mb-0">
                 <div className="flex justify-center">
                   <button
                     onClick={() => setShowPastOvers(!showPastOvers)}
@@ -718,7 +714,7 @@ function StartMatchPlayers() {
                   </button>
                 </div>
                 {showPastOvers && (
-                  <div className="mt-4 md:mt-6 text-white w-full">
+                  <div className="mt-2 md:mt-4 text-white w-full">
                     <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-4 text-center">Overs History</h3>
                     <div className="flex flex-wrap gap-2 md:gap-4 justify-center">
                       {pastOvers.map((over, index) => (
@@ -751,7 +747,7 @@ function StartMatchPlayers() {
               </div>
             </div>
 
-            <div className="mt-6 md:mt-10 flex flex-wrap justify-center gap-2 md:gap-4">
+            <div className="mt-4 flex flex-wrap justify-center gap-2 md:gap-4">
               {[0, 1, 2, 4, 6].map((num) => (
                 <button
                   key={num}
@@ -763,7 +759,7 @@ function StartMatchPlayers() {
               ))}
             </div>
 
-            <div className="mt-4 md:mt-6 flex flex-wrap justify-center gap-2 md:gap-4">
+            <div className="mt-2 flex flex-wrap justify-center gap-2 md:gap-4">
               {['Wide', 'No-ball', 'OUT', 'Leg By', 'lbw'].map((label) => (
                 <button
                   key={label}
