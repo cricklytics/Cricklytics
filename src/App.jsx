@@ -10,6 +10,8 @@ import Landingpage from './pages/Landingpage';
 import Sidebar from './components/sophita/HomePage/Sidebar';
 import Golive from './pages/Golive';
 import Club from './pages/Club';
+import Message from "./pages/Message";
+import Contact from './pages/contacts';
 
 
 import Startmatch from './pages/Startmatch';
@@ -82,6 +84,7 @@ function App() {
           <Route path="/go-live" element={<Golive />} />
           <Route path="/start-match" element={<Startmatch />} />
           <Route path="/club" element={<Club />} />
+          <Route path="/message" element={<Message/>} />
 
           <Route path="/tournament" element={<Tournaments/>} />
           <Route path="/team" element={<TeamDetails/>} />
@@ -100,6 +103,7 @@ function App() {
           <Route path="/stats" element={< Stats/>} />
           <Route path="/match" element={< Match/>} />
           <Route path="/insights" element={< Insights/>} />
+          <Route path="/contacts" element={<Contact/>} />
 
           <Route path="/tournamentseries" element={<TournamentSeries />} />
            {/* Newly Added Routes */}
