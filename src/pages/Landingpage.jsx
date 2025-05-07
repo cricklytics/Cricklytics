@@ -25,27 +25,6 @@ const Landingpage = () => {
   const [isPriceVisible, setIsPriceVisible] = useState(false);
   const [profileStoryVisible, setProfileStoryVisible] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState(null);
-  const [isContactOpen, setIsContactOpen] = useState(false); // State for toggling contact details
-  const contactRef = useRef(null);
-
-  const toggleContact = () => {
-    setIsContactOpen(!isContactOpen);
-  };
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (contactRef.current && !contactRef.current.contains(event.target)) {
-        setIsContactOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
-
-
   const [profileImages, setProfileImages] = useState([
     { id: 1, image: fr1, name: 'Friend 1' },
     { id: 2, image: fr2, name: 'Friend 2' },
@@ -53,6 +32,13 @@ const Landingpage = () => {
   ]);
   const [editingProfileId, setEditingProfileId] = useState(null);
   const [activeTab, setActiveTab] = useState("forYou"); // "forYou", "following", "reels"
+  
+  // State for comments and sharing
+  const [showCommentBox, setShowCommentBox] = useState(null);
+  const [selectedHighlight, setSelectedHighlight] = useState(null);
+  const [comments, setComments] = useState({});
+  const [newComment, setNewComment] = useState('');
+  const [showShareBox, setShowShareBox] = useState(null);
  
   const [highlightsData, setHighlightsData] = useState([]);
   const [followersData, setFollowersData] = useState([
@@ -75,6 +61,8 @@ const Landingpage = () => {
   const searchBarRef = useRef(null);
   const fileInputRef = useRef(null);
   const reelInputRef = useRef(null);
+  const commentRefs = useRef({});
+  const shareRefs = useRef({});
  
   const [isAIExpanded, setIsAIExpanded] = useState(false);
 
@@ -87,7 +75,24 @@ const Landingpage = () => {
   const chatRef = useRef(null);
   const inputRef = useRef(null);
 
-  const stickyHeaderRef = useRef(null);
+  // Share options data
+  const shareOptions = [
+    { name: 'WhatsApp', icon: '📱' },
+    { name: 'Facebook', icon: '👍' },
+    { name: 'Twitter', icon: '🐦' },
+    { name: 'Instagram', icon: '📷' },
+    { name: 'Copy Link', icon: '🔗' }
+  ];
+
+  // Chat data
+  const chatData = {
+    primary: [
+      { id: 1, name: "Virat Kohli", lastMessage: "Hey, how's it going?", time: "2h", unread: true, avatar: "bg-blue-500" },
+      { id: 2, name: "MS Dhoni", lastMessage: "Let's catch up soon", time: "1d", unread: false, avatar: "bg-green-500" }
+    ],
+    requests: [],
+    general: []
+  };
 
   const handleToggleSearch = () => {
     setShowSearch(!showSearch);
@@ -98,14 +103,85 @@ const Landingpage = () => {
   };
   const handleSendMessage = () => {
     if (messageInput.trim()) {
-      // Add your message sending logic here
       console.log("Message sent:", messageInput);
       setMessageInput('');
     }
   };
 
+  // Comment handlers
+  const handleCommentClick = (highlight, e) => {
+    e.stopPropagation();
+    setSelectedHighlight(highlight);
+    setShowCommentBox(showCommentBox === highlight.id ? null : highlight.id);
+    setShowShareBox(null); // Close share box if open
+    
+    if (!comments[highlight.id]) {
+      setComments(prev => ({
+        ...prev,
+        [highlight.id]: []
+      }));
+    }
+  };
+
+  const handleAddComment = () => {
+    if (newComment.trim() && selectedHighlight) {
+      const comment = {
+        id: Date.now(),
+        text: newComment,
+        timestamp: new Date().toISOString(),
+        user: "Current User"
+      };
+      
+      setComments(prev => ({
+        ...prev,
+        [selectedHighlight.id]: [...(prev[selectedHighlight.id] || []), comment]
+      }));
+      
+      setNewComment('');
+    }
+  };
+
+  // Share handlers
+  const handleShareClick = (highlight, e) => {
+    e.stopPropagation();
+    setSelectedHighlight(highlight);
+    setShowShareBox(showShareBox === highlight.id ? null : highlight.id);
+    setShowCommentBox(null); // Close comment box if open
+  };
+
+  const handleShare = (platform) => {
+    console.log(`Sharing ${selectedHighlight.title} via ${platform}`);
+    setShowShareBox(null);
+    alert(`Shared "${selectedHighlight.title}" via ${platform}`);
+  };
+
+  // Handle clicks outside comment/share boxes
   useEffect(() => {
     const handleClickOutside = (event) => {
+      // Close comment box if clicked outside
+      if (showCommentBox !== null) {
+        const commentBox = commentRefs.current[showCommentBox];
+        if (commentBox && !commentBox.contains(event.target)) {
+          // Check if click was on the comment icon
+          const commentIcon = document.querySelector(`.comment-icon-${showCommentBox}`);
+          if (!commentIcon?.contains(event.target)) {
+            setShowCommentBox(null);
+          }
+        }
+      }
+      
+      // Close share box if clicked outside
+      if (showShareBox !== null) {
+        const shareBox = shareRefs.current[showShareBox];
+        if (shareBox && !shareBox.contains(event.target)) {
+          // Check if click was on the share icon
+          const shareIcon = document.querySelector(`.share-icon-${showShareBox}`);
+          if (!shareIcon?.contains(event.target)) {
+            setShowShareBox(null);
+          }
+        }
+      }
+      
       if (searchRef.current && !searchRef.current.contains(event.target)) {
         setShowSearch(false);
       }
@@ -121,9 +197,14 @@ const Landingpage = () => {
       if (event.key === 'Escape') {
         setShowSearch(false);
         setShowChat(false);
+        setShowCommentBox(null);
+        setShowShareBox(null);
       }
       if (event.key === 'Enter' && showChat && messageInput) {
         handleSendMessage();
+      }
+      if (event.key === 'Enter' && showCommentBox !== null && newComment) {
+        handleAddComment();
       }
     };
  
@@ -134,41 +215,8 @@ const Landingpage = () => {
       document.removeEventListener('mousedown', handleClickOutside);
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [messageInput]);
+  }, [messageInput, newComment, showCommentBox, showShareBox]);
 
-  // Sample chat data
-  const chatData = {
-    primary: [
-      {
-        id: 1,
-        name: "John Doe",
-        lastMessage: "Hey, how are you doing?",
-        time: "2h",
-        unread: true,
-        avatar: "bg-gradient-to-r from-[#5DE0E6] to-[#004AAD]"
-      },
-      {
-        id: 2,
-        name: "Jane Smith",
-        lastMessage: "Let's meet tomorrow!",
-        time: "1d",
-        unread: false,
-        avatar: "bg-gradient-to-r from-pink-500 to-yellow-500"
-      }
-    ],
-    general: [
-      {
-        id: 3,
-        name: "Team Cricklytics",
-        lastMessage: "New features coming soon!",
-        time: "3d",
-        unread: false,
-        avatar: "bg-gradient-to-r from-purple-500 to-red-500"
-      }
-    ],
-    requests: []
-  };
- 
   // Fetch highlights from Firebase Firestore
   useEffect(() => {
     const fetchHighlights = async () => {
@@ -228,20 +276,19 @@ const Landingpage = () => {
   }, [highlightVisible]);
  
   const handleMainClick = (e) => {
-    // Don't hide highlights if clicking on specific elements OR within the sticky header
     if (
       isPriceVisible ||
       profileStoryVisible ||
       (highlightRef.current && highlightRef.current.contains(e.target)) ||
       (searchBarRef.current && searchBarRef.current.contains(e.target)) ||
-      (stickyHeaderRef.current && stickyHeaderRef.current.contains(e.target)) || // <-- Add this check
-     //  e.target.closest('.profile-image-container') || // This is now covered by stickyHeaderRef, can be removed if desired
+      e.target.closest('.profile-image-container') ||
       e.target === fileInputRef.current
     ) {
-      return; // Do nothing if click is inside these areas
+      return;
     }
-    // Only hide if the click is truly on the background
     setHighlightVisible(false);
+    setShowCommentBox(null);
+    setShowShareBox(null);
   };
  
   const toggleLike = (id) => {
@@ -260,7 +307,7 @@ const Landingpage = () => {
     e.stopPropagation();
     setEditingProfileId(profileId);
     fileInputRef.current.click();
-    setHighlightVisible(true); // Ensure highlights remain visible
+    setHighlightVisible(true);
   };
 
   const handleReelUploadClick = () => {
@@ -270,7 +317,6 @@ const Landingpage = () => {
   const handleReelUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // Here you would typically upload to your backend
       const newReel = {
         id: reelsData.length + 1,
         title: `My Reel ${reelsData.length + 1}`,
@@ -306,6 +352,11 @@ const Landingpage = () => {
           : follower
       )
     );
+  };
+
+  const handleOpenMessagesPage = () => {
+    console.log('Attempting to navigate to messages');
+    navigate('/message');
   };
  
   return (
@@ -403,172 +454,24 @@ const Landingpage = () => {
                 <Search className="text-white w-4 h-4 md:w-6 md:h-6" />
               </button>
             </div>
-        <div className="relative mb-4 md:mb-4 mt-4">
-          <button
-            onClick={toggleContact}
-            className="text-white hover:text-gray-300 text-xl transition-colors"
-          >
-            Contact
-          </button>
-          {/* Contact Details Dropdown (Visible only on click) */}
-          {isContactOpen && (
-            <div className="absolute top-full right-0 mt-2 w-[calc(100%-2rem)] sm:w-64 max-w-[90vw] mx-auto min-w-[200px] bg-gray-800 rounded-lg shadow-lg p-4 z-60">
-              <p className="text-white text-sm flex flex-col">
-                <span className="font-semibold">Email:</span>
-                <a
-                  href="mailto:support_cricklytics@creativityventures.co.in"
-                  className="hover:text-gray-300 transition-colors break-words"
-                >
-                  support_cricklytics@creativityventures.co.in
-                </a>
-              </p>
-              <p className="text-white text-sm mt-2 flex flex-col">
-                <span className="font-semibold">Ph-no:</span>
-                <a
-                  href="tel:+917397362027"
-                  className="hover:text-gray-300 transition-colors"
-                >
-                  +91 7397362027
-                </a>
-              </p>
+            <div>
+              <button className="text-sm md:text-2xl font-bold cursor-pointer hover:text-[#3edcff]" onClick={() => navigate("/contacts")}>
+                Contacts
+              </button>
             </div>
-          )}
-        </div>
+            {/* <span className="text-sm md:text-2xl font-bold cursor-pointer hover:text-[#3edcff] hidden sm:inline">Contact</span> */}
             <FaBell className="cursor-pointer hover:scale-110" size={24} />
-
-             {/* Message Icon with dropdown */}
-          <div className="relative">
-            <FaComment
-              className="message-icon cursor-pointer text-white transition-transform duration-200 hover:scale-110"
-              size={24}
-              onClick={() => setShowChat(!showChat)}
-            />
-           
-            {showChat && (
-              <div
-                ref={chatRef}
-                className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl z-[1050] border border-gray-200 overflow-hidden"
-              >
-                {/* Chat Header */}
-                <div className="bg-white p-3 border-b border-gray-200 flex justify-between items-center">
-                  <div className="flex items-center">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-r from-[#5DE0E6] to-[#004AAD] flex items-center justify-center mr-2">
-                      <FaComment className="text-white" size={14} />
-                    </div>
-                    <h3 className="font-semibold text-gray-800">Messages</h3>
-                  </div>
-                  <button
-                    onClick={() => setShowChat(false)}
-                    className="text-gray-500 hover:text-gray-700"
-                  >
-                    <FaTimes />
-                  </button>
-                </div>
- 
-                {/* Search Bar */}
-                <div className="p-2 border-b border-gray-200">
-                  <div className="relative">
-                    <FaSearch className="absolute left-3 top-2.5 text-gray-400" size={12} />
-                    <input
-                      type="text"
-                      placeholder="Search"
-                      className="w-full bg-gray-100 rounded-lg py-1.5 pl-9 pr-3 text-sm text-black focus:outline-none"
-                    />
-                  </div>
-                </div>
- 
-                {/* Chat List */}
-                <div className="flex-1 overflow-y-auto h-64">
-                  {chatData[activeChatTab]?.length > 0 ? (
-                    chatData[activeChatTab].map((chat) => (
-                      <div key={chat.id} className="p-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer flex items-center">
-                        <div className={`w-10 h-10 rounded-full ${chat.avatar} mr-3`}></div>
-                        <div className="flex-1">
-                          <div className="flex justify-between items-center">
-                            <span className={`font-semibold text-sm ${chat.unread ? 'text-black' : 'text-gray-800'}`}>
-                              {chat.name}
-                            </span>
-                            <span className="text-xs text-gray-400">{chat.time}</span>
-                          </div>
-                          <p className={`text-xs ${chat.unread ? 'font-medium text-black' : 'text-gray-500'} truncate`}>
-                            {chat.lastMessage}
-                          </p>
-                        </div>
-                        {chat.unread && (
-                          <div className="w-2 h-2 rounded-full bg-[#5DE0E6] ml-2"></div>
-                        )}
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-center py-10 px-4">
-                      <div className="w-16 h-16 mx-auto rounded-full bg-gray-100 flex items-center justify-center mb-3">
-                        <FaComment className="text-gray-400" size={20} />
-                      </div>
-                      <h4 className="font-medium text-gray-700 mb-1">
-                        {activeChatTab === 'requests'
-                          ? "No message requests"
-                          : "No messages yet"}
-                      </h4>
-                      <p className="text-xs text-gray-500">
-                        {activeChatTab === 'requests'
-                          ? "When someone messages you who you don't follow, it'll appear here"
-                          : "Start a conversation with your friends"}
-                      </p>
-                    </div>
-                  )}
-                </div>
- 
-                {/* Message Input (visible only in primary tab) */}
-                {activeChatTab === 'primary' && (
-                  <div className="p-2 border-t border-gray-200 bg-white">
-                    <div className="flex items-center">
-                      <input
-                        type="text"
-                        placeholder="Write a message..."
-                        className="flex-1 border rounded-l-lg py-2 px-3 text-sm text-black-400 focus:outline-none"
-                        value={messageInput}
-                        onChange={(e) => setMessageInput(e.target.value)}
-                      />
-                      <button
-                        className="bg-[#5DE0E6] text-white py-2 px-4 rounded-r-lg hover:bg-[#4acfd6] flex items-center"
-                        onClick={handleSendMessage}
-                      >
-                        <FaPaperPlane size={14} />
-                      </button>
-                    </div>
-                  </div>
-                )}
- 
-                {/* Bottom Navigation */}
-                <div className="p-2 border-t border-gray-200 bg-white flex justify-around z-50">
-                  <button
-                    className={`hover:text-[#5DE0E6] p-2 ${activeChatTab === 'requests' ? 'text-[#5DE0E6] border-b-2 border-[#5DE0E6]' : 'text-gray-700'}`}
-                    onClick={() => setActiveChatTab('requests')}
-                  >
-                    <span className="text-xs">Requests</span>
-                  </button>
-                  <button
-                    className={`hover:text-[#5DE0E6] p-2 ${activeChatTab === 'primary' ? 'text-[#5DE0E6] border-b-2 border-[#5DE0E6]' : 'text-gray-700'}`}
-                    onClick={() => setActiveChatTab('primary')}
-                  >
-                    <span className="text-xs">Primary</span>
-                  </button>
-                  <button
-                    className={`hover:text-[#5DE0E6] p-2 ${activeChatTab === 'general' ? 'text-[#5DE0E6] border-b-2 border-[#5DE0E6]' : 'text-gray-700'}`}
-                    onClick={() => setActiveChatTab('general')}
-                  >
-                    <span className="text-xs">General</span>
-                  </button>
-                </div>
-
-              </div>
-            )}
-          </div>
-
             
+
+            {/* Message Icon */}
+            <div className="relative">
+  <FaComment
+    className="message-icon cursor-pointer text-white transition-transform duration-200 hover:scale-110"
+    size={24}
+    onClick={handleOpenMessagesPage}
+  />
+</div>
           </div>
-          
-          
         </nav>
  
         <Sidebar isOpen={menuOpen} closeMenu={() => setMenuOpen(false)} />
@@ -577,14 +480,10 @@ const Landingpage = () => {
         <div
           className={`absolute z-[1010] flex flex-col items-center p-2 md:p-[1rem] transition-all duration-700 ease-in-out ${
             highlightVisible ? "top-16 md:top-23" : "top-[50%]"
-          } w-full ${isAIExpanded ? "opacity-0 pointer-events-none" : "opacity-100"} ${
-            showChat ? "pointer-events-none" : "" // Conditional pointer-events
-          }`}
+          } w-full ${isAIExpanded ? "opacity-0 pointer-events-none" : "opacity-100"}`}
           style={{ height: "calc(100vh - 4rem)" }}
         >
-          <div
-          ref={stickyHeaderRef}
-          className={`sticky w-full md:w-[80%] top-0 z-20 bg-[rgba(2,16,30,0.7)] bg-opacity-40 backdrop-blur-md pb-2 md:pb-4 ${highlightVisible && !showChat ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
+          <div className={`sticky w-full md:w-[80%] top-0 z-20 bg-[rgba(2,16,30,0.7)] bg-opacity-40 backdrop-blur-md pb-2 md:pb-4 ${highlightVisible && !showChat ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
             <div className="w-full flex justify-center pt-2 md:pt-4 caret-none">
               <div className="w-full md:w-[50%] flex justify-center gap-2 md:gap-3 md:ml-5 text-white text-sm md:text-xl">
                 {profileImages.map((profile) => (
@@ -675,12 +574,90 @@ const Landingpage = () => {
                       <h3 className="text-white text-sm md:text-lg font-bold m-0 ml-3 md:mr-9">
                         {item.title}
                       </h3>
-                      <div className="flex justify-evenly items-end  h-12 w-40 md:w-60 mr-2 mt-3 md:mr-5 mb-2 md:mb-5">
-                        <button onClick={() => toggleLike(item.id)} className="z-10">
+                      <div className="flex justify-evenly items-end h-12 w-40 md:w-60 mr-2 mt-3 md:mr-5 mb-2 md:mb-5">
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); toggleLike(item.id); }} 
+                          className="z-10"
+                        >
                           <img src={likedVideos[item.id] ? alike : blike} alt="Like" className="w-6 h-6 md:w-8 md:h-8" />
                         </button>
-                        <img src={comment} alt="Comment" className="w-6 h-6 md:w-8 md:h-8 z-10" />
-                        <img src={share} alt="Share" className="w-6 h-6 md:w-8 md:h-8 z-7" />
+                        
+                        {/* Comment Button and Box */}
+                        <div className="relative">
+                          <button 
+                            onClick={(e) => handleCommentClick(item, e)}
+                            className={`comment-icon-${item.id}`}
+                          >
+                            <img src={comment} alt="Comment" className="w-6 h-6 md:w-8 md:h-8 z-10" />
+                          </button>
+                          
+                          {showCommentBox === item.id && (
+                            <div 
+                              ref={el => commentRefs.current[item.id] = el}
+                              className="absolute bottom-10 left-1/2 transform -translate-x-1/2 w-64 bg-[#0D171E] rounded-lg shadow-xl z-50 border border-gray-700 p-3"
+                            >
+                              <div className="max-h-40 overflow-y-auto mb-2">
+                                {comments[item.id]?.length > 0 ? (
+                                  comments[item.id].map(comment => (
+                                    <div key={comment.id} className="mb-2 pb-2 border-b border-gray-700">
+                                      <p className="text-white text-sm">{comment.text}</p>
+                                      <p className="text-gray-400 text-xs">{comment.user}</p>
+                                    </div>
+                                  ))
+                                ) : (
+                                  <p className="text-gray-400 text-sm">No comments yet</p>
+                                )}
+                              </div>
+                              <div className="flex gap-2">
+                                <input
+                                  type="text"
+                                  value={newComment}
+                                  onChange={(e) => setNewComment(e.target.value)}
+                                  placeholder="Add a comment..."
+                                  className="flex-1 bg-gray-800 text-white text-sm rounded px-2 py-1"
+                                />
+                                <button
+                                  onClick={handleAddComment}
+                                  className="bg-[#5DE0E6] text-white px-2 rounded text-sm"
+                                  disabled={!newComment.trim()}
+                                >
+                                  Post
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* Share Button and Box */}
+                        <div className="relative">
+                          <button 
+                            onClick={(e) => handleShareClick(item, e)}
+                            className={`share-icon-${item.id}`}
+                          >
+                            <img src={share} alt="Share" className="w-6 h-6 md:w-8 md:h-8 z-7" />
+                          </button>
+                          
+                          {showShareBox === item.id && (
+                            <div 
+                              ref={el => shareRefs.current[item.id] = el}
+                              className="absolute bottom-10 left-1/2 transform -translate-x-1/2 w-48 bg-[#0D171E] rounded-lg shadow-xl z-50 border border-gray-700 p-3"
+                            >
+                              <h4 className="text-white text-sm mb-2">Share via</h4>
+                              <div className="grid grid-cols-2 gap-2">
+                                {shareOptions.map(option => (
+                                  <button
+                                    key={option.name}
+                                    onClick={() => handleShare(option.name)}
+                                    className="flex flex-col items-center p-2 hover:bg-gray-800 rounded"
+                                  >
+                                    <span className="text-lg">{option.icon}</span>
+                                    <span className="text-white text-xs">{option.name}</span>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -690,41 +667,40 @@ const Landingpage = () => {
               )
             )}
 
-{activeTab === 'following' && (
-  <div className="w-full md:w-1/2 p-4 overflow-y-auto">
-    <h2 className="text-white text-2xl font-bold mb-6 ml-4">People You Follow</h2>
-    <div className="flex flex-col gap-4 px-4">
-      {followersData.map(follower => (
-        <div key={follower.id} className="bg-[#0D171E] rounded-lg p-4 flex items-center justify-between">
-          <div className="flex items-center">
-            <img 
-              src={follower.image} 
-              alt={follower.name}
-              className="w-12 h-12 rounded-full object-cover mr-4"
-            />
-            <div>
-              <h3 className="text-white font-semibold">{follower.name}</h3>
-              <p className="text-gray-400 text-sm">
-                {follower.isFollowing ? "Following" : "Not Following"}
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={() => toggleFollow(follower.id)}
-            className={`px-4 py-2 rounded-full text-sm font-medium ${
-              follower.isFollowing 
-                ? "bg-gray-700 text-white hover:bg-gray-600"
-                : "bg-blue-600 text-white hover:bg-blue-700"
-            }`}
-          >
-            {follower.isFollowing ? "Unfollow" : "Follow"}
-          </button>
-        </div>
-      ))}
-    </div>
-  </div>
-)}
-
+            {activeTab === 'following' && (
+              <div className="w-full md:w-1/2 p-4 overflow-y-auto">
+                <h2 className="text-white text-2xl font-bold mb-6 ml-4">People You Follow</h2>
+                <div className="flex flex-col gap-4 px-4">
+                  {followersData.map(follower => (
+                    <div key={follower.id} className="bg-[#0D171E] rounded-lg p-4 flex items-center justify-between">
+                      <div className="flex items-center">
+                        <img 
+                          src={follower.image} 
+                          alt={follower.name}
+                          className="w-12 h-12 rounded-full object-cover mr-4"
+                        />
+                        <div>
+                          <h3 className="text-white font-semibold">{follower.name}</h3>
+                          <p className="text-gray-400 text-sm">
+                            {follower.isFollowing ? "Following" : "Not Following"}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => toggleFollow(follower.id)}
+                        className={`px-4 py-2 rounded-full text-sm font-medium ${
+                          follower.isFollowing 
+                            ? "bg-gray-700 text-white hover:bg-gray-600"
+                            : "bg-blue-600 text-white hover:bg-blue-700"
+                        }`}
+                      >
+                        {follower.isFollowing ? "Unfollow" : "Follow"}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             {activeTab === 'reels' && (
               <div className="w-full md:w-[80%]">
                 {/* Upload Reel Button */}
@@ -742,7 +718,7 @@ const Landingpage = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-4">
                   {reelsData.map(reel => (
                     <div key={reel.id} className="bg-[#0D171E] rounded-xl overflow-hidden shadow-lg">
-                      <div className="relative pt-[177.78%]"> {/* 16:9 aspect ratio */}
+                      <div className="relative pt-[177.78%]">
                         <iframe
                           src={reel.videoUrl}
                           title={reel.title}

@@ -25,36 +25,33 @@ export default function Highlights() {
   >
 
       {/* Top Navbar */}
-      <div className="flex justify-between items-center p-4 rounded-lg mb-5">
-        <div className="flex items-center gap-4">
-          <img
-            src={logo}
-            alt="Cricklytics Logo"
-            className="h-7 w-7 md:h-10 object-contain block select-none"
-            onError={(e) => {
-              e.target.onerror = null;
-              e.target.src = "/images/Picture3 2.png";
-            }}
-          />
-          <span className="text-2xl font-bold text-white whitespace-nowrap text-shadow-[0_0_8px_rgba(93,224,230,0.4)]">
-            Cricklytics
-          </span>
-        </div>
-      </div>
-
-      {/* 🔙 Back Button Below Logo */}
-<div className="mb-4">
-  <img
-    src={backButton} // Change path if needed
-    alt="Back"
-    className="h-8 w-8 cursor-pointer absolute w-10 h-10 -scale-x-100  left-5'"
-    onClick={() => window.history.back()}
-  />
-</div>
-
+     <div className="flex flex-col mt-0">
+             <div className="flex items-start">
+               <img 
+                 src={logo}
+                 alt="Cricklytics Logo"
+                 className="h-7 w-7 md:h-10 object-contain block select-none"
+                 onError={(e) => {
+                   e.target.onerror = null;
+                   e.target.src = "/images/Picture3 2.png";
+                 }}
+               />
+               <span className="p-2 text-2xl font-bold text-white whitespace-nowrap text-shadow-[0_0_8px_rgba(93,224,230,0.4)]">
+                 Cricklytics
+               </span>
+             </div>
+             <div className="md:absolute flex items-center gap-4 md:mt-12">
+               <img 
+                 src={backButton}
+                 alt="Back"
+                 className="h-8 w-8 cursor-pointer -scale-x-100"
+                 onClick={() => window.history.back()}
+               />
+           </div>
+           </div>
 
       {/* Tabs */}
-      <div className="flex justify-center space-x-12 text-white text-lg font-semibold border-b-4 border-white pb-2 mt-5">
+      <div className="flex justify-center space-x-12 text-white text-lg font-semibold border-b-4 border-white pb-2">
         <div
           onClick={() => setActiveTab('myteam')}
           className={`cursor-pointer ${activeTab === 'myteam' ? 'border-b-2 border-white text-blue-500' : ''}`}

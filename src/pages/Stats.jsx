@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import logo from "../assets/pawan/PlayerProfile/picture-312.png";
-import backButton from '../assets/kumar/right-chevron.png'
+import backButton from '../assets/kumar/right-chevron.png';
 
 const Stats = () => {
   const navigate = useNavigate();
@@ -22,37 +22,30 @@ const Stats = () => {
       backgroundPosition: 'center',
     }}>
       {/* Top Navigation Bar */}
-      <div className="flex justify-between items-center p-4 rounded-lg mb-5">
-        <div className="flex items-center gap-4">
-          <img 
-            src={logo}
-            alt="Cricklytics Logo"
-            className="h-7 w-7 md:h-10 object-contain block select-none"
-            onError={(e) => {
-              e.target.onerror = null;
-              e.target.src = "/images/Picture3 2.png";
-            }}
-          />
-          <span className="text-2xl font-bold text-white whitespace-nowrap text-shadow-[0_0_8px_rgba(93,224,230,0.4)]">
-            Cricklytics
-          </span>
-        </div>
-        
-      </div>
-      <div className="flex justify-between p-2">
-      <img
-          src={backButton} // Change path if needed
-          alt="Back"
-          className="w-10 h-10 cursor-pointer -scale-x-100"
-          onClick={() => window.history.back()}
-        />
-          <button 
-            className="text-white bg-red-600 px-4 py-2 rounded-lg hover:bg-red-500"
-            onClick={() => window.location.reload()}
-          >
-            Cancel
-          </button>
-          </div>
+      <div className="flex flex-col mt-0">
+              <div className="flex items-start">
+                <img 
+                  src={logo}
+                  alt="Cricklytics Logo"
+                  className="h-7 w-7 md:h-10 object-contain block select-none"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = "/images/Picture3 2.png";
+                  }}
+                />
+                <span className="p-2 text-2xl font-bold text-white whitespace-nowrap text-shadow-[0_0_8px_rgba(93,224,230,0.4)]">
+                  Cricklytics
+                </span>
+              </div>
+              </div>
+              <div className="md:absolute flex items-center gap-4">
+                <img 
+                  src={backButton}
+                  alt="Back"
+                  className="h-8 w-8 cursor-pointer -scale-x-100"
+                  onClick={() => window.history.back()}
+                />
+            </div>
       {/* Horizontal Navigation Bar */}
       <div className="max-w-5xl mx-auto px-4">
   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-6 border-b border-white/20 mb-6 py-6">
