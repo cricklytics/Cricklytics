@@ -149,7 +149,7 @@ const Login = () => {
 
         <div className="w-full md:w-1/2 p-10">
           <h2 className="text-3xl font-bold text-blue-800 mb-4">Cricklytics</h2>
-          <p className="text-gray-400 mb-6">Express sign in via Google and WhatsApp</p>
+          <p className="text-gray-400 mb-6">Express sign in via Google</p>
 
           <div className="flex justify-around mb-6">
             <button

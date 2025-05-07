@@ -1,6 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import logo from "../assets/pawan/PlayerProfile/picture-312.png";
+import backButton from '../assets/kumar/right-chevron.png'
 
 const Stats = () => {
   const navigate = useNavigate();
@@ -39,12 +40,12 @@ const Stats = () => {
         
       </div>
       <div className="flex justify-between p-2">
-      <button 
-            className="text-white bg-gray-600 px-4 py-2 rounded-lg hover:bg-gray-500"
-            onClick={() => navigate(-1)}
-          >
-            Back
-          </button>
+      <img
+          src={backButton} // Change path if needed
+          alt="Back"
+          className="w-10 h-10 cursor-pointer -scale-x-100"
+          onClick={() => window.history.back()}
+        />
           <button 
             className="text-white bg-red-600 px-4 py-2 rounded-lg hover:bg-red-500"
             onClick={() => window.location.reload()}
