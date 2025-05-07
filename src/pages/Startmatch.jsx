@@ -68,7 +68,7 @@ const PlayerSelector = ({ teamA, teamB }) => {
                                          // Or simply use a large value like minHeight: '80vh'
       }}
     >
-        <div className="w-full px-4 md:px-8 py-8 mx-auto max-w-7xl">
+        <div className="w-full px-4 md:px-8 pb-8 mx-auto max-w-7xl">
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -261,7 +261,7 @@ useEffect(() => {
     //   minHeight: '100vh'
     // }}>
     <div
-      className="w-full relative py-8" // Use padding instead of margin on inner elements now
+      className="w-full relative" // Use padding instead of margin on inner elements now
       style={{
         backgroundImage: `url(${bgImg})`,
         backgroundSize: 'cover',
@@ -281,7 +281,7 @@ useEffect(() => {
      >
       {/* <div className="relative min-h-screen w-full">         */}
         {/* Main Content */}
-        <div className="w-full px-4 md:px-8 py-8 mx-auto max-w-7xl">
+        <div className="w-full px-4 md:px-8 pb-8 py-1 mx-auto max-w-7xl">
           <motion.h1 
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
