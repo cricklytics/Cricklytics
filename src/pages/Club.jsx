@@ -3,8 +3,7 @@ import { FaChevronDown, FaChevronUp, FaUserFriends, FaCalendarAlt, FaPlus } from
 import { motion } from 'framer-motion';
 import cricketImage from '../assets/sophita/Homepage/cricket1.png';
 import logo from '../assets/sophita/HomePage/Picture3.png';
-import backButton from '../assets/kumar/right-chevron.png'
-import { Navigate } from 'react-router-dom';
+import backButton from '../assets/kumar/right-chevron.png';
 
 const ClubPage = () => {
   const [showTeamsDropdown, setShowTeamsDropdown] = useState(false);
@@ -13,15 +12,16 @@ const ClubPage = () => {
 
   return (
     <div 
-      className="min-h-screen"
+      className="min-h-screen overflow-hidden"
       style={{
         background: 'linear-gradient(to bottom, #000000 15%, #001A80 87%, #000D40 100%)'
       }}
     >
       {/* Header */}
-      <header className="shadow-md py-4 px-6">
-        <div className="w-full max-w-7xl mx-auto flex justify-between items-center">
-          <div className="flex flex-col items-start">
+      <header className="pt-2 px-2">
+        <div className="w-full mx-auto flex justify-between items-start">
+          {/* Logo and Back Button */}
+          <div className="flex flex-col">
             <div className="flex items-center">
               <motion.img
                 src={logo}
@@ -34,136 +34,139 @@ const ClubPage = () => {
             <img 
               src={backButton} 
               alt="Back"
-              className=" h-7- w-7 md:h-10 w-10 mt-2 ml-1 cursor-pointer transform rotate-180" style={{marginTop:'15px'}}
+              className="h-7 w-7 md:h-10 w-10 mt-2 ml-1 cursor-pointer transform rotate-180"
               onClick={() => window.history.back()}
             />
           </div>
           
-          <div className="relative">
-            <button 
-              className="flex items-center gap-2 bg-[#51aab1] text-white px-4 py-2 rounded-lg hover:bg-[#4acfd4] transition-colors"
-              onClick={() => setShowClubDropdown(!showClubDropdown)}
-            >
-              <span className="hidden sm:inline">Austria CC Wien Club</span>
-              <span className="sm:hidden">AC Wien</span>
-              {showClubDropdown ? <FaChevronUp /> : <FaChevronDown />}
-            </button>
-            {showClubDropdown && (
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border border-gray-200">
-                <div className="py-1">
-                  <a href="#" className="block px-4 py-2 text-gray-800 hover:bg-gray-200 transition-colors">Club Profile</a>
-                  <a href="#" className="block px-4 py-2 text-gray-800 hover:bg-gray-200 transition-colors">Club Members</a>
-                  <a href="#" className="block px-4 py-2 text-gray-800 hover:bg-gray-200 transition-colors">Club Settings</a>
+          {/* Mobile Dropdowns - Top Right Corner */}
+          <div className="flex md:hidden flex-col gap-2">
+            <div className="relative">
+              <button 
+                className="flex items-center justify-between w-full bg-[#51aab1] text-white px-4 py-2 rounded-lg hover:bg-[#4acfd4] transition-colors"
+                onClick={() => setShowClubDropdown(!showClubDropdown)}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-sm">Austria CC Wien Club</span>
                 </div>
-              </div>
-            )}
+                {showClubDropdown ? <FaChevronUp /> : <FaChevronDown />}
+              </button>
+              {showClubDropdown && (
+                <div className="absolute right-0 mt-1 w-full bg-white rounded-md shadow-lg z-10 border border-gray-200">
+                  <div className="py-1">
+                    <a href="#" className="block px-4 py-2 text-gray-800 hover:bg-gray-200 transition-colors text-sm">Club Profile</a>
+                    <a href="#" className="block px-4 py-2 text-gray-800 hover:bg-gray-200 transition-colors text-sm">Club Members</a>
+                    <a href="#" className="block px-4 py-2 text-gray-800 hover:bg-gray-200 transition-colors text-sm">Club Settings</a>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="relative">
+              <button 
+                className="flex items-center justify-between w-full bg-[#51aab1] text-white px-4 py-2 rounded-lg hover:bg-[#4acfd4] transition-colors"
+                onClick={() => setShowMatchesDropdown(!showMatchesDropdown)}
+              >
+                <div className="flex items-center gap-2">
+                  <FaCalendarAlt />
+                  <span className="text-sm">Upcoming Matches</span>
+                </div>
+                {showMatchesDropdown ? <FaChevronUp /> : <FaChevronDown />}
+              </button>
+              {showMatchesDropdown && (
+                <div className="absolute right-0 mt-1 w-full bg-white rounded-md shadow-lg z-10 border border-gray-200">
+                  <div className="py-1">
+                    <div className="p-2 hover:bg-gray-200 cursor-pointer transition-colors">
+                      <p className="font-medium text-gray-800 text-sm">Austria CC vs Vienna CC</p>
+                      <p className="text-xs text-gray-600">May 10, 2025</p>
+                    </div>
+                    <div className="p-2 hover:bg-gray-200 cursor-pointer transition-colors">
+                      <p className="font-medium text-gray-800 text-sm">Austria CC vs Graz CC</p>
+                      <p className="text-xs text-gray-600">May 17, 2025</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="relative">
+              <button 
+                className="flex items-center justify-between w-full bg-[#51aab1] text-white px-4 py-2 rounded-lg hover:bg-[#4acfd4] transition-colors"
+                onClick={() => setShowTeamsDropdown(!showTeamsDropdown)}
+              >
+                <div className="flex items-center gap-2">
+                  <FaUserFriends />
+                  <span className="text-sm">Teams And Players</span>
+                </div>
+                {showTeamsDropdown ? <FaChevronUp /> : <FaChevronDown />}
+              </button>
+              {showTeamsDropdown && (
+                <div className="absolute right-0 mt-1 w-full bg-white rounded-md shadow-lg z-10 border border-gray-200">
+                  <div className="py-1">
+                    <div className="p-2 hover:bg-gray-200 cursor-pointer transition-colors">
+                      <p className="font-medium text-gray-800 text-sm">Senior Team</p>
+                      <p className="text-xs text-gray-600">12 players</p>
+                    </div>
+                    <div className="p-2 hover:bg-gray-200 cursor-pointer transition-colors">
+                      <p className="font-medium text-gray-800 text-sm">Junior Team</p>
+                      <p className="text-xs text-gray-600">8 players</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto py-8 px-4">
-        {/* Desktop Layout (hidden on mobile) */}
-        <div className="hidden md:flex flex-col items-center">
-          {/* Upcoming Matches - Centered */}
-          <div className="w-full max-w-2xl mb-8">
-            <div className="rounded-lg shadow-md p-4">
-              <button 
-                className="flex items-center justify-between w-full bg-[#51aab1] text-white px-4 py-3 rounded-lg hover:bg-[#4acfd4] transition-colors"
-                onClick={() => setShowMatchesDropdown(!showMatchesDropdown)}
-              >
-                <div className="flex items-center gap-2">
-                  <FaCalendarAlt />
-                  <span>Upcoming Matches</span>
-                </div>
-                {showMatchesDropdown ? <FaChevronUp /> : <FaChevronDown />}
-              </button>
-              {showMatchesDropdown && (
-                <div className="mt-2 space-y-2 bg-white rounded-lg py-1">
-                  <div className="p-3 hover:bg-gray-200 cursor-pointer transition-colors">
-                    <p className="font-medium text-gray-800">Austria CC vs Vienna CC</p>
-                    <p className="text-sm text-gray-600">May 10, 2025</p>
-                  </div>
-                  <div className="p-3 hover:bg-gray-200 cursor-pointer transition-colors">
-                    <p className="font-medium text-gray-800">Austria CC vs Graz CC</p>
-                    <p className="text-sm text-gray-600">May 17, 2025</p>
-                  </div>
-                  <div className="p-3 hover:bg-gray-200 cursor-pointer transition-colors">
-                    <p className="font-medium text-gray-800">Austria CC vs Salzburg CC</p>
-                    <p className="text-sm text-gray-600">May 24, 2025</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Teams and Players - Below Upcoming Matches */}
-          <div className="w-full max-w-2xl mb-8">
-            <div className="shadow-md p-4">
-              <button 
-                className="flex items-center justify-between w-full bg-[#51aab1] text-white px-4 py-3 rounded-lg hover:bg-[#4acfd4] transition-colors"
-                onClick={() => setShowTeamsDropdown(!showTeamsDropdown)}
-              >
-                <div className="flex items-center gap-2">
-                  <FaUserFriends />
-                  <span>Teams And Players</span>
-                </div>
-                {showTeamsDropdown ? <FaChevronUp /> : <FaChevronDown />}
-              </button>
-              {showTeamsDropdown && (
-                <div className="mt-2 space-y-2 bg-white rounded-lg py-1">
-                  <div className="p-3 hover:bg-gray-200 cursor-pointer transition-colors">
-                    <p className="font-medium text-gray-800">Senior Team</p>
-                    <p className="text-sm text-gray-600">12 players</p>
-                  </div>
-                  <div className="p-3 hover:bg-gray-200 cursor-pointer transition-colors">
-                    <p className="font-medium text-gray-800">Junior Team</p>
-                    <p className="text-sm text-gray-600">8 players</p>
-                  </div>
-                  <div className="p-3 hover:bg-gray-200 cursor-pointer transition-colors">
-                    <p className="font-medium text-gray-800">Women's Team</p>
-                    <p className="text-sm text-gray-600">10 players</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Cricket Image */}
-          <div className="mb-8 w-full flex justify-center">
-            <img 
-              src={cricketImage} 
-              alt="Cricket"
-              className="w-140 h-170 object-contain"
-            />
-          </div>
-
-          {/* Join Club Button - Below Image */}
-          <div className="w-full max-w-2xl">
-            <button className="w-full bg-[#51aab1] text-white px-8 py-4 rounded-lg hover:bg-[#4acfd4] transition-colors flex items-center justify-center gap-2 text-xl">
-              <FaPlus size={20} />
-              Join Club
-            </button>
-          </div>
+      <main className="flex flex-col md:flex-row md:gap-20 h-[calc(100vh-120px)] mt-[-20px]">
+        {/* Left Side - Cricket Image */}
+        <div className="w-full md:w-1/2 flex justify-center md:justify-end h-full items-start pt-4 md:pt-2">
+          <img 
+            src={cricketImage} 
+            alt="Cricket"
+            className="h-auto max-h-[65vh] md:max-h-[75vh] object-contain"
+          />
         </div>
 
-        {/* Mobile Layout (hidden on desktop) */}
-        <div className="md:hidden flex flex-col gap-4">
-          {/* Upcoming Matches - Top */}
-          <div className="w-full">
-            <div className="rounded-lg shadow-md p-2">
-              <button 
-                className="flex items-center justify-between w-full bg-[#51aab1] text-white px-3 py-2 rounded-lg hover:bg-[#4acfd4] transition-colors text-sm"
-                onClick={() => setShowMatchesDropdown(!showMatchesDropdown)}
-              >
-                <div className="flex items-center gap-2">
-                  <FaCalendarAlt size={14} />
-                  <span>Upcoming Matches</span>
+        {/* Right Side - Dropdowns (desktop only) */}
+        <div className="hidden md:flex flex-col gap-4 w-1/2 h-full justify-center pt-4 md:pl-10 pr-8">
+          <div className="relative w-full max-w-xs">
+            <button 
+              className="flex items-center justify-between w-full bg-[#51aab1] text-white px-4 py-2 rounded-lg hover:bg-[#4acfd4] transition-colors"
+              onClick={() => setShowClubDropdown(!showClubDropdown)}
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-sm sm:text-base">Austria CC Wien Club</span>
+              </div>
+              {showClubDropdown ? <FaChevronUp /> : <FaChevronDown />}
+            </button>
+            {showClubDropdown && (
+              <div className="absolute w-full mt-1 bg-white rounded-md shadow-lg z-10 border border-gray-200">
+                <div className="py-1">
+                  <a href="#" className="block px-4 py-2 text-gray-800 hover:bg-gray-200 transition-colors text-sm">Club Profile</a>
+                  <a href="#" className="block px-4 py-2 text-gray-800 hover:bg-gray-200 transition-colors text-sm">Club Members</a>
+                  <a href="#" className="block px-4 py-2 text-gray-800 hover:bg-gray-200 transition-colors text-sm">Club Settings</a>
                 </div>
-                {showMatchesDropdown ? <FaChevronUp size={14} /> : <FaChevronDown size={14} />}
-              </button>
-              {showMatchesDropdown && (
-                <div className="mt-2 space-y-1 bg-white rounded-lg py-1">
+              </div>
+            )}
+          </div>
+
+          <div className="relative w-full max-w-xs">
+            <button 
+              className="flex items-center justify-between w-full bg-[#51aab1] text-white px-4 py-2 rounded-lg hover:bg-[#4acfd4] transition-colors"
+              onClick={() => setShowMatchesDropdown(!showMatchesDropdown)}
+            >
+              <div className="flex items-center gap-2">
+                <FaCalendarAlt />
+                <span className="text-sm sm:text-base">Upcoming Matches</span>
+              </div>
+              {showMatchesDropdown ? <FaChevronUp /> : <FaChevronDown />}
+            </button>
+            {showMatchesDropdown && (
+              <div className="absolute w-full mt-1 bg-white rounded-md shadow-lg z-10 border border-gray-200">
+                <div className="py-1">
                   <div className="p-2 hover:bg-gray-200 cursor-pointer transition-colors">
                     <p className="font-medium text-gray-800 text-sm">Austria CC vs Vienna CC</p>
                     <p className="text-xs text-gray-600">May 10, 2025</p>
@@ -172,41 +175,25 @@ const ClubPage = () => {
                     <p className="font-medium text-gray-800 text-sm">Austria CC vs Graz CC</p>
                     <p className="text-xs text-gray-600">May 17, 2025</p>
                   </div>
-                  <div className="p-2 hover:bg-gray-200 cursor-pointer transition-colors">
-                    <p className="font-medium text-gray-800 text-sm">Austria CC vs Salzburg CC</p>
-                    <p className="text-xs text-gray-600">May 24, 2025</p>
-                  </div>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
 
-          {/* Center Content - Cricket Image */}
-          <div className="w-full flex justify-center">
-            <div className="w-full flex justify-center">
-              <img 
-                src={cricketImage} 
-                alt="Cricket"
-                className="w-40 h-48 object-contain"
-              />
-            </div>
-          </div>
-
-          {/* Teams and Players - Bottom */}
-          <div className="w-full">
-            <div className="shadow-md p-2">
-              <button 
-                className="flex items-center justify-between w-full bg-[#51aab1] text-white px-3 py-2 rounded-lg hover:bg-[#4acfd4] transition-colors text-sm"
-                onClick={() => setShowTeamsDropdown(!showTeamsDropdown)}
-              >
-                <div className="flex items-center gap-2">
-                  <FaUserFriends size={14} />
-                  <span>Teams And Players</span>
-                </div>
-                {showTeamsDropdown ? <FaChevronUp size={14} /> : <FaChevronDown size={14} />}
-              </button>
-              {showTeamsDropdown && (
-                <div className="mt-2 space-y-1 bg-white rounded-lg py-1">
+          <div className="relative w-full max-w-xs">
+            <button 
+              className="flex items-center justify-between w-full bg-[#51aab1] text-white px-4 py-2 rounded-lg hover:bg-[#4acfd4] transition-colors"
+              onClick={() => setShowTeamsDropdown(!showTeamsDropdown)}
+            >
+              <div className="flex items-center gap-2">
+                <FaUserFriends />
+                <span className="text-sm sm:text-base">Teams And Players</span>
+              </div>
+              {showTeamsDropdown ? <FaChevronUp /> : <FaChevronDown />}
+            </button>
+            {showTeamsDropdown && (
+              <div className="absolute w-full mt-1 bg-white rounded-md shadow-lg z-10 border border-gray-200">
+                <div className="py-1">
                   <div className="p-2 hover:bg-gray-200 cursor-pointer transition-colors">
                     <p className="font-medium text-gray-800 text-sm">Senior Team</p>
                     <p className="text-xs text-gray-600">12 players</p>
@@ -215,22 +202,18 @@ const ClubPage = () => {
                     <p className="font-medium text-gray-800 text-sm">Junior Team</p>
                     <p className="text-xs text-gray-600">8 players</p>
                   </div>
-                  <div className="p-2 hover:bg-gray-200 cursor-pointer transition-colors">
-                    <p className="font-medium text-gray-800 text-sm">Women's Team</p>
-                    <p className="text-xs text-gray-600">10 players</p>
-                  </div>
                 </div>
-              )}
-            </div>
-            
-            {/* Join Club Button */}
-            <div className="mt-4 shadow-md p-2">
-              <button className="w-full bg-[#51aab1] text-white px-4 py-3 rounded-lg hover:bg-[#4acfd4] transition-colors flex items-center justify-center gap-2 text-sm">
-                <FaPlus size={14} />
-                Join Club
-              </button>
-            </div>
+              </div>
+            )}
           </div>
+        </div>
+
+        {/* Join Club Button */}
+        <div className="absolute w-full flex justify-center bottom-16 md:bottom-20">
+          <button className="bg-[#51aab1] text-white px-8 py-3 rounded-lg hover:bg-[#4acfd4] transition-colors flex items-center justify-center gap-2 text-lg md:text-xl">
+            <FaPlus size={20} />
+            Join Club
+          </button>
         </div>
       </main>
     </div>
