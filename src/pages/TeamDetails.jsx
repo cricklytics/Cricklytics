@@ -7,7 +7,6 @@ import img2022 from '../assets/sophita/HomePage/2022.jpeg';
 import img2025 from '../assets/sophita/HomePage/2025.jpeg';
 import backButton from '../assets/kumar/right-chevron.png';
 
-
 const myTeams = [
   { location: 'Chennai', captain: 'M S Dhoni', image: Advertisement , name: 'Chennai Super Kings' },
   { location: 'Mumbai', captain: 'Rohit Sharma', image: img2019, name: 'Mumbai Indians' },
@@ -28,45 +27,40 @@ export default function TeamDetails() {
   const teams = activeTab === 'myteam' ? myTeams : opponentTeams;
 
   return (
-<div className="min-h-screen p-4" style={{
+    <div className="min-h-screen p-4" style={{
       backgroundImage: 'linear-gradient(140deg,#080006 15%,#FF0077)',
       backgroundRepeat: 'no-repeat',
       backgroundSize: 'cover',
       backgroundPosition: 'center',
     }}>
-
-      {/* Top Navigation Bar */}
-      <div className="flex justify-between items-center p-4 rounded-lg mb-5">
-        <div className="flex items-center gap-4" >
+      {/* Combined Header with Logo and Back Button */}
+      <div className="flex flex-col mt-0">
+        <div className="flex items-start">
           <img 
             src={logo}
             alt="Cricklytics Logo"
             className="h-7 w-7 md:h-10 object-contain block select-none"
-          
             onError={(e) => {
               e.target.onerror = null;
               e.target.src = "/images/Picture3 2.png";
             }}
           />
-          <span className="text-2xl font-bold text-white whitespace-nowrap text-shadow-[0_0_8px_rgba(93,224,230,0.4)] ">
+          <span className="p-2 text-2xl font-bold text-white whitespace-nowrap text-shadow-[0_0_8px_rgba(93,224,230,0.4)]">
             Cricklytics
           </span>
         </div>
+        </div>
+        <div className="md:absolute flex items-center gap-4">
+          <img 
+            src={backButton}
+            alt="Back"
+            className="h-8 w-8 cursor-pointer -scale-x-100"
+            onClick={() => window.history.back()}
+          />
       </div>
 
-       {/* 🔙 Back Button Below Logo */}
-            <div className="mb-4">
-              <img
-                src={backButton} // Change path if needed
-                alt="Back"
-                className="h-8 w-8 cursor-pointer absolute w-10 h-10 -scale-x-100 top-25 left-5'"
-                onClick={() => window.history.back()}
-              />
-            </div>
-      
-
-      {/* Tabs */}
-      <div className="flex justify-center space-x-12 text-white text-lg font-semibold border-b-4 border-white pb-2 mb-6" style={{marginTop:'70px'}}>
+      {/* Tabs - Moved up directly under the header */}
+      <div className="flex justify-center space-x-12 text-white text-lg font-semibold border-b-4 border-white pb-2 mb-6">
         {['myteam', 'opponent', 'following'].map((tab) => (
           <div
             key={tab}

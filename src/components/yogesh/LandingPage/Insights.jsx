@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import logo from '../../../assets/pawan/PlayerProfile/picture-312.png';
+import backButton from '../../../assets/kumar/right-chevron.png'
 const Insights = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("batting");
@@ -129,40 +130,33 @@ const Insights = () => {
       backgroundPosition: 'center',
     }}>
       {/* Top Navigation Bar */}
-      <div className="flex justify-between items-center p-4 rounded-lg mb-5">
-        <div className="flex items-center gap-4">
-          <img 
-            src={logo}
-            alt="Cricklytics Logo"
-            className="h-7 w-7 md:h-10 object-contain block select-none"
-            onError={(e) => {
-              e.target.onerror = null;
-              e.target.src = "/images/Picture3 2.png";
-            }}
-          />
-          <span className="text-2xl font-bold text-white whitespace-nowrap text-shadow-[0_0_8px_rgba(93,224,230,0.4)]">
-            Cricklytics
-          </span>
-        </div>
-       
-      </div>
-      <div className="flex justify-between py-2">
-      <button 
-            className="text-white bg-gray-600 px-4 py-2 rounded-lg hover:bg-gray-500"
-            onClick={() => navigate(-1)}
-          >
-            Back
-          </button>
-          <button 
-            className="text-white bg-red-600 px-4 py-2 rounded-lg hover:bg-red-500"
-            onClick={() => window.location.reload()}
-          >
-            Cancel
-          </button>
-          </div>
+     <div className="flex flex-col mt-0">
+             <div className="flex items-start">
+               <img 
+                 src={logo}
+                 alt="Cricklytics Logo"
+                 className="h-7 w-7 md:h-10 object-contain block select-none"
+                 onError={(e) => {
+                   e.target.onerror = null;
+                   e.target.src = "/images/Picture3 2.png";
+                 }}
+               />
+               <span className="p-2 text-2xl font-bold text-white whitespace-nowrap text-shadow-[0_0_8px_rgba(93,224,230,0.4)]">
+                 Cricklytics
+               </span>
+             </div>
+             </div>
+             <div className="md:absolute flex items-center gap-4">
+               <img 
+                 src={backButton}
+                 alt="Back"
+                 className="h-8 w-8 cursor-pointer -scale-x-100"
+                 onClick={() => window.history.back()}
+               />
+           </div>
       {/* Horizontal Navigation Bar */}
       <div className="max-w-5xl mx-auto">
-      <div className="flex overflow-x-auto whitespace-nowrap gap-4 border-b border-white/20 mb-10 mt-10 px-4">
+      <div className="flex overflow-x-auto justify-center whitespace-nowrap gap-4 border-b border-white/20 mb-10 px-4">
   {tabs.map((tab) => (
     <button
       key={tab.id}
