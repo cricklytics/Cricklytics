@@ -430,7 +430,7 @@ function StartMatchPlayers() {
             onClick={goBack}
             className="absolute left-4 top-24 md:left-10 md:top-32 z-10 w-10 h-10 flex items-center justify-center"
           >
-            <img src={backButton} alt="Back" className="w-6 h-6 transform rotate-180" onError={(e) => (e.target.src = '')} />
+            <img src={backButton} alt="Back" className="w-6 h-6 transform rotate-180 mb-5" onError={(e) => (e.target.src = '')} />
           </button>
         )}
 
@@ -468,7 +468,7 @@ function StartMatchPlayers() {
               {!bowlerVisible && (
                 <>
                   <div>
-                    <button className="w-15 h-8 text-white text-lg md:w-25 md:h-10 font-bold bg-gradient-to-l from-[#12BFA5] to-[#000000] rounded-[1rem] shadow-lg">
+                    <button className="w-28 h-12 text-white text-lg md:w-25 md:h-10 font-bold bg-gradient-to-l from-[#12BFA5] to-[#000000] rounded-[1rem] shadow-lg">
                       Striker
                     </button>
                     {striker && (
@@ -493,7 +493,7 @@ function StartMatchPlayers() {
                     )}
                   </div>
                   <div>
-                    <button className="w-15 h-18 text-white text-lg md:w-25 md:h-10 font-bold bg-gradient-to-l from-[#12BFA5] to-[#000000] rounded-[1rem] shadow-lg">
+                    <button className="w-28 h-12 text-white text-lg md:w-25 md:h-10 font-bold bg-gradient-to-l from-[#12BFA5] to-[#000000] rounded-[1rem] shadow-lg">
                       Non-Striker
                     </button>
                     {nonStriker && (
