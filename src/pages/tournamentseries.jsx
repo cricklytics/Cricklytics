@@ -6,7 +6,6 @@ import location from '../assets/kumar/loc.png';
 import ball1 from '../assets/kumar/cricket-ball.png';
 import ball2 from '../assets/kumar/ball-others.png';
 import others from '../assets/kumar/icons8-tennis-ball-96.png';
-import '../styles/Scroll.css'
 
 function Tournamentseries() {
     const navigate = useNavigate();
