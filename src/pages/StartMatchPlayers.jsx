@@ -101,7 +101,7 @@ function StartMatchPlayers() {
     } else if (striker) {
       cancelStriker();
     } else {
-      navigate(-1);
+      navigate('/match-start', { state: { activeTab: 'Start Match' } });
     }
   };
 
