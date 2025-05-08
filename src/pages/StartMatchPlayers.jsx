@@ -35,6 +35,9 @@ class ErrorBoundary extends Component {
 }
 
 function StartMatchPlayers() {
+  const location = useLocation();
+  const maxOvers = location.state?.overs || 2; // Default to 2 overs if not passed
+  const maxBalls = maxOvers * 6;
   const navigate = useNavigate();
   const [currentView, setCurrentView] = useState('toss');
   const [showThirdButtonOnly, setShowThirdButtonOnly] = useState(false);
@@ -198,9 +201,97 @@ function StartMatchPlayers() {
   };
 
   useEffect(() => {
+    if (modalContent.title !== 'Match Result') return;
+  
+    const canvas = document.getElementById('fireworks-canvas');
+    if (!canvas) return;
+  
+    const ctx = canvas.getContext('2d');
+    let width = canvas.width = canvas.offsetWidth;
+    let height = canvas.height = canvas.offsetHeight;
+  
+    let fireworks = [];
+  
+    function randomColor() {
+      return `hsl(${Math.floor(Math.random() * 360)}, 100%, 70%)`;
+    }
+  
+    function createFirework(x, y) {
+      const color = randomColor();
+      const particles = [];
+      const particleCount = 30;
+  
+      for (let i = 0; i < particleCount; i++) {
+        const angle = (Math.PI * 2 * i) / particleCount;
+        const speed = Math.random() * 2 + 2;
+        particles.push({
+          x,
+          y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          alpha: 1,
+          color,
+          size: Math.random() * 2 + 1,
+        });
+      }
+  
+      fireworks.push({ particles });
+    }
+  
+    function launch() {
+      // launch 3 fireworks from the bottom to predefined points
+      createFirework(width / 2, height / 3);              // center top
+      createFirework(width / 4, height / 1.8);            // left below middle
+      createFirework((3 * width) / 4, height / 1.8);      // right below middle
+    }
+  
+    function update() {
+      ctx.clearRect(0, 0, width, height);
+  
+      fireworks.forEach(firework => {
+        firework.particles.forEach(p => {
+          p.x += p.vx;
+          p.y += p.vy;
+          p.alpha -= 0.015;
+  
+          ctx.globalAlpha = p.alpha;
+          ctx.fillStyle = p.color;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+          ctx.fill();
+        });
+  
+        // filter out faded particles
+        firework.particles = firework.particles.filter(p => p.alpha > 0);
+      });
+  
+      fireworks = fireworks.filter(f => f.particles.length > 0);
+      ctx.globalAlpha = 1;
+      requestAnimationFrame(update);
+    }
+  
+    const interval = setInterval(launch, 1000);
+    update();
+  
+    // Resize canvas on modal resize
+    const resize = () => {
+      width = canvas.width = canvas.offsetWidth;
+      height = canvas.height = canvas.offsetHeight;
+    };
+    window.addEventListener('resize', resize);
+  
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('resize', resize);
+      fireworks = [];
+      ctx.clearRect(0, 0, width, height);
+    };
+  }, [modalContent.title]);
+  
+  useEffect(() => {
     if (gameFinished) return;
 
-    if (overNumber > 2) {
+    if (overNumber > maxOvers) {  // Changed from overNumber > 2
       if (!isChasing) {
         setTargetScore(playerScore + 1);
         setIsChasing(true);
@@ -414,7 +505,14 @@ function StartMatchPlayers() {
 
         {showModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-[#4C0025] p-6 rounded-lg max-w-md w-full">
+            <div className="bg-[#4C0025] p-6 rounded-lg max-w-md w-full relative overflow-hidden">
+            {modalContent.title === 'Match Result' && (
+  <canvas
+    id="fireworks-canvas"
+    className="absolute bottom-0 left-0 w-full h-full z-0 pointer-events-none"
+  ></canvas>
+)}
+
               <h3 className="text-white text-xl font-bold mb-4">{modalContent.title}</h3>
               <p className="text-white mb-6">{modalContent.message}</p>
               <div className="flex justify-center">
@@ -651,7 +749,7 @@ function StartMatchPlayers() {
                 <div className="ml-4 md:ml-10">
                   <h3 className="text-sm md:text-2xl md:text-3xl lg:text-4xl text-white font-bold text-center">
                     {playerScore} - {outCount}
-                    <h2 className="text-base md:text-lg lg:text-xl">{overNumber > 2 ? 2 : overNumber}.{validBalls}</h2>
+                    <h2 className="text-base md:text-lg lg:text-xl">{overNumber > maxOvers ? maxOvers : overNumber}.{validBalls}</h2>
                   </h3>
                 </div>
               </div>

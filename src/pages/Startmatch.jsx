@@ -5,7 +5,7 @@ import logo from '../assets/pawan/PlayerProfile/picture-312.png';
 import bgImg from '../assets/sophita/HomePage/advertisement5.jpeg';
 
 
-const PlayerSelector = ({ teamA, teamB }) => {
+const PlayerSelector = ({ teamA, teamB, overs }) => {  // Add overs to props
   const [leftSearch, setLeftSearch] = useState('');
   const [rightSearch, setRightSearch] = useState('');
   const [selectedPlayers, setSelectedPlayers] = useState({ left: [], right: [] });
@@ -48,11 +48,16 @@ const PlayerSelector = ({ teamA, teamB }) => {
     });
   };
   const handleActualStartMatch = () => {
-    // Logic before navigating (e.g., save selected players)
     console.log("Starting match with players:", selectedPlayers);
-    // Navigate to the actual scoring page/component route
-    navigate('/StartMatchPlayers'); // Keep this navigation for now
-};
+    navigate('/StartMatchPlayers', { 
+      state: { 
+        overs: overs,  // Pass overs to next page
+        teamA: teamA,
+        teamB: teamB,
+        selectedPlayers: selectedPlayers  // Optional: pass selected players if needed
+      } 
+    });
+  };
 
   return (
     <div
@@ -230,13 +235,13 @@ useEffect(() => {
     setSelectedTeamB(initialTeamB);
 }, [initialTeamB]);
 
-  const handleNext = () => {
-    if (!selectedTeamA || !selectedTeamB || !overs) {
-      alert('Please fill all required fields');
-      return;
-    }
-    setShowPlayerSelector(true);
-  };
+const handleNext = () => {
+  if (!selectedTeamA || !selectedTeamB || !overs) {
+    alert('Please fill all required fields');
+    return;
+  }
+  setShowPlayerSelector(true);
+};
 
   // If showing player selector, render it (it's now modified to fit inline)
   if (showPlayerSelector) {
@@ -244,10 +249,9 @@ useEffect(() => {
       <PlayerSelector
         teamA={selectedTeamA}
         teamB={selectedTeamB}
-        // Pass the callback if needed for Option 2 in PlayerSelector
-        // onStartMatchClick={onMatchSetupComplete}
-       />
-     );
+        overs={overs}  // Pass overs to PlayerSelector
+      />
+    );
   }
   const hasValue = (value) => value !== '' && value !== null && value !== undefined;
 
