@@ -16,20 +16,32 @@ import { useNavigate } from "react-router-dom";
 import { db } from "../firebase";
 import { collection, getDocs } from "firebase/firestore";
  
-const Landingpage = () => {
+const Landingpage = ({ menuOpen, setMenuOpen, userProfile }) => {
   const navigate = useNavigate();
-  const [menuOpen, setMenuOpen] = useState(false);
+  // const [menuOpen, setMenuOpen] = useState(false);
   const [likedVideos, setLikedVideos] = useState({});
   const [hovered, setHovered] = useState(null);
   const [highlightVisible, setHighlightVisible] = useState(false);
   const [isPriceVisible, setIsPriceVisible] = useState(false);
   const [profileStoryVisible, setProfileStoryVisible] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState(null);
-  const [profileImages, setProfileImages] = useState([
+
+
+   // Ensure userProfile is available before accessing its properties
+  const [profileImages, setProfileImages] = useState([]); // Initialize as empty
+
+// Effect to populate profileImages, including the user's image, when userProfile or other data changes
+useEffect(() => {
+  const initialProfileImages = [
+    { id: 'user', image: userProfile?.profileImageUrl || 'path/to/default/image.png', name: userProfile?.userName || 'You' }, // Add user's image
     { id: 1, image: fr1, name: 'Friend 1' },
     { id: 2, image: fr2, name: 'Friend 2' },
     { id: 3, image: fr1, name: 'Friend 3' }
-  ]);
+    // Add other friends/stories here
+  ];
+  setProfileImages(initialProfileImages);
+}, [userProfile]); // Regenerate this array if userProfile changes
+
   const [editingProfileId, setEditingProfileId] = useState(null);
   const [activeTab, setActiveTab] = useState("forYou"); // "forYou", "following", "reels"
   
@@ -63,6 +75,7 @@ const Landingpage = () => {
   const reelInputRef = useRef(null);
   const commentRefs = useRef({});
   const shareRefs = useRef({});
+  const stickyHeaderRef = useRef(null);
  
   const [isAIExpanded, setIsAIExpanded] = useState(false);
 
@@ -275,20 +288,30 @@ const Landingpage = () => {
     }
   }, [highlightVisible]);
  
+// Update handleMainClick to also consider the user's own profile image click
   const handleMainClick = (e) => {
+    // Check if the click is within any area that should remain open
     if (
-      isPriceVisible ||
-      profileStoryVisible ||
+       isPriceVisible ||
+       profileStoryVisible ||
+      e.target.closest('#user-profile-image-container') || // Added check for user's image container
       (highlightRef.current && highlightRef.current.contains(e.target)) ||
+      (stickyHeaderRef.current && stickyHeaderRef.current.contains(e.target)) ||
       (searchBarRef.current && searchBarRef.current.contains(e.target)) ||
-      e.target.closest('.profile-image-container') ||
-      e.target === fileInputRef.current
-    ) {
-      return;
-    }
+      e.target === fileInputRef.current ||
+      e.target === reelInputRef.current ||
+      (commentRefs.current && Object.values(commentRefs.current).some(ref => ref && ref.contains(e.target))) ||
+      (shareRefs.current && Object.values(shareRefs.current).some(ref => ref && ref.contains(e.target))) ||
+      e.target.closest('.message-icon') ||
+      e.target.closest('.profile-story-modal-content') ||
+      (isAIExpanded && e.target.closest('.ai-assistance-container'))
+      ) {
+          return;
+        }
+  
     setHighlightVisible(false);
-    setShowCommentBox(null);
-    setShowShareBox(null);
+    setShowCommentBox(null); 
+    setShowShareBox(null); 
   };
  
   const toggleLike = (id) => {
@@ -298,10 +321,21 @@ const Landingpage = () => {
     }));
   };
  
-  const handleProfileClick = (profile) => {
-    setSelectedProfile(profile);
-    setProfileStoryVisible(true);
-  };
+ // Modify handleProfileClick to handle the user's own profile
+   const handleProfileClick = (profile) => {
+      if (profile.id === 'user') {
+        // Handle click on user's own profile image (e.g., open a user profile page)
+        console.log("Clicked on user's own profile image");
+        // navigate('/my-profile'); // Example navigation
+        // For now, we'll open a modal similar to friends' stories
+        setSelectedProfile(profile);
+        setProfileStoryVisible(true);
+      } else {
+        // Handle clicks on other users' profiles
+        setSelectedProfile(profile);
+        setProfileStoryVisible(true);
+      }
+    };
  
   const handleAddImageClick = (e, profileId) => {
     e.stopPropagation();
@@ -328,21 +362,26 @@ const Landingpage = () => {
   };
  
   const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const newImage = event.target.result;
-        setProfileImages(prev => prev.map(profile =>
-          profile.id === editingProfileId
-            ? { ...profile, image: newImage }
-            : profile
-        ));
-      };
-      reader.readAsDataURL(file);
-    }
-    setEditingProfileId(null);
-  };
+        const file = e.target.files[0];
+        if (file) {
+          // This logic is for updating the *displayed* profile images in the row.
+          // If this is for the *user's own* profile image (editingProfileId === 'user'),
+          // you would also want to upload it to Firebase Storage and update Firestore
+          // similar to the logic in the Sidebar component.
+          // For simplicity in this example, we'll just update the local state display.
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            const newImage = event.target.result;
+            setProfileImages(prev => prev.map(profile =>
+              profile.id === editingProfileId
+                ? { ...profile, image: newImage }
+                : profile
+            ));
+          };
+          reader.readAsDataURL(file);
+        }
+        setEditingProfileId(null);
+      };
 
   const toggleFollow = (id) => {
     setFollowersData(prev => 
@@ -483,30 +522,51 @@ const Landingpage = () => {
           } w-full ${isAIExpanded ? "opacity-0 pointer-events-none" : "opacity-100"}`}
           style={{ height: "calc(100vh - 4rem)" }}
         >
-          <div className={`sticky w-full md:w-[80%] top-0 z-20 bg-[rgba(2,16,30,0.7)] bg-opacity-40 backdrop-blur-md pb-2 md:pb-4 ${highlightVisible && !showChat ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
+          <div ref={stickyHeaderRef}  className={`sticky w-full md:w-[80%] top-0 z-20 bg-[rgba(2,16,30,0.7)] bg-opacity-40 backdrop-blur-md pb-2 md:pb-4 ${highlightVisible && !showChat ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
             <div className="w-full flex justify-center pt-2 md:pt-4 caret-none">
               <div className="w-full md:w-[50%] flex justify-center gap-2 md:gap-3 md:ml-5 text-white text-sm md:text-xl">
-                {profileImages.map((profile) => (
-                  <div key={profile.id} className="relative profile-image-container">
-                    <button
-                      id="profiles-of-users"
-                      className="w-13 h-13 md:w-20 md:h-20 rounded-full bg-cover bg-center"
-                      style={{ backgroundImage: `url(${profile.image})` }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleProfileClick(profile);
-                      }}
-                    >
-                    </button>
- 
-                    <button
-                      className="absolute -top-1 -right-1 h-5 w-5 rounded-full pb-2 bg-gray-800 flex items-center justify-center text-xl text-white font-bold"
-                      onClick={(e) => handleAddImageClick(e, profile.id)}
-                    >
-                      +
-                    </button>
-                  </div>
-                ))}
+              {userProfile?.profileImageUrl && (
+                   <div key={userProfile.uid} className="relative profile-image-container" id="user-profile-image-container">
+                     <button
+                       className="w-13 h-13 md:w-20 md:h-20 rounded-full bg-cover bg-center border-2 border-white" // Added border for distinction
+                       style={{ backgroundImage: `url(${userProfile.profileImageUrl})` }}
+                       onClick={(e) => {
+                         e.stopPropagation();
+                         handleProfileClick({ id: 'user', image: userProfile.profileImageUrl, name: userProfile.userName || 'You' });
+                       }}
+                     >
+                     </button>
+                     {/* Optional: Add '+' button for user's own image upload */}
+                      <button
+                         className="absolute -top-1 -right-1 h-5 w-5 rounded-full pb-2 bg-gray-800 flex items-center justify-center text-xl text-white font-bold"
+                         onClick={(e) => handleAddImageClick(e, 'user')} // Use 'user' as ID for user's profile
+                       >
+                         +
+                       </button>
+                   </div>
+                 )}
+                 {/* Other profile images (friends) */}
+                {profileImages.filter(p => p.id !== 'user').map((profile) => ( // Filter out the user's own image from this list
+                  <div key={profile.id} className="relative profile-image-container">
+                    <button
+                      id="profiles-of-users"
+                      className="w-13 h-13 md:w-20 md:h-20 rounded-full bg-cover bg-center"
+                      style={{ backgroundImage: `url(${profile.image})` }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleProfileClick(profile);
+                      }}
+                    >
+                    </button>
+
+                    <button
+                      className="absolute -top-1 -right-1 h-5 w-5 rounded-full pb-2 bg-gray-800 flex items-center justify-center text-xl text-white font-bold"
+                      onClick={(e) => handleAddImageClick(e, profile.id)}
+                    >
+                      +
+                    </button>
+                  </div>
+                ))}
               </div>
             </div>
  
