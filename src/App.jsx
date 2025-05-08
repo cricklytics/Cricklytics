@@ -12,6 +12,7 @@ import Golive from './pages/Golive';
 import Club from './pages/Club';
 import Message from "./pages/Message";
 import Contact from './pages/contacts';
+import FieldingStatsPage from './components/sophita/HomePage/Fielding';
 
 
 import Startmatch from './pages/Startmatch';
@@ -85,6 +86,7 @@ function App() {
           <Route path="/start-match" element={<Startmatch />} />
           <Route path="/club" element={<Club />} />
           <Route path="/message" element={<Message/>} />
+          <Route path="/fielding" element={<FieldingStatsPage/>} />
 
           <Route path="/tournament" element={<Tournaments/>} />
           <Route path="/team" element={<TeamDetails/>} />
