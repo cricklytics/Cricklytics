@@ -184,7 +184,7 @@ function Tournamentseries() {
                         <input 
                           className="w-[16rem] h-12 border-2 border-white text-white p-2 rounded-xl mt-4" 
                           type="text" 
-                          placeholder="Tournament/Series Name" 
+                          placeholder="" 
                           value={tournamentName}
                           onChange={(e) => {
                             setTournamentName(e.target.value);
@@ -239,7 +239,7 @@ function Tournamentseries() {
                         <input 
                           className="w-64 h-12 border-2 border-white text-white p-2 rounded-xl mt-[.5rem]" 
                           type="text" 
-                          placeholder="Participation Team" 
+                          placeholder="" 
                           value={noOfTeams}
                           onChange={(e) => {
                             setNoOfTeams(e.target.value);
@@ -292,7 +292,7 @@ function Tournamentseries() {
                         <input
                             className="w-64 h-12 border-2 border-white text-white p-2 rounded-xl mt-2 bg-no-repeat pl-10 pr-12 py-2 placeholder-white"
                             type="text"
-                            placeholder="Location"
+                            placeholder=""
                             value={physicalLocation}
                             onChange={(e) => {
                               setPhysicalLocation(e.target.value);
