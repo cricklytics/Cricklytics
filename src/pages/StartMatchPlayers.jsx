@@ -69,6 +69,11 @@ function StartMatchPlayers() {
   const [pendingWide, setPendingWide] = useState(false);
   const [pendingNoBall, setPendingNoBall] = useState(false);
   const [pendingOut, setPendingOut] = useState(false);
+  const [activeLabel, setActiveLabel] = useState(null);
+  const [activeNumber, setActiveNumber] = useState(null);
+  const [showRunInfo, setShowRunInfo] = useState(false);
+
+
 
   const playerNames = ['Hardhik', 'Raj', 'Anil', 'John', 'Ravi', 'Suresh', 'Sam', 'Alex'];
   const playerRoles = ['Bowler', 'Batsman', 'Wicketkeeper', 'All-rounder', 'Bowler', 'Batsman', 'All-rounder', 'Wicketkeeper'];
@@ -125,6 +130,17 @@ function StartMatchPlayers() {
 
   const handleScoreButtonClick = (value, isLabel) => {
     if (gameFinished) return;
+  
+    if (isLabel) {
+      setActiveNumber(null);
+      setActiveLabel(value); // Set clicked label as active
+    } else {
+      setActiveLabel(null); 
+      setActiveNumber(value); // independently set number active
+    
+      // Clear label when a number is clicked
+    }
+    if (gameFinished) return;
     
     if (pendingWide && !isLabel && typeof value === 'number') {
       setPlayerScore(prev => prev + value + 1);
@@ -148,6 +164,11 @@ function StartMatchPlayers() {
     const playValue = typeof value === 'string' ? value.charAt(0) : value;
 
     if (isLabel) {
+      if (value === 'Wide' || value === 'No-ball' || value === 'Leg By') {
+        setShowRunInfo(true); // show the info message
+      } else {
+        setShowRunInfo(false); // hide it for other labels
+      }      
       if (value === 'Six') {
         setPlayerScore(prev => prev + 6);
         setTopPlays(prev => [...prev, 6]);
@@ -185,6 +206,9 @@ function StartMatchPlayers() {
         }
       }
     } else {
+      setShowRunInfo(false); 
+      setActiveNumber(value);       // Set number active
+      setActiveLabel(null);         // Clear label selection
       setPlayerScore(prev => prev + value);
       setTopPlays(prev => [...prev, value]);
       setCurrentOverBalls(prev => [...prev, value]);
@@ -199,6 +223,7 @@ function StartMatchPlayers() {
         setNonStriker(temp);
       }
     }
+    
   };
 
   useEffect(() => {
@@ -861,28 +886,48 @@ function StartMatchPlayers() {
             </div>
 
             <div className="mt-4 flex flex-wrap justify-center gap-2 md:gap-4">
-              {[0, 1, 2, 4, 6].map((num) => (
-                <button
-                  key={num}
-                  onClick={() => handleScoreButtonClick(num)}
-                  className="w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 bg-[#4C0025] text-white font-bold text-lg md:text-xl rounded-full border-2 border-white flex items-center justify-center"
-                >
-                  {num}
-                </button>
-              ))}
-            </div>
+  {[0, 1, 2, 4, 6].map((num) => {
+    const isActive = activeNumber === num;
+    return (
+      <button
+        key={num}
+        onClick={() => handleScoreButtonClick(num)}
+        className={`w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 
+          ${isActive ? 'bg-green-500' : 'bg-[#4C0025] hover:bg-green-300'} 
+          text-white font-bold text-lg md:text-xl rounded-full border-2 border-white 
+          flex items-center justify-center transition-colors duration-300`}
+      >
+        {num}
+      </button>
+    );
+  })}
+</div>
+
+
 
             <div className="mt-2 flex flex-wrap justify-center gap-2 md:gap-4">
-              {['Wide', 'No-ball', 'OUT', 'Leg By', 'lbw'].map((label) => (
-                <button
-                  key={label}
-                  onClick={() => handleScoreButtonClick(label, true)}
-                  className={`w-20 h-10 md:w-24 md:h-12 ${label === 'OUT' ? 'bg-red-600' : 'bg-[#4C0025]'} text-white font-bold text-sm md:text-lg rounded-lg border-2 border-white flex items-center justify-center`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+  {['Wide', 'No-ball', 'OUT', 'Leg By', 'lbw'].map((label) => {
+    const isActive = activeLabel === label;
+    return (
+      <button
+        key={label}
+        onClick={() => handleScoreButtonClick(label, true)}
+        className={`w-20 h-10 md:w-24 md:h-12
+          ${isActive ? 'bg-red-600' : 'bg-[#4C0025] hover:bg-red-400'}
+          text-white font-bold text-sm md:text-lg rounded-lg border-2 border-white
+          flex items-center justify-center transition-colors duration-300`}
+      >
+        {label}
+      </button>
+    );
+  })}
+</div>
+{showRunInfo && (
+  <p className="text-yellow-300 text-sm mt-2 text-center font-medium">
+    Please select run, if not select 0
+  </p>
+)}
+
 
             {showBatsmanDropdown && (
               <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
