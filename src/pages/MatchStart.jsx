@@ -288,13 +288,19 @@ const FixtureGenerator = () => {
 
  // Effect to check location state on mount and update activeTab
  useEffect(() => {
+  const tabFromModalClick = location.state?.activeTab;
   const initialTabFromState = location.state?.initialTab;
   const cameFromSidebarState = location.state?.fromSidebar; // Check for the sidebar flag
 
-  if (initialTabFromState) {
-    setActiveTab(initialTabFromState);
-  }
-
+    // Priority 1: Tab explicitly passed as 'activeTab' (e.g., from modal)
+    if (tabFromModalClick) {
+      setActiveTab(tabFromModalClick);
+    }
+    // Priority 2: Tab passed as 'initialTab' (e.g., from homepage)
+    else if (initialTabFromState) {
+      setActiveTab(initialTabFromState);
+    }
+// If neither is present, activeTab remains its default initialized value.
   // Set the cameFromSidebar state based on location state
   if (cameFromSidebarState) {
      setCameFromSidebar(true);
@@ -307,7 +313,7 @@ const FixtureGenerator = () => {
       // You might want to reset some state here if needed when the component unmounts
   };
 
-}, [location.state?.initialTab, location.state?.fromSidebar, setActiveTab]); // Depend on initialTab and fromSidebar in location state
+}, [location.state?.activeTab, location.state?.initialTab, location.state?.fromSidebar, setActiveTab, navigate, location.pathname]); // Depend on initialTab and fromSidebar in location state
 
 
   // Default list of teams if none are passed from TournamentPage
@@ -417,8 +423,9 @@ const FixtureGenerator = () => {
 
 
   const allTabs = ['Fixture Generator', 'Start Match', 'Live Score', 'Match Results', 'Highlights', 'Match Analytics'];
-  const tabsExceptFixtureGenerator = ['Start Match', 'Live Score', 'Match Results', 'Highlights', 'Match Analytics'];
-
+  const tabsExceptFixtureGenerator = cameFromSidebar && (activeTab === 'Start Match' || activeTab === 'Live Score' || activeTab === 'Match Results' || activeTab === 'Highlights' || activeTab === 'Match Analytics')
+  ? ['Start Match', 'Live Score', 'Match Results', 'Highlights', 'Match Analytics']
+  : allTabs;
 
   return (
     <div className="w-screen min-h-screen bg-gradient-to-br from-green-400 via-blue-400 to-blue-200 overflow-x-hidden">

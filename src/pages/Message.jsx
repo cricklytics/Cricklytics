@@ -86,12 +86,12 @@ const Message = () => {
         {/* Search Bar */}
         <div className="mb-4 relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <FaSearch className="text-[#5DE0E6]" />
+            <FaSearch className="text-[#5DE0E6] md:w-[1.5rem] md:h-[1.5rem]" />
           </div>
           <input
             type="text"
             placeholder="Search messages..."
-            className="w-full bg-[#000428]/60 border border-[#004e92]/50 rounded-xl py-3 pl-10 pr-4 text-white placeholder-[#5DE0E6]/70 focus:outline-none focus:ring-2 focus:ring-[#5DE0E6] focus:border-transparent backdrop-blur-sm"
+            className="w-full bg-[#000428]/60 border border-[#004e92]/50 rounded-xl py-3 pl-10 pr-4 text-white placeholder-[#5DE0E6]/70 focus:outline-none focus:ring-2 focus:ring-[#5DE0E6] focus:border-transparent "
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />

@@ -5,6 +5,19 @@ import Login from './components/yogesh/LoginPage/login';
 import Signup from './components/yogesh/LoginPage/signup';
 import Landingpage1 from './pages/Landingpage1';
 import SearchBarAft from './components/yogesh/LandingPage/SearchBar';
+import CommunitySection from './pages/CommunitySection';
+import AcademicsPage from './pages/Community/AcademicsPage';
+import BatManufacturesPage from './pages/Community/BatManufacturesPage';
+import CommentatorsPage from './pages/Community/CommentatorsPage';
+import GroundsPage from './pages/Community/GroundsPage';
+import OrganisersPage from './pages/Community/OrganisersPage';
+import PersonalCoachingPage from './pages/Community/PersonalCoachingPage';
+import ScoresPage from './pages/Community/ScoresPage';
+import ShopsPage from './pages/Community/ShopsPage';
+import StreamersPage from './pages/Community/StreamersPage';
+import TrophyVendorsPage from './pages/Community/TrophyVendorsPage';
+import TshirtVendorsPage from './pages/Community/TshirtVendorsPage';
+import UmpiresPage from './pages/Community/UmpiresPage';
 
 import Landingpage from './pages/Landingpage';
 import Sidebar from './components/sophita/HomePage/Sidebar';
@@ -85,6 +98,19 @@ function App() {
           <Route path="/start-match" element={<Startmatch />} />
           <Route path="/club" element={<Club />} />
           <Route path="/message" element={<Message/>} />
+          <Route path="/community" element={<CommunitySection/>} />
+          <Route path="/academics" element={<AcademicsPage/>} />
+          <Route path="/bat-manufactures" element={<BatManufacturesPage/>} />
+          <Route path="/commentators" element={<CommentatorsPage/>} />
+          <Route path="/grounds" element={<GroundsPage/>} />
+          <Route path="/organisers" element={<OrganisersPage/>} />
+          <Route path="/personal-coaching" element={<PersonalCoachingPage/>} />
+          <Route path="/scores" element={<ScoresPage/>} />
+          <Route path="/shops" element={<ShopsPage/>} />
+          <Route path="/streamers" element={<StreamersPage/>} />
+          <Route path="/trophy-vendors" element={<TrophyVendorsPage/>} />
+          <Route path="/tshirt-vendors" element={<TshirtVendorsPage/>} />
+          <Route path="/umpires" element={<UmpiresPage/>} />
 
           <Route path="/tournament" element={<Tournaments/>} />
           <Route path="/team" element={<TeamDetails/>} />
