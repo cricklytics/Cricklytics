@@ -2,8 +2,6 @@ import React from 'react';
 import HeaderComponent from '../kumar/header';
 import { useNavigate } from 'react-router-dom';
 import scanner from '../../assets/kumar/icons8-qr-code-52.png';
-import nav from '../../assets/kumar/right-chevron.png';
-import Scanner from '../../assets/kumar/scanner.png';
 import { useState } from 'react';
 
 function Tournament_nextpg() {
@@ -239,7 +237,7 @@ function Tournament_nextpg() {
                         id="expiry-date"
                         className="peer w-full h-10 md:h-12 border-2 border-white text-white p-2 rounded-lg md:rounded-xl mt-1 md:mt-2 pl-3 md:pl-4 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 text-sm md:text-base"
                         type="text"
-                        placeholder=" "
+                        // placeholder=" "
                       />
                       <label
                         htmlFor="expiry-date"
@@ -254,7 +252,7 @@ function Tournament_nextpg() {
                         id="cvv"
                         className="peer w-full h-10 md:h-12 border-2 border-white text-white p-2 rounded-lg md:rounded-xl mt-1 md:mt-2 pl-3 md:pl-4 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 text-sm md:text-base"
                         type="text"
-                        placeholder=" "
+                        // placeholder=" "
                       />
                       <label
                         htmlFor="cvv"
@@ -270,7 +268,7 @@ function Tournament_nextpg() {
                       id="cardholder-name"
                       className="peer w-full h-10 md:h-12 border-2 border-white text-white p-2 rounded-lg md:rounded-xl mt-1 md:mt-2 pl-3 md:pl-4 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 text-sm md:text-base"
                       type="text"
-                      placeholder=" "
+                      // placeholder=" "
                     />
                     <label
                       htmlFor="cardholder-name"
@@ -394,7 +392,7 @@ function Tournament_nextpg() {
                 className="w-full md:w-64 h-10 md:h-12 border-2 border-white text-white p-2 rounded-xl mt-[.5rem] text-sm md:text-base"
                 type="number"
                 min="1"
-                placeholder="Enter the Amount"
+                // placeholder="Enter the Amount"
               />
               </div>
             </div>
@@ -418,7 +416,7 @@ function Tournament_nextpg() {
                   className="w-full md:w-64 h-10 md:h-12 border-2 border-white text-white p-2 rounded-xl mt-[.5rem] text-sm md:text-base"
                   type="number"
                   min="1"
-                  placeholder="Enter the Amount"
+                  // placeholder="Enter the Amount"
                 />
                 </div>
               </div>
@@ -443,7 +441,7 @@ function Tournament_nextpg() {
                 <p className="text-red-500 text-sm mt-1">Please select official handling method</p>
               )}
               
-              <input className="w-full md:w-70 h-10 md:h-12 border-2 border-white text-white p-2 rounded-xl mt-3 md:mt-[1rem] placeholder-white placeholder-opacity-100 text-sm md:text-base" type="number" placeholder='Contact Number'/>
+              <input className="w-full md:w-70 h-10 md:h-12 border-2 border-white text-white p-2 rounded-xl mt-3 md:mt-[1rem] placeholder-white placeholder-opacity-100 text-sm md:text-base" type="number"/>
             </div>
           </div>
 
@@ -499,7 +497,7 @@ function Tournament_nextpg() {
             <input
               className="w-full md:w-64 h-10 md:h-12 border-2 border-white text-white p-2 rounded-xl mt-[.5rem] text-sm md:text-base"
               type="text"
-              placeholder="Participation Team"
+              // placeholder="Participation Team"
             />
           </div>
 

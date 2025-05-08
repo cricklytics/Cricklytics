@@ -12,6 +12,7 @@ import flag1 from '../assets/kumar/Netherland.png';
 import flag2 from '../assets/kumar/ukraine.png';
 import btnbg from '../assets/kumar/button.png';
 import backButton from '../assets/kumar/right-chevron.png';
+import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 
 // Error Boundary Component
 class ErrorBoundary extends Component {
@@ -48,7 +49,7 @@ function StartMatchPlayers() {
   const [outCount, setOutCount] = useState(0);
   const [opponentBallsFaced, setOpponentBallsFaced] = useState(0);
   const [validBalls, setValidBalls] = useState(0);
-  const [overNumber, setOverNumber] = useState(1);
+  const [overNumber, setOverNumber] = useState(0);
   const [striker, setStriker] = useState(null);
   const [nonStriker, setNonStriker] = useState(null);
   const [bowlerVisible, setBowlerVisible] = useState(false);
@@ -223,7 +224,7 @@ function StartMatchPlayers() {
   
       for (let i = 0; i < particleCount; i++) {
         const angle = (Math.PI * 2 * i) / particleCount;
-        const speed = Math.random() * 2 + 2;
+        const speed = Math.random() * 1 + 0.5;
         particles.push({
           x,
           y,
@@ -231,7 +232,7 @@ function StartMatchPlayers() {
           vy: Math.sin(angle) * speed,
           alpha: 1,
           color,
-          size: Math.random() * 2 + 1,
+          size: Math.random() * 2 + 0.5,
         });
       }
   
@@ -242,7 +243,8 @@ function StartMatchPlayers() {
       // launch 3 fireworks from the bottom to predefined points
       createFirework(width / 2, height / 3);              // center top
       createFirework(width / 4, height / 1.8);            // left below middle
-      createFirework((3 * width) / 4, height / 1.8);      // right below middle
+      createFirework((3 * width) / 4, height / 1.8);      
+// right below middle
     }
   
     function update() {
@@ -252,7 +254,7 @@ function StartMatchPlayers() {
         firework.particles.forEach(p => {
           p.x += p.vx;
           p.y += p.vy;
-          p.alpha -= 0.015;
+          p.alpha -= 0.005;
   
           ctx.globalAlpha = p.alpha;
           ctx.fillStyle = p.color;
@@ -270,7 +272,7 @@ function StartMatchPlayers() {
       requestAnimationFrame(update);
     }
   
-    const interval = setInterval(launch, 1000);
+    const interval = setInterval(launch, 1500);
     update();
   
     // Resize canvas on modal resize
@@ -323,7 +325,7 @@ function StartMatchPlayers() {
       const temp = striker;
       setStriker(nonStriker);
       setNonStriker(temp);
-      displayModal('Over Finished', `Over ${overNumber} completed!`);
+      displayModal('Over Finished', `Over ${overNumber+1} completed!`);
       setTimeout(() => {
         setShowBowlerDropdown(true);
       }, 1000);
@@ -503,29 +505,38 @@ function StartMatchPlayers() {
         </button>
         )}
 
-        {showModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-[#4C0025] p-6 rounded-lg max-w-md w-full relative overflow-hidden">
-            {modalContent.title === 'Match Result' && (
-  <canvas
-    id="fireworks-canvas"
-    className="absolute bottom-0 left-0 w-full h-full z-0 pointer-events-none"
-  ></canvas>
-)}
+{showModal && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="bg-[#4C0025] p-6 rounded-lg max-w-md w-full relative">
+      {modalContent.title === 'Match Result' && (
+        <DotLottieReact
+          src="https://lottie.host/42c7d544-9ec0-4aaf-895f-3471daa49e49/a5beFhswU6.lottie"
+          style={{
+            position: 'absolute',
+            top: '10%',
+            width: '100%',
+            height: '100%',
+            zIndex: 0,
+            pointerEvents: 'none',
+          }}
+          loop
+          autoplay
+        />
+      )}
 
-              <h3 className="text-white text-xl font-bold mb-4">{modalContent.title}</h3>
-              <p className="text-white mb-6">{modalContent.message}</p>
-              <div className="flex justify-center">
-                <button
-                  onClick={handleModalOkClick}
-                  className="w-40 h-12 bg-[#FF62A1] text-white font-bold text-lg rounded-lg border-2 border-white"
-                >
-                  OK
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+      <h3 className="text-white text-xl font-bold mb-4 relative z-10">{modalContent.title}</h3>
+      <p className="text-white mb-6 relative z-10">{modalContent.message}</p>
+      <div className="flex justify-center relative z-10">
+        <button
+          onClick={handleModalOkClick}
+          className="w-40 h-12 bg-[#FF62A1] text-white font-bold text-lg rounded-lg border-2 border-white"
+        >
+          OK
+        </button>
+      </div>
+    </div>
+  </div> // ✅ close the outermost modal wrapper
+)}
 
         {(currentView !== 'toss' || striker || nonStriker || bowlerVisible || showThirdButtonOnly) && (
           <button
@@ -562,7 +573,7 @@ function StartMatchPlayers() {
                 {bowlerVisible ? (isChasing ? 'Team A' : 'Team B') : isChasing ? 'Choose to Chase' : 'The Team A won the Toss'}
               </h2>
               <h2 className="text-2xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-b from-[#F0167C] to-white text-center">
-                {bowlerVisible ? (isChasing ? 'Choose the Batsmen' : 'Choose the Bowler') : isChasing ? 'Select Batsmen' : 'Choosed to Bat'}
+                {bowlerVisible ? (isChasing ? 'Choose the bowler' : 'Choose the Bowler') : isChasing ? 'Select Batsmen' : 'Select to Bat'}
               </h2>
             </div>
 
