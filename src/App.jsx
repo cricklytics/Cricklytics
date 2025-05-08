@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect  } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 
 import Login from './components/yogesh/LoginPage/login';
@@ -26,6 +26,7 @@ import Club from './pages/Club';
 import Message from "./pages/Message";
 import Contact from './pages/contacts';
 import FieldingStatsPage from './components/sophita/HomePage/Fielding';
+import Tabletoppers from './pages/Tabletoppers';
 
 
 import Startmatch from './pages/Startmatch';
@@ -63,12 +64,86 @@ import StartMatchPlayers from './pages/StartMatchPlayers';
 
 
 
+// Import auth and db
+import { auth, db } from './firebase'; // Assuming your firebase config is here
+import { onAuthStateChanged } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+
 // import HeroSection2 from './component/HeroSection2';
 // import HeroSection3 from './component/HeroSection3';
 // import HeroSection4 from './component/HeroSection4';
 
 function App() {
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
+  const [userProfile, setUserProfile] = useState(null); // State to hold user profile data
+  const [loadingUser, setLoadingUser] = useState(true); // State to track user loading
+
+   // Effect to listen for auth state changes and fetch user data
+   useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        // User is signed in, fetch their profile data
+        try {
+          const docRef = doc(db, "users", user.uid);
+          const docSnap = await getDoc(docRef);
+
+          if (docSnap.exists()) {
+            const userData = docSnap.data();
+            setUserProfile({
+              uid: user.uid,
+              email: user.email,
+              userName: userData.firstName || "User", // Use firstName from firestore
+              profileImageUrl: userData.profileImageUrl || null, // Get profile image URL
+              whatsapp: userData.whatsapp || "No phone",
+              themeColor: userData.themeColor || "#5DE0E6", // Default color
+              accountType: userData.accountType || "public", // Default type
+              // Add other fields as needed
+            });
+          } else {
+            // User doc doesn't exist, use basic auth data
+             setUserProfile({
+              uid: user.uid,
+              email: user.email,
+              userName: "User",
+              profileImageUrl: null,
+              whatsapp: "No phone",
+              themeColor: "#5DE0E6",
+              accountType: "public",
+             });
+            console.log("No such user document!");
+          }
+        } catch (error) {
+          console.error("Error fetching user document:", error);
+           setUserProfile({
+              uid: user.uid,
+              email: user.email,
+              userName: "User",
+              profileImageUrl: null,
+              whatsapp: "No phone",
+              themeColor: "#5DE0E6",
+              accountType: "public",
+           });
+        } finally {
+           setLoadingUser(false); // Set loading to false after fetch
+        }
+      } else {
+        // User is signed out
+        setUserProfile(null);
+        setLoadingUser(false); // Set loading to false
+      }
+    });
+
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
+  }, []); // Empty dependency array means this effect runs once on mount
+
+
+  // You might want to show a loading spinner or similar while fetching user data
+   if (loadingUser) {
+     return <div>Loading user...</div>; // Or a proper loading component
+   }
+
+
   return (
     <Router>
       <ToastContainer position="top-center" autoClose={3000} />
@@ -77,11 +152,11 @@ function App() {
         <Routes>
           <Route
             path="/landingpage"
-            element={<Sidebar isOpen={isSidebarOpen} closeMenu={() => setIsSidebarOpen(false)} />}
+            element={userProfile && <Sidebar isOpen={isSidebarOpen} closeMenu={() => setIsSidebarOpen(false)} userProfile={userProfile} />}
           />
           <Route
             path="/go-live"
-            element={<Sidebar isOpen={isSidebarOpen} closeMenu={() => setIsSidebarOpen(false)} />}
+            element={userProfile && <Sidebar isOpen={isSidebarOpen} closeMenu={() => setIsSidebarOpen(false)} userProfile={userProfile} />}
           />
         </Routes>
 
@@ -94,7 +169,7 @@ function App() {
           <Route path="/search-aft" element={<SearchBarAft />} />
 
           {/* Dashboard Routes */}
-          <Route path="/landingpage" element={<Landingpage menuOpen={isSidebarOpen} setMenuOpen={setIsSidebarOpen} />} />
+          <Route path="/landingpage" element={userProfile ? <Landingpage menuOpen={isSidebarOpen} setMenuOpen={setIsSidebarOpen} userProfile={userProfile} /> : <Login />} /> {/* Protect route */}
           <Route path="/go-live" element={<Golive />} />
           <Route path="/start-match" element={<Startmatch />} />
           <Route path="/club" element={<Club />} />
@@ -115,6 +190,7 @@ function App() {
           <Route path="/umpires" element={<UmpiresPage/>} />
 
           <Route path="/fielding" element={<FieldingStatsPage/>} />
+          <Route path="/table-toppers" element={<Tabletoppers/>} />
 
           <Route path="/tournament" element={<Tournaments/>} />
           <Route path="/team" element={<TeamDetails/>} />

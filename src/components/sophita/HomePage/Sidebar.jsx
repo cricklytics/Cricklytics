@@ -185,16 +185,16 @@ const AccountSettingsContent = ({
   );
 };
 
-const Sidebar = ({ isOpen, closeMenu }) => {
+const Sidebar = ({ isOpen, closeMenu, userProfile }) => {
   const navigate = useNavigate();
   const [showDropdown, setShowDropdown] = useState(false);
   const [showAccountSettings, setShowAccountSettings] = useState(false);
   const [showTagsDropdown, setShowTagsDropdown] = useState(false);
   const [showCommentsDropdown, setShowCommentsDropdown] = useState(false);
-  const [userName, setUserName] = useState("Loading...");
-  const [userEmail, setUserEmail] = useState("");
-  const [userPhone, setUserPhone] = useState("");
-  const [profileImage, setProfileImage] = useState(null);
+  // const [userName, setUserName] = useState("Loading...");
+  // const [userEmail, setUserEmail] = useState("");
+  // const [userPhone, setUserPhone] = useState("");
+  // const [profileImage, setProfileImage] = useState(null);
   const [selectedColor, setSelectedColor] = useState("#5DE0E6");
   const [accountType, setAccountType] = useState("public");
   const [accountSettingsBg, setAccountSettingsBg] = useState("rgb(93, 224, 230, 0.5)");
@@ -216,42 +216,42 @@ const Sidebar = ({ isOpen, closeMenu }) => {
     return () => window.removeEventListener('resize', checkMobileView);
   }, []);
 
-  useEffect(() => {
-    const fetchUserData = async () => {
-      const currentUser = auth.currentUser;
+  // useEffect(() => {
+  //   const fetchUserData = async () => {
+  //     const currentUser = auth.currentUser;
   
-      if (currentUser) {
-        try {
-          const docRef = doc(db, "users", currentUser.uid);
-          const docSnap = await getDoc(docRef);
+  //     if (currentUser) {
+  //       try {
+  //         const docRef = doc(db, "users", currentUser.uid);
+  //         const docSnap = await getDoc(docRef);
   
-          if (docSnap.exists()) {
-            const userData = docSnap.data();
-            setUserName(userData.firstName || "User");
-            setUserPhone(userData.whatsapp || "No phone");
-            if (userData.profileImageUrl) setProfileImage(userData.profileImageUrl);
-            if (userData.themeColor) {
-              setSelectedColor(userData.themeColor);
-            }
-            if (userData.accountType) setAccountType(userData.accountType);
-          } else {
-            console.log("No such user document!");
-            setUserName("User");
-            setUserPhone("No phone");
-          }
+  //         if (docSnap.exists()) {
+  //           const userData = docSnap.data();
+  //           setUserName(userData.firstName || "User");
+  //           setUserPhone(userData.whatsapp || "No phone");
+  //           if (userData.profileImageUrl) setProfileImage(userData.profileImageUrl);
+  //           if (userData.themeColor) {
+  //             setSelectedColor(userData.themeColor);
+  //           }
+  //           if (userData.accountType) setAccountType(userData.accountType);
+  //         } else {
+  //           console.log("No such user document!");
+  //           setUserName("User");
+  //           setUserPhone("No phone");
+  //         }
   
-          setUserEmail(currentUser.email || "No email");
-        } catch (err) {
-          console.error("Error fetching user data:", err);
-          setUserName("User");
-          setUserEmail("No email");
-          setUserPhone("No phone");
-        }
-      }
-    };
+  //         setUserEmail(currentUser.email || "No email");
+  //       } catch (err) {
+  //         console.error("Error fetching user data:", err);
+  //         setUserName("User");
+  //         setUserEmail("No email");
+  //         setUserPhone("No phone");
+  //       }
+  //     }
+  //   };
   
-    fetchUserData();
-  }, []);
+  //   fetchUserData();
+  // }, []);
 
     // Effect to handle clicks outside the Account Settings panel
     useEffect(() => {
@@ -274,6 +274,15 @@ const Sidebar = ({ isOpen, closeMenu }) => {
       setShowAccountSettings(false);
     }
   }, [isOpen, showAccountSettings]);
+
+   // Effect to update state if userProfile prop changes (e.g., after an update in App)
+   useEffect(() => {
+    if (userProfile) {
+      setSelectedColor(userProfile.themeColor || "#5DE0E6");
+      setAccountType(userProfile.accountType || "public");
+      setAccountSettingsBg(`rgba(${hexToRgb(userProfile.themeColor || "#5DE0E6")}, 0.2)`);
+    }
+  }, [userProfile]);
 
 
   const handleColorChange = async (color) => {
@@ -300,24 +309,26 @@ const Sidebar = ({ isOpen, closeMenu }) => {
   };
 
   const handleImageUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-  
-    const storage = getStorage();
-    const storageRef = ref(storage, `profileImages/${auth.currentUser.uid}`);
-    
-    try {
-      await uploadBytes(storageRef, file);
-      const downloadURL = await getDownloadURL(storageRef);
-      setProfileImage(downloadURL);
-  
-      await updateDoc(doc(db, "users", auth.currentUser.uid), {
-        profileImageUrl: downloadURL,
-      });
-    } catch (err) {
-      console.error("Error uploading image:", err);
-    }
-  };
+        const file = e.target.files[0];
+        if (!file || !userProfile?.uid) return; // Ensure file and user ID exist
+      
+        const storage = getStorage();
+        const storageRef = ref(storage, `profileImages/${userProfile.uid}`);
+        
+        try {
+          await uploadBytes(storageRef, file);
+          const downloadURL = await getDownloadURL(storageRef);
+          // setProfileImage(downloadURL); // Update local state
+      
+          await updateDoc(doc(db, "users", userProfile.uid), {
+            profileImageUrl: downloadURL,
+          });
+      // Ideally, trigger an update in the parent (App) state here
+      // e.g., via a prop: onProfileUpdate({ profileImageUrl: downloadURL })
+        } catch (err) {
+          console.error("Error uploading image:", err);
+        }
+      };
 
   const handleSignOut = async () => {
     try {
@@ -333,18 +344,17 @@ const Sidebar = ({ isOpen, closeMenu }) => {
       closeMenu(); // Close the main sidebar
     };
 
-  const sidebarStyle = isMobileView ? { backgroundColor: selectedColor } : {};
+  const sidebarStyle = { backgroundColor: selectedColor };
 
 
   return (
     <>
       <div
-        className={`fixed top-0 left-0 w-[220px] md:w-[300px] h-screen shadow-lg 
-                   transition-transform duration-300 ease-in-out z-[1100] overflow-y-auto select-none
-                   ${isMobileView ? '' : 'bg-gradient-to-b from-[#B5FFE3] via-[#5DE0E6] to-[#B5FFE3]'}
-                   ${isOpen ? "translate-x-0" : "-translate-x-full"}`}
-        style={sidebarStyle} // Apply dynamic background for mobile
-      >
+  className={`fixed top-0 left-0 w-[220px] md:w-[300px] h-screen shadow-lg
+              transition-transform duration-300 ease-in-out z-[1100] overflow-y-auto select-none
+              ${isOpen ? "translate-x-0" : "-translate-x-full"}`} // Gradient class removed
+  style={sidebarStyle} // Applies { backgroundColor: selectedColor }
+>
         <div className="h-full relative">
           <button 
             className="absolute top-4 right-4 text-xl md:text-2xl text-black cursor-pointer"
@@ -356,17 +366,17 @@ const Sidebar = ({ isOpen, closeMenu }) => {
           {/* Profile Section */}
           <div className="text-center py-4 px-4 mt-6 text-black">
             <div className="relative w-16 h-16 md:w-20 md:h-20 mx-auto mb-4">
-              {profileImage ? (
-                <img
-                  src={profileImage}
-                  alt="Profile"
-                  className="w-full h-full rounded-full object-cover border-2 border-[#5DE0E6]"
-                />
-              ) : (
-                <div className="w-full h-full rounded-full bg-black text-white flex items-center justify-center text-2xl font-bold border-2 border-[#5DE0E6]">
-                  {userName.charAt(0).toUpperCase()}
-                </div>
-              )}
+            {userProfile?.profileImageUrl ? ( // Use profileImageUrl from prop
+                <img
+                  src={userProfile.profileImageUrl}
+                  alt="Profile"
+                  className="w-full h-full rounded-full object-cover border-2 border-black"
+                />
+              ) : (
+                <div className="w-full h-full rounded-full bg-black text-white flex items-center justify-center text-2xl font-bold border-2 border-[#5DE0E6]">
+                  {userProfile?.userName ? userProfile.userName.charAt(0).toUpperCase() : 'U'} {/* Use userName from prop */}
+                </div>
+              )}
 
               <label className="absolute bottom-0 right-0 bg-white p-1 rounded-full cursor-pointer shadow-md">
                 <FaPlus className="text-black text-xs" />
@@ -381,11 +391,11 @@ const Sidebar = ({ isOpen, closeMenu }) => {
 
             <div className="flex items-center justify-center gap-2">
               <h6 className="text-base md:text-lg font-bold">
-                {userName}
+              {userProfile?.userName || "User"}
               </h6>
             </div>
-            <p className="text-xs md:text-sm opacity-80 mt-1">{userEmail}</p>
-            <p className="text-xs md:text-sm opacity-80">{userPhone}</p>
+            <p className="text-xs md:text-sm opacity-80 mt-1">{userProfile?.email || "No email"}</p>
+            <p className="text-xs md:text-sm opacity-80">{userProfile?.whatsapp || "No phone"}</p>
           </div>
 
           {/* Menu Items */}
