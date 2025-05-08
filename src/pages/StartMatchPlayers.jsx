@@ -1,5 +1,5 @@
 import React, { useState, useEffect, Component } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import HeaderComponent from '../components/kumar/startMatchHeader';
 import plyr2 from '../assets/kumar/plyr2.jpeg';
 import plyr3 from '../assets/kumar/plyr6.jpeg';
@@ -101,7 +101,7 @@ function StartMatchPlayers() {
     } else if (striker) {
       cancelStriker();
     } else {
-      navigate('/match-start', { state: { activeTab: 'Start Match' } });
+      navigate(-1);
     }
   };
 
@@ -401,11 +401,15 @@ function StartMatchPlayers() {
 
         {currentView === 'toss' && !striker && !nonStriker && !bowlerVisible && !showThirdButtonOnly && (
           <button
-            onClick={goBack}
-            className="absolute right-4 top-24 md:right-10 md:top-32 z-10 w-10 h-10 flex items-center justify-center"
-          >
-            <span className="h-7 w-7 md:h-10 w-10 text-white text-3xl font-bold">×</span>
-          </button>
+          onClick={goBack}
+          className="absolute left-4 top-24 md:left-10 md:top-32 z-10 w-10 h-10 flex items-center justify-center"
+        >
+          <img
+            alt="Back"
+            className="w-6 h-6 transform rotate-180 mb-5"
+            src="/src/assets/kumar/right-chevron.png"
+          />
+        </button>
         )}
 
         {showModal && (
@@ -435,8 +439,8 @@ function StartMatchPlayers() {
         )}
 
         {!showThirdButtonOnly && (
-          <div className="w-[90%] py-4 flex flex-col items-center">
-            <div className="w-full max-w-2xl h-16 flex justify-around mt-12 md:mt-3">
+          <div className="">
+            {/* <div className="w-full max-w-2xl h-16 flex justify-around mt-12 md:mt-3">
               <button
                 onClick={() => handleButtonClick('toss')}
                 className="bg-[#FF62A1] w-20 h-10 text-sm md:w-32 h-10 md:text-xl text-white font-bold rounded-2xl shadow-[0px_0px_13px_0px_#FF94C8] border-2 border-white"
@@ -449,14 +453,14 @@ function StartMatchPlayers() {
               >
                 Start
               </button>
-            </div>
+            </div> */}
           </div>
         )}
 
         {currentView === 'toss' && !showThirdButtonOnly && (
           <>
             <div id="toss" className="text-center mb-4">
-              <h2 className="text-white font-bold text-3xl md:text-[3rem]">
+              <h2 className="text-white font-bold text-3xl md:text-[3rem] mt-20 md:mt-6">
                 {bowlerVisible ? (isChasing ? 'Team A' : 'Team B') : isChasing ? 'Choose to Chase' : 'The Team A won the Toss'}
               </h2>
               <h2 className="text-2xl md:text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-b from-[#F0167C] to-white text-center">
