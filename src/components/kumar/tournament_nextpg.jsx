@@ -58,7 +58,7 @@ function Tournament_nextpg() {
         window.location.reload();
       }
     } else {
-      navigate('/');
+      navigate('/tournamentseries');
     }
   };
 

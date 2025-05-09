@@ -235,7 +235,7 @@ function Tournamentseries() {
                     </div>
 
                     <div className="w-full md:w-[80%] lg:w-[50%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-5">
-                        <label className="text-xl text-white">No of Teams*</label>
+                        <label className="text-xl text-white">Number of Teams*</label>
                         <input 
                           className="w-64 h-12 border-2 border-white text-white p-2 rounded-xl mt-[.5rem]" 
                           type="text" 
@@ -363,7 +363,7 @@ function Tournamentseries() {
                     </div>
 
                     <div className="w-full md:w-[80%] lg:w-[50%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-5">
-                        <label className="text-xl text-white">Rules and Descrimination</label>
+                        <label className="text-xl text-white">Rules and Description</label>
                         <div className="w-[40%] relative flex items-center justify-between gap-5  mb-6">
                        <button id="view-rules" className="rounded-xl w-24 bg-gradient-to-l from-[#5DE0E6] to-[#004AAD] h-9 text-white mr-6 cursor-pointer" onClick={toggleDivVisibility}>
                        {isRulesVisible ? 'Hide Rules' : 'View Rules'}
