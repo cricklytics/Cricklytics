@@ -49,7 +49,7 @@ function StartMatchPlayers() {
   const [outCount, setOutCount] = useState(0);
   const [opponentBallsFaced, setOpponentBallsFaced] = useState(0);
   const [validBalls, setValidBalls] = useState(0);
-  const [overNumber, setOverNumber] = useState(0);
+  const [overNumber, setOverNumber] = useState(1);
   const [striker, setStriker] = useState(null);
   const [nonStriker, setNonStriker] = useState(null);
   const [bowlerVisible, setBowlerVisible] = useState(false);
@@ -537,7 +537,8 @@ function StartMatchPlayers() {
         <DotLottieReact
           src="https://lottie.host/42c7d544-9ec0-4aaf-895f-3471daa49e49/a5beFhswU6.lottie"
           style={{
-            position: 'absolute',
+            position: 'fixed',
+            left: '0%',
             top: '10%',
             width: '100%',
             height: '100%',
