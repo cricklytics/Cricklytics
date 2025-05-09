@@ -309,26 +309,26 @@ const Sidebar = ({ isOpen, closeMenu, userProfile }) => {
   };
 
   const handleImageUpload = async (e) => {
-        const file = e.target.files[0];
-        if (!file || !userProfile?.uid) return; // Ensure file and user ID exist
-      
-        const storage = getStorage();
-        const storageRef = ref(storage, `profileImages/${userProfile.uid}`);
-        
-        try {
-          await uploadBytes(storageRef, file);
-          const downloadURL = await getDownloadURL(storageRef);
-          // setProfileImage(downloadURL); // Update local state
-      
-          await updateDoc(doc(db, "users", userProfile.uid), {
-            profileImageUrl: downloadURL,
-          });
-      // Ideally, trigger an update in the parent (App) state here
-      // e.g., via a prop: onProfileUpdate({ profileImageUrl: downloadURL })
-        } catch (err) {
-          console.error("Error uploading image:", err);
-        }
-      };
+      const file = e.target.files[0];
+      if (!file || !userProfile?.uid) return; // Ensure file and user ID exist
+    
+      const storage = getStorage();
+      const storageRef = ref(storage, `profileImages/${userProfile.uid}`);
+      
+      try {
+       await uploadBytes(storageRef, file);
+       const downloadURL = await getDownloadURL(storageRef);
+       // setProfileImage(downloadURL); // Update local state
+  
+       await updateDoc(doc(db, "users", userProfile.uid), {
+        profileImageUrl: downloadURL,
+       });
+     // Ideally, trigger an update in the parent (App) state here
+     // e.g., via a prop: onProfileUpdate({ profileImageUrl: downloadURL })
+      } catch (err) {
+       console.error("Error uploading image:", err);
+      }
+     };
 
   const handleSignOut = async () => {
     try {
@@ -367,16 +367,16 @@ const Sidebar = ({ isOpen, closeMenu, userProfile }) => {
           <div className="text-center py-4 px-4 mt-6 text-black">
             <div className="relative w-16 h-16 md:w-20 md:h-20 mx-auto mb-4">
             {userProfile?.profileImageUrl ? ( // Use profileImageUrl from prop
-                <img
-                  src={userProfile.profileImageUrl}
-                  alt="Profile"
-                  className="w-full h-full rounded-full object-cover border-2 border-black"
-                />
-              ) : (
-                <div className="w-full h-full rounded-full bg-black text-white flex items-center justify-center text-2xl font-bold border-2 border-[#5DE0E6]">
-                  {userProfile?.userName ? userProfile.userName.charAt(0).toUpperCase() : 'U'} {/* Use userName from prop */}
-                </div>
-              )}
+                 <img
+                  src={userProfile.profileImageUrl}
+                  alt="Profile"
+                  className="w-full h-full rounded-full object-cover border-2 border-black"
+                 />
+               ) : (
+                 <div className="w-full h-full rounded-full bg-black text-white flex items-center justify-center text-2xl font-bold border-2 border-[#5DE0E6]">
+                  {userProfile?.userName ? userProfile.userName.charAt(0).toUpperCase() : 'U'} {/* Use userName from prop */}
+                 </div>
+               )}
 
               <label className="absolute bottom-0 right-0 bg-white p-1 rounded-full cursor-pointer shadow-md">
                 <FaPlus className="text-black text-xs" />

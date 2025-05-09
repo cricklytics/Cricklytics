@@ -305,6 +305,7 @@ useEffect(() => {
       e.target.closest('.message-icon') ||
       e.target.closest('.profile-story-modal-content') ||
       (isAIExpanded && e.target.closest('.ai-assistance-container'))
+      || e.target.closest('#cricklytics-title') // Add an ID to the Cricklytics span
       ) {
           return;
         }
@@ -322,20 +323,20 @@ useEffect(() => {
   };
  
  // Modify handleProfileClick to handle the user's own profile
-   const handleProfileClick = (profile) => {
-      if (profile.id === 'user') {
-        // Handle click on user's own profile image (e.g., open a user profile page)
-        console.log("Clicked on user's own profile image");
-        // navigate('/my-profile'); // Example navigation
-        // For now, we'll open a modal similar to friends' stories
-        setSelectedProfile(profile);
-        setProfileStoryVisible(true);
-      } else {
-        // Handle clicks on other users' profiles
-        setSelectedProfile(profile);
-        setProfileStoryVisible(true);
-      }
-    };
+ const handleProfileClick = (profile) => {
+   if (profile.id === 'user') {
+   // Handle click on user's own profile image (e.g., open a user profile page)
+   console.log("Clicked on user's own profile image");
+   // navigate('/my-profile'); // Example navigation
+   // For now, we'll open a modal similar to friends' stories
+   setSelectedProfile(profile);
+   setProfileStoryVisible(true);
+   } else {
+   // Handle clicks on other users' profiles
+   setSelectedProfile(profile);
+   setProfileStoryVisible(true);
+   }
+ };
  
   const handleAddImageClick = (e, profileId) => {
     e.stopPropagation();
@@ -362,26 +363,26 @@ useEffect(() => {
   };
  
   const handleImageChange = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-          // This logic is for updating the *displayed* profile images in the row.
-          // If this is for the *user's own* profile image (editingProfileId === 'user'),
-          // you would also want to upload it to Firebase Storage and update Firestore
-          // similar to the logic in the Sidebar component.
-          // For simplicity in this example, we'll just update the local state display.
-          const reader = new FileReader();
-          reader.onload = (event) => {
-            const newImage = event.target.result;
-            setProfileImages(prev => prev.map(profile =>
-              profile.id === editingProfileId
-                ? { ...profile, image: newImage }
-                : profile
-            ));
-          };
-          reader.readAsDataURL(file);
-        }
-        setEditingProfileId(null);
-      };
+   const file = e.target.files[0];
+   if (file) {
+    // This logic is for updating the *displayed* profile images in the row.
+    // If this is for the *user's own* profile image (editingProfileId === 'user'),
+    // you would also want to upload it to Firebase Storage and update Firestore
+    // similar to the logic in the Sidebar component.
+    // For simplicity in this example, we'll just update the local state display.
+    const reader = new FileReader();
+    reader.onload = (event) => {
+     const newImage = event.target.result;
+     setProfileImages(prev => prev.map(profile =>
+      profile.id === editingProfileId
+       ? { ...profile, image: newImage }
+       : profile
+     ));
+    };
+    reader.readAsDataURL(file);
+   }
+   setEditingProfileId(null);
+  };
 
   const toggleFollow = (id) => {
     setFollowersData(prev => 
@@ -397,6 +398,11 @@ useEffect(() => {
     console.log('Attempting to navigate to messages');
     navigate('/message');
   };
+    // Function to toggle highlight visibility
+    const toggleHighlightVisibility = () => {
+      setHighlightVisible(prev => !prev);
+   };
+ 
  
   return (
     <div className="bg-[#02101E]">
@@ -476,7 +482,9 @@ useEffect(() => {
               <div className="h-0.5 md:h-1 w-4 md:w-8 rounded bg-white"></div>
               <div className="h-0.5 md:h-1 w-3 md:w-5 rounded bg-white"></div>
             </button>
-            <span className="ml-4 md:ml-8 mt-4 md:mt-6 text-xl md:text-3xl font-bold">Cricklytics</span>
+            <span
+            id="cricklytics-title" 
+            className="ml-4 md:ml-8 mt-4 md:mt-6 text-xl md:text-3xl font-bold cursor-pointer select-none" onClick={toggleHighlightVisibility} >Cricklytics</span>
           </div>
  
           <div className="fixed inset-0 -z-10 flex items-center justify-center">
@@ -504,12 +512,12 @@ useEffect(() => {
 
             {/* Message Icon */}
             <div className="relative">
-  <FaComment
-    className="message-icon cursor-pointer text-white transition-transform duration-200 hover:scale-110"
-    size={24}
-    onClick={handleOpenMessagesPage}
-  />
-</div>
+              <FaComment
+                className="message-icon cursor-pointer text-white transition-transform duration-200 hover:scale-110"
+                size={24}
+                onClick={handleOpenMessagesPage}
+              />
+            </div>
           </div>
         </nav>
  
@@ -546,27 +554,25 @@ useEffect(() => {
                    </div>
                  )}
                  {/* Other profile images (friends) */}
-                {profileImages.filter(p => p.id !== 'user').map((profile) => ( // Filter out the user's own image from this list
-                  <div key={profile.id} className="relative profile-image-container">
-                    <button
-                      id="profiles-of-users"
-                      className="w-13 h-13 md:w-20 md:h-20 rounded-full bg-cover bg-center"
-                      style={{ backgroundImage: `url(${profile.image})` }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleProfileClick(profile);
-                      }}
-                    >
-                    </button>
-
-                    <button
-                      className="absolute -top-1 -right-1 h-5 w-5 rounded-full pb-2 bg-gray-800 flex items-center justify-center text-xl text-white font-bold"
-                      onClick={(e) => handleAddImageClick(e, profile.id)}
-                    >
-                      +
-                    </button>
-                  </div>
-                ))}
+                  {profileImages.filter(p => p.id !== 'user').map((profile) => ( // Filter out the user's own image from this list
+                    <div key={profile.id} className="relative profile-image-container">
+                      <button
+                      id="profiles-of-users"
+                      className="w-13 h-13 md:w-20 md:h-20 rounded-full bg-cover bg-center"
+                      style={{ backgroundImage: `url(${profile.image})` }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleProfileClick(profile);
+                      }}
+                      ></button>
+                      <button
+                      className="absolute -top-1 -right-1 h-5 w-5 rounded-full pb-2 bg-gray-800 flex items-center justify-center text-xl text-white font-bold"
+                      onClick={(e) => handleAddImageClick(e, profile.id)}
+                      >
+                      +
+                      </button>
+                  </div>
+                  ))}
               </div>
             </div>
  

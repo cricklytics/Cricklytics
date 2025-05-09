@@ -154,10 +154,10 @@ function App() {
             path="/landingpage"
             element={userProfile && <Sidebar isOpen={isSidebarOpen} closeMenu={() => setIsSidebarOpen(false)} userProfile={userProfile} />}
           />
-          <Route
+          {/* <Route
             path="/go-live"
             element={userProfile && <Sidebar isOpen={isSidebarOpen} closeMenu={() => setIsSidebarOpen(false)} userProfile={userProfile} />}
-          />
+          /> */}
         </Routes>
 
         {/* Main Content */}
