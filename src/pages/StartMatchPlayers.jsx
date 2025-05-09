@@ -37,6 +37,7 @@ class ErrorBoundary extends Component {
 
 function StartMatchPlayers() {
   const location = useLocation();
+  const originPage = location.state?.origin; // <-- Get the origin route
   const maxOvers = location.state?.overs || 2; // Default to 2 overs if not passed
   const maxBalls = maxOvers * 6;
   const navigate = useNavigate();
@@ -89,30 +90,16 @@ function StartMatchPlayers() {
     setShowThirdButtonOnly(view === 'start');
   };
 
-  const goBack = () => {
-    if (showThirdButtonOnly) {
-      setBowlerVisible(true);
-      setShowThirdButtonOnly(false);
-      setCurrentView('toss');
-    } else if (bowlerVisible) {
-      setBowlerVisible(false);
-      if (isChasing) {
-        setSelectedBowler(null);
-      }
-    } else if (striker && nonStriker) {
-      if (nonStriker) {
-        cancelNonStriker();
-      } else if (striker) {
-        cancelStriker();
-      }
-    } else if (nonStriker) {
-      cancelNonStriker();
-    } else if (striker) {
-      cancelStriker();
-    } else {
-      navigate('/match-start', { state: { activeTab: 'Start Match' } });
-    }
-  };
+    // Modify goBack to handle navigation based on origin or simpler history back
+    const goBack = () => {
+       // If the game is finished and modal is shown, handleModalOkClick handles navigation
+       if (gameFinished && showModal) {
+          // Do nothing here, let handleModalOkClick handle it
+          return;
+       }
+       // If not in a game-finished state or modal, use history back
+       navigate(-1); // This goes back to the previous page, which would be Startmatch via PlayerSelector
+    };
 
   const updateBatsmanScore = (batsmanIndex, runs) => {
     setBatsmenScores(prev => ({
@@ -486,13 +473,36 @@ function StartMatchPlayers() {
     setCurrentOverBalls(prev => prev.slice(0, -1));
   };
 
-  const handleModalOkClick = () => {
-    if (gameFinished && modalContent.title === 'Match Result') {
-      navigate('/match-start', { state: { activeTab: 'Match Results' } });
+ // Inside your StartMatchPlayers component
+
+const handleModalOkClick = () => {
+  setShowModal(false); // Hide modal first
+
+  if (gameFinished && modalContent.title === 'Match Result') {
+    // Use the originPage obtained from location.state
+    const originPage = location.state?.origin; // <-- Ensure originPage is accessed here
+
+    // *** ADD THIS CONSOLE LOG ***
+    console.log('Origin Page:', originPage);
+    // **************************
+
+    if (originPage) {
+        navigate(originPage, { state: { activeTab: 'Match Results' } });
     } else {
-      setShowModal(false);
+        // Fallback if origin is not found (e.g., direct access to /StartMatchPlayers)
+        console.error("Origin page not found in state. Cannot navigate back correctly.");
+        // Example fallback: navigate to landing page or home
+        // navigate('/'); // Uncomment a fallback if needed
     }
-  };
+  } else if (modalContent.title === 'Innings Break') {
+      // Logic after innings break modal closes - e.g., prompt for next bowler
+      setBowlerVisible(true); // Show bowler selection after innings break
+      setCurrentView('toss'); // Stay on 'toss' view to select bowler
+      setShowThirdButtonOnly(false); // Hide score board view
+  }
+};
+
+// Rest of your StartMatchPlayers component code...
 
   if (!currentView && !showThirdButtonOnly) {
     return (

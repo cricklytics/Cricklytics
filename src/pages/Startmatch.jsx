@@ -5,7 +5,7 @@ import logo from '../assets/pawan/PlayerProfile/picture-312.png';
 import bgImg from '../assets/sophita/HomePage/advertisement5.jpeg';
 
 
-const PlayerSelector = ({ teamA, teamB, overs }) => {  // Add overs to props
+const PlayerSelector = ({ teamA, teamB, overs, origin }) => {  // Add overs to props
   const [leftSearch, setLeftSearch] = useState('');
   const [rightSearch, setRightSearch] = useState('');
   const [selectedPlayers, setSelectedPlayers] = useState({ left: [], right: [] });
@@ -49,12 +49,14 @@ const PlayerSelector = ({ teamA, teamB, overs }) => {  // Add overs to props
   };
   const handleActualStartMatch = () => {
     console.log("Starting match with players:", selectedPlayers);
+    console.log('Origin being passed to StartMatchPlayers:', origin);
     navigate('/StartMatchPlayers', { 
       state: { 
         overs: overs,  // Pass overs to next page
         teamA: teamA,
         teamB: teamB,
-        selectedPlayers: selectedPlayers  // Optional: pass selected players if needed
+        selectedPlayers: selectedPlayers,  // Optional: pass selected players if needed
+        origin: origin // <--- Pass the origin received from Startmatch
       } 
     });
   };
@@ -207,7 +209,8 @@ const PlayerSelector = ({ teamA, teamB, overs }) => {  // Add overs to props
     </div>
   );
 };
-const Startmatch = ({ initialTeamA = '', initialTeamB = '', onMatchSetupComplete }) => {
+const Startmatch = ({ initialTeamA = '', initialTeamB = '', onMatchSetupComplete, origin  }) => {
+  console.log('Startmatch received origin prop:', origin);
   const [selectedTeamA, setSelectedTeamA] = useState('');
   const [selectedTeamB, setSelectedTeamB] = useState('');
   const [tossWinner, setTossWinner] = useState('');
@@ -249,7 +252,8 @@ const handleNext = () => {
       <PlayerSelector
         teamA={selectedTeamA}
         teamB={selectedTeamB}
-        overs={overs}  // Pass overs to PlayerSelector
+        overs={overs}
+        origin={origin} // <--- Pass origin to PlayerSelector
       />
     );
   }

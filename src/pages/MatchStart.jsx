@@ -501,6 +501,7 @@ const FixtureGenerator = () => {
             <Startmatch
                 initialTeamA={selectedTeamA}
                 initialTeamB={selectedTeamB}
+                origin="/match-start"
             />
        ) : (
       <main className="w-full max-w-7xl px-4 sm:px-8 py-8 mx-auto">

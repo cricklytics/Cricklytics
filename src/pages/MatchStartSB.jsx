@@ -386,7 +386,7 @@ const FixtureGenerator = () => {
     return acc;
   }, {});
 
-
+  console.log('match-start-sb activeTab:', activeTab);
   const allTabs = ['Start Match', 'Live Score', 'Match Results', 'Highlights', 'Match Analytics'];
 
   return (
@@ -444,6 +444,7 @@ const FixtureGenerator = () => {
             <Startmatch
                 initialTeamA={selectedTeamA}
                 initialTeamB={selectedTeamB}
+                origin="/match-start-sb" // <--- Prop being passed here
             />
        ) : (
       <main className="w-full max-w-7xl px-4 sm:px-8 py-8 mx-auto">
