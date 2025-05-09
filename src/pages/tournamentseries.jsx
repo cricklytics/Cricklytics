@@ -375,19 +375,19 @@ function Tournamentseries() {
                       <h1 className='text-xl text-white mb-[1rem]'>Ball Type*</h1>
                       <div className='relative flex items-center w-full h-fit gap-5'>
                         <a
-                          className={`animate-rotate flex items-center justify-center w-25 h-25 rounded-full ${selectedBall === 'ball1' ? 'bg-[#73DDD8]' : 'bg-blue-100'} hover:bg-transparent hover:text-white mt-4 cursor-pointer`}
+                          className={`animate-rotate flex items-center justify-center w-25 h-25 rounded-full ${selectedBall === 'ball1' ? 'bg-blue-100' : 'bg-transparent'} hover:text-white mt-4 cursor-pointer`}
                           onClick={() => handleBallClick('ball1')}
                         >
                           <img src={ball1} alt="" className='w-20 h-20' />
                         </a>
                         <a
-                          className={`animate-rotate flex items-center justify-center w-25 h-25 rounded-full ${selectedBall === 'others' ? 'bg-[#73DDD8]' : 'bg-blue-100'} hover:bg-transparent hover:text-white mt-4 cursor-pointer`}
+                          className={`animate-rotate flex items-center justify-center w-25 h-25 rounded-full ${selectedBall === 'others' ? 'bg-blue-100' : 'bg-transparent'}  hover:text-white mt-4 cursor-pointer`}
                           onClick={() => handleBallClick('others')}
                         >
                           <img src={others} alt="" className='w-20 h-20' />
                         </a>
                         <a
-                          className={`animate-rotate flex items-center justify-center w-25 h-25 rounded-full ${selectedBall === 'ball2' ? 'bg-[#73DDD8]' : 'bg-blue-100'} hover:bg-transparent hover:text-white mt-4 cursor-pointer`}
+                          className={`animate-rotate flex items-center justify-center w-25 h-25 rounded-full ${selectedBall === 'ball2' ? 'bg-blue-100' : 'bg-transparent'}  hover:text-white mt-4 cursor-pointer`}
                           onClick={() => handleBallClick('ball2')}
                         >
                           <img src={ball2} alt="" className='w-18 h-18' />
