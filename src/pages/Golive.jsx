@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import { FaChevronDown, FaChevronUp, FaGlobeAmericas, FaTrophy, FaVenus } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
-import Picture3 from '../assets/sophita/HomePage/Picture3.png';
 import Southafrica from '../assets/sophita/HomePage/Southafrica.png';
 import Netherland from '../assets/sophita/HomePage/Netherland.jpeg';
+import backButton from '../assets/kumar/right-chevron.png';
+import logo from '../assets/pawan/PlayerProfile/picture-312.png';
 
 const Golive = () => {
   const navigate = useNavigate();
@@ -39,21 +40,34 @@ const Golive = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-black to-[#001A80] text-white p-4 py-0">
-      {/* Top Navigation Bar - Mobile Optimized */}
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center p-3 bg-black/30 rounded-lg mb-4">
-        <div className="flex items-center gap-3 mb-3 sm:mb-0">
-          <img
-            src={Picture3}
-            alt="Cricklytics Logo"
-            className="h-6 w-6 md:h-10 object-contain block select-none"
-          />
-          <span className="text-xl sm:text-2xl font-bold text-white whitespace-nowrap">
-            Cricklytics
-          </span>
-        </div>
+     {/* Top Navigation Bar */}
+           <div className="flex flex-col mt-0">
+                   <div className="flex items-start">
+                     <img 
+                       src={logo}
+                       alt="Cricklytics Logo"
+                       className="h-7 w-7 md:h-10 object-contain block select-none"
+                       onError={(e) => {
+                         e.target.onerror = null;
+                         e.target.src = "/images/Picture3 2.png";
+                       }}
+                     />
+                     <span className="p-2 text-2xl font-bold text-white whitespace-nowrap text-shadow-[0_0_8px_rgba(93,224,230,0.4)]">
+                       Cricklytics
+                     </span>
+                   </div>
+                   </div>
+                   <div className="md:absolute flex items-center gap-4">
+                     <img 
+                       src={backButton}
+                       alt="Back"
+                       className="h-8 w-8 cursor-pointer -scale-x-100"
+                       onClick={() => navigate("/landingpage")}
+                     />
+                 </div>
 
         {/* Tab Selection - Mobile Optimized */}
-        <div className="flex gap-2 justify-between sm:justify-start">
+        <div className="flex md:gap-10 justify-between mt-3 md:justify-end">
           <button
             className={`px-3 py-1 sm:px-4 sm:py-2 text-sm sm:text-base rounded-lg transition-all duration-300 ${
               activeTab === "international" 
@@ -81,7 +95,6 @@ const Golive = () => {
             National
           </button>
         </div>
-      </div>
 
       {/* Navigation Dropdowns - Mobile Optimized */}
       <div className="flex flex-col sm:flex-row sm:justify-center gap-3 sm:gap-8 relative mb-6">
@@ -332,7 +345,7 @@ const Golive = () => {
       <div className="flex justify-center gap-4 sm:gap-6 items-center mt-8 w-full max-w-[800px] mx-auto px-4 pb-6">
         <button 
           className="bg-red-600 hover:bg-red-700 text-white px-4 py-1 sm:px-6 sm:py-2 text-sm sm:text-base rounded-full transition duration-300"
-          onClick={() => navigate("/landingpage")}
+          onClick={() => window.history.back()}
         >
           Cancel
         </button>

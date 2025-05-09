@@ -3,9 +3,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FaPlay, FaRegImage } from 'react-icons/fa';
 import logo from '../assets/sophita/HomePage/picture3_2.png';
 import backButton from '../assets/kumar/right-chevron.png'
+import { useNavigate } from "react-router-dom";
 
 export default function Highlights() {
   const [activeTab, setActiveTab] = useState('myteam');
+  const navigate = useNavigate();
 
   const tabContentVariant = {
     hidden: { opacity: 0, y: 30 },
@@ -45,7 +47,7 @@ export default function Highlights() {
                  src={backButton}
                  alt="Back"
                  className="h-8 w-8 cursor-pointer -scale-x-100"
-                 onClick={() => window.history.back()}
+                 onClick={() => navigate("/search-aft")}
                />
            </div>
            </div>
@@ -92,7 +94,9 @@ export default function Highlights() {
             <p className="text-lg font-medium mb-4 text-center text-black">
               We don’t have Highlights of this player yet but you can have yours!
             </p>
-            <button className="bg-[#70005A] text-white px-10 py-4 text-xl font-semibold rounded-md shadow-md shadow-black transition duration-300 hover:bg-[blue] hover:-translate-y-1">
+            <button className="bg-[#70005A] text-white px-10 py-4 text-xl font-semibold rounded-md shadow-md shadow-black transition duration-300 hover:bg-[blue] hover:-translate-y-1" 
+            onClick={() => navigate("/go-live")}
+            >
               Go Live
             </button>
           </motion.div>
