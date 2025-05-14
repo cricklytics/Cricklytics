@@ -1,6 +1,11 @@
 import React, { useState, useEffect  } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 
+import ClubMain from './pages/Clubmain'
+// import ClubDetail from './components/yogesh/ClubDetail'
+import Tab from "./components/yogesh/LandingPage/tab"
+
+
 import Login from './components/yogesh/LoginPage/login';
 import Signup from './components/yogesh/LoginPage/signup';
 import Landingpage1 from './pages/Landingpage1';
@@ -175,6 +180,9 @@ function App() {
           <Route path="/start-match" element={<Startmatch />} />
           <Route path="/club" element={<Club />} />
           <Route path="/message" element={<Message/>} />
+          <Route path="/Clubsmain" element={<ClubMain/>} />
+          <Route path="/clubs/:id"  element={<Tab/>} />
+          <Route path="/Tab" element={<Tab/>} />
 
           <Route path="/community" element={<CommunitySection/>} />
           <Route path="/academics" element={<AcademicsPage/>} />
