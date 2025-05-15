@@ -3,6 +3,7 @@ import { FiSearch, FiFilter, FiStar, FiMapPin, FiUsers, FiChevronDown } from 're
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
+import { useNavigate } from "react-router-dom";
 import colomb from '../assets/yogesh/clubimg/Colomb.png';
 import royals from '../assets/yogesh/clubimg/royals.jpeg';
 import EasternEaglesCC from '../assets/yogesh/clubimg/EasternEaglesCC.jpeg';
@@ -10,6 +11,7 @@ import HambantotaHawks from "../assets/yogesh/clubimg/HambantotaHawks.jpeg";
 import NorthernKnights from "../assets/yogesh/clubimg/NorthernKnightsCC.png"
 import KandyKingsCricket from "../assets/yogesh/clubimg/KandyKings.jpeg"
 import GalleGladiators from "../assets/yogesh/clubimg/GalleGladiators.png"
+import backButton from '../assets/kumar/right-chevron.png';
 
 // Mock data remains the same
 const mockClubs = [
@@ -101,6 +103,7 @@ const mockClubs = [
 
 const Clubsmain = () => {
   // All state declarations remain the same
+  const navigate = useNavigate();
   const [clubs, setClubs] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterOpen, setFilterOpen] = useState(false);
@@ -148,7 +151,20 @@ const Clubsmain = () => {
         className="bg-gradient-to-r from-gray-800 to-gray-700 text-white py-4 px-4 shadow-md sticky top-0 z-10"
       >
         <div className="container mx-auto flex justify-between items-center">
-          <h1 className="text-xl md:text-3xl font-bold">Cricket Association Clubs</h1>
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={()  => navigate("/landingpage")} // Navigates back
+              className="px-2 py-1 rounded-md text-sm md:text-base transition-colors"
+            >
+              <img 
+                src={backButton} 
+                alt="Back"
+                className="h-7 w-7 md:h-10 w-10 mt-2 ml-1 cursor-pointer transform rotate-180"
+                // onClick={() => window.history.back()}
+              />
+            </button>
+            <h1 className="text-xl md:text-3xl font-bold">Cricket Association Clubs</h1>
+          </div>
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}

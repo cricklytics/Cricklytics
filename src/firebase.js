@@ -6,6 +6,7 @@ import {
   signInWithPhoneNumber
 } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
+import { getVertexAI, getGenerativeModel } from "firebase/vertexai";
 
 // ✅ Firebase Configuration
 const firebaseConfig = {
@@ -20,10 +21,13 @@ const firebaseConfig = {
 
 // ✅ Initialize Firebase
 const app = initializeApp(firebaseConfig);
+const vertexAI = getVertexAI(app);
+
+const geminiModel = getGenerativeModel(vertexAI, { model: "gemini-2.0-flash" });
 
 // ✅ Firebase Services
 const auth = getAuth(app);
 const db = getFirestore(app);
 
 // ✅ Export everything needed
-export { auth, db, RecaptchaVerifier, signInWithPhoneNumber };
+export { auth, db, RecaptchaVerifier, signInWithPhoneNumber ,geminiModel };
