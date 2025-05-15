@@ -217,34 +217,34 @@ const ClubDetail = () => {
           >
             <FiArrowLeft className="text-xl" />
           </span>
-          <div>
-            <h1 className="text-xl md:text-2xl font-bold">{club.name}</h1>
-            <p className="text-blue-100 text-sm">{club.category} Club</p>
+          <div className="overflow-hidden">
+            <h1 className="text-xl md:text-2xl font-bold truncate">{club.name}</h1>
+            <p className="text-blue-100 text-sm truncate">{club.category} Club</p>
           </div>
         </div>
       </header>
 
       <main className="container mx-auto px-4 py-6">
         <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 p-4 md:p-6">
             {/* Club Overview */}
             <div className="md:col-span-1">
-              <div className="flex flex-col items-center mb-6">
+              <div className="flex flex-col items-center mb-4 md:mb-6">
                 <img
                   src={club.logo}
                   alt={`${club.name} logo`}
-                 className="w-48 h-48 object-cover rounded-full border-4 border-blue-100 mb-4"
+                  className="w-32 h-32 md:w-48 md:h-48 object-cover rounded-full border-4 border-blue-100 mb-3 md:mb-4"
                 />
                 <div className="text-center">
-                  <h2 className="text-xl font-bold">{club.name}</h2>
-                  <p className="text-gray-600">{club.location}</p>
+                  <h2 className="text-lg md:text-xl font-bold">{club.name}</h2>
+                  <p className="text-gray-600 text-sm md:text-base">{club.location}</p>
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <div className="p-4 bg-gray-50 rounded-lg">
-                  <h3 className="font-bold text-gray-800 mb-2">Club Information</h3>
-                  <div className="space-y-2">
+              <div className="space-y-3 md:space-y-4">
+                <div className="p-3 md:p-4 bg-gray-50 rounded-lg">
+                  <h3 className="font-bold text-gray-800 mb-2 text-sm md:text-base">Club Information</h3>
+                  <div className="space-y-2 text-sm md:text-base">
                     <div className="flex items-center">
                       <FiUsers className="text-gray-500 mr-2" />
                       <span>{club.members} members</span>
@@ -262,18 +262,18 @@ const ClubDetail = () => {
                   </div>
                 </div>
 
-                <div className="p-4 bg-gray-50 rounded-lg">
-                  <h3 className="font-bold text-gray-800 mb-2">Contact</h3>
-                  <div className="space-y-2">
+                <div className="p-3 md:p-4 bg-gray-50 rounded-lg">
+                  <h3 className="font-bold text-gray-800 mb-2 text-sm md:text-base">Contact</h3>
+                  <div className="space-y-2 text-sm md:text-base">
                     <div className="flex items-center">
                       <FiMail className="text-gray-500 mr-2" />
-                      <a href={`mailto:${club.contact.email}`} className="text-blue-600 hover:underline">
+                      <a href={`mailto:${club.contact.email}`} className="text-blue-600 hover:underline truncate">
                         {club.contact.email}
                       </a>
                     </div>
                     <div className="flex items-center">
                       <FiGlobe className="text-gray-500 mr-2" />
-                      <a href={`https://${club.contact.website}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                      <a href={`https://${club.contact.website}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline truncate">
                         {club.contact.website}
                       </a>
                     </div>
@@ -281,7 +281,7 @@ const ClubDetail = () => {
                       <svg className="w-4 h-4 text-gray-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                       </svg>
-                      <span>{club.contact.phone}</span>
+                      <span className="truncate">{club.contact.phone}</span>
                     </div>
                   </div>
                 </div>
@@ -289,37 +289,37 @@ const ClubDetail = () => {
             </div>
 
             {/* Club Details */}
-            <div className="md:col-span-2 space-y-6">
-              <div className="bg-gray-50 p-4 rounded-lg">
+            <div className="md:col-span-2 space-y-4 md:space-y-6">
+              <div className="bg-gray-50 p-3 md:p-4 rounded-lg">
                 <h2 className="text-lg font-bold text-gray-800 mb-2">About</h2>
-                <p className="text-gray-700">{club.description}</p>
+                <p className="text-gray-700 text-sm md:text-base">{club.description}</p>
               </div>
 
-              <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="bg-gray-50 p-3 md:p-4 rounded-lg">
                 <h2 className="text-lg font-bold text-gray-800 mb-2">Upcoming Matches</h2>
-                <div className="space-y-3">
+                <div className="space-y-2 md:space-y-3">
                   {club.upcomingMatches.length > 0 ? (
                     club.upcomingMatches.map((match, index) => (
-                      <div key={index} className="bg-white p-3 rounded-md shadow-sm">
+                      <div key={index} className="bg-white p-2 md:p-3 rounded-md shadow-sm text-sm md:text-base">
                         <div className="font-medium">vs {match.opponent}</div>
-                        <div className="text-sm text-gray-600">{match.date}</div>
-                        <div className="text-sm text-gray-500 mt-1">
+                        <div className="text-gray-600">{match.date}</div>
+                        <div className="text-gray-500 mt-1">
                           <FiMapPin className="inline mr-1" size={12} />
                           {match.venue}
                         </div>
                       </div>
                     ))
                   ) : (
-                    <p className="text-gray-500">No upcoming matches scheduled</p>
+                    <p className="text-gray-500 text-sm md:text-base">No upcoming matches scheduled</p>
                   )}
                 </div>
               </div>
 
-              <div className="bg-gray-50 p-4 rounded-lg">
+              <div className="bg-gray-50 p-3 md:p-4 rounded-lg">
                 <h2 className="text-lg font-bold text-gray-800 mb-2">Facilities</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {club.facilities.map((facility, index) => (
-                    <div key={index} className="bg-white p-2 rounded-md shadow-sm text-sm">
+                    <div key={index} className="bg-white p-2 rounded-md shadow-sm text-xs md:text-sm">
                       {facility}
                     </div>
                   ))}
@@ -327,11 +327,11 @@ const ClubDetail = () => {
               </div>
 
               {club.achievements && club.achievements.length > 0 && (
-                <div className="bg-gray-50 p-4 rounded-lg">
+                <div className="bg-gray-50 p-3 md:p-4 rounded-lg">
                   <h2 className="text-lg font-bold text-gray-800 mb-2">Achievements</h2>
                   <ul className="space-y-2">
                     {club.achievements.map((achievement, index) => (
-                      <li key={index} className="flex items-start">
+                      <li key={index} className="flex items-center text-sm md:text-base">
                         <FiStar className="text-yellow-500 mt-1 mr-2 flex-shrink-0" />
                         <span>{achievement}</span>
                       </li>

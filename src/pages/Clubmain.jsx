@@ -11,7 +11,7 @@ import NorthernKnights from "../assets/yogesh/clubimg/NorthernKnightsCC.png"
 import KandyKingsCricket from "../assets/yogesh/clubimg/KandyKings.jpeg"
 import GalleGladiators from "../assets/yogesh/clubimg/GalleGladiators.png"
 
-// Mock data defined outside component
+// Mock data remains the same
 const mockClubs = [
   {
     id: 1,
@@ -100,6 +100,7 @@ const mockClubs = [
 ];
 
 const Clubsmain = () => {
+  // All state declarations remain the same
   const [clubs, setClubs] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterOpen, setFilterOpen] = useState(false);
@@ -109,7 +110,7 @@ const Clubsmain = () => {
     establishedAfter: ''
   });
 
-  // Filter function
+  // Filter function remains the same
   const filterClubs = () => {
     return clubs.filter(club => {
       const matchesSearch = club.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -124,13 +125,13 @@ const Clubsmain = () => {
     });
   };
 
-  // Derived data
+  // Derived data remains the same
   const locations = [...new Set(clubs.map(club => club.location))];
   const categories = [...new Set(clubs.map(club => club.category))];
   const filteredClubs = filterClubs();
 
   useEffect(() => {
-    // Set mock data on component mount with a slight delay for animation
+    // Same useEffect
     const timer = setTimeout(() => {
       setClubs(mockClubs);
     }, 500);
@@ -139,34 +140,35 @@ const Clubsmain = () => {
 
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100">
-      {/* Header with animation and Join button */}
+      {/* Header - adjusted for mobile */}
       <motion.header 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="bg-gradient-to-r from-gray-800 to-gray-700 text-white py-6 px-4 shadow-md sticky top-0 z-10"
+        className="bg-gradient-to-r from-gray-800 to-gray-700 text-white py-4 px-4 shadow-md sticky top-0 z-10"
       >
         <div className="container mx-auto flex justify-between items-center">
-          <h1 className="text-2xl md:text-3xl font-bold">Cricket Association Clubs</h1>
+          <h1 className="text-xl md:text-3xl font-bold">Cricket Association Clubs</h1>
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-md text-white font-medium transition-colors"
+            className="px-3 py-1 md:px-4 md:py-2 bg-green-600 hover:bg-green-700 rounded-md text-white text-sm md:text-base font-medium transition-colors"
           >
             Join Now
           </motion.button>
         </div>
       </motion.header>
 
-      {/* Main Content */}
-      <div className="container mx-auto px-4 py-6 flex flex-col md:flex-row gap-8 items-start">
-        {/* Video Column */}
+      {/* Main Content - adjusted layout for mobile */}
+      <div className="container mx-auto px-2 sm:px-4 py-4 flex flex-col md:flex-row gap-4 md:gap-8 items-start">
+        {/* Video Column - hidden on small screens */}
         <motion.div 
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.2, duration: 0.5 }}
-          className="w-full md:w-1/3 lg:w-1/4 bg-gray-800 p-6 rounded-lg shadow-md sticky top-24 h-fit border border-gray-700"
+          className="hidden md:block w-full md:w-1/3 lg:w-1/4 bg-gray-800 p-4 md:p-6 rounded-lg shadow-md sticky top-20 h-fit border border-gray-700"
         >
+          {/* Keep the same content here */}
           <motion.h2 
             whileHover={{ scale: 1.02 }}
             className="text-xl font-bold text-blue-300 mb-4"
@@ -174,7 +176,6 @@ const Clubsmain = () => {
             Cricket Clubs Network
           </motion.h2>
           
-          {/* Lottie Animation */}
           <motion.div
             whileHover={{ scale: 1.02 }}
             transition={{ type: "spring", stiffness: 400, damping: 10 }}
@@ -217,16 +218,16 @@ const Clubsmain = () => {
           </div>
         </motion.div>
 
-        {/* Clubs List Column */}
+        {/* Clubs List Column - adjusted for mobile */}
         <div className="w-full md:w-2/3 lg:w-3/4">
-          {/* Search and Filter Section */}
+          {/* Search and Filter Section - adjusted for mobile */}
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="bg-gray-800 rounded-lg shadow-md p-4 mb-6 border border-gray-700"
+            className="bg-gray-800 rounded-lg shadow-md p-3 sm:p-4 mb-4 sm:mb-6 border border-gray-700"
           >
-            <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex flex-col md:flex-row gap-3">
               <motion.div 
                 whileFocus={{ scale: 1.01 }}
                 className="relative flex-grow"
@@ -236,8 +237,8 @@ const Clubsmain = () => {
                 </div>
                 <input
                   type="text"
-                  placeholder="Search clubs by name or location..."
-                  className="pl-10 pr-4 py-2 w-full bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-white"
+                  placeholder="Search clubs..."
+                  className="pl-10 pr-4 py-2 w-full bg-gray-700 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-white text-sm sm:text-base"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -246,7 +247,7 @@ const Clubsmain = () => {
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => setFilterOpen(!filterOpen)}
-                className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors border border-gray-600"
+                className="flex items-center justify-center gap-2 px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors border border-gray-600 text-sm sm:text-base"
               >
                 <FiFilter className="text-gray-300" />
                 <span className="text-gray-300">Filters</span>
@@ -254,7 +255,7 @@ const Clubsmain = () => {
               </motion.button>
             </div>
 
-            {/* Filter Dropdown with animation */}
+            {/* Filter Dropdown - adjusted grid for mobile */}
             <AnimatePresence>
               {filterOpen && (
                 <motion.div 
@@ -264,14 +265,14 @@ const Clubsmain = () => {
                   transition={{ duration: 0.3 }}
                   className="overflow-hidden"
                 >
-                  <div className="mt-4 p-4 border border-gray-700 rounded-lg bg-gray-750">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="mt-3 p-3 sm:p-4 border border-gray-700 rounded-lg bg-gray-750">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                       <motion.div
                         whileHover={{ scale: 1.01 }}
                       >
                         <label className="block text-sm font-medium text-gray-300 mb-1">Location</label>
                         <select
-                          className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white"
+                          className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white text-sm"
                           value={filters.location}
                           onChange={(e) => setFilters({...filters, location: e.target.value})}
                         >
@@ -286,7 +287,7 @@ const Clubsmain = () => {
                       >
                         <label className="block text-sm font-medium text-gray-300 mb-1">Category</label>
                         <select
-                          className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white"
+                          className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white text-sm"
                           value={filters.category}
                           onChange={(e) => setFilters({...filters, category: e.target.value})}
                         >
@@ -298,10 +299,11 @@ const Clubsmain = () => {
                       </motion.div>
                       <motion.div
                         whileHover={{ scale: 1.01 }}
+                        className="sm:col-span-2 md:col-span-1"
                       >
                         <label className="block text-sm font-medium text-gray-300 mb-1">Established After</label>
                         <select
-                          className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white"
+                          className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white text-sm"
                           value={filters.establishedAfter}
                           onChange={(e) => setFilters({...filters, establishedAfter: e.target.value})}
                         >
@@ -314,12 +316,12 @@ const Clubsmain = () => {
                         </select>
                       </motion.div>
                     </div>
-                    <div className="mt-4 flex justify-end">
+                    <div className="mt-3 flex justify-end">
                       <motion.button 
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                         onClick={() => setFilters({ location: '', category: '', establishedAfter: '' })}
-                        className="px-4 py-2 text-sm text-gray-400 hover:text-gray-200"
+                        className="px-3 py-1 text-xs sm:text-sm text-gray-400 hover:text-gray-200"
                       >
                         Reset Filters
                       </motion.button>
@@ -330,8 +332,8 @@ const Clubsmain = () => {
             </AnimatePresence>
           </motion.div>
 
-          {/* Clubs List */}
-          <div className="grid grid-cols-1 gap-4">
+          {/* Clubs List - adjusted spacing for mobile */}
+          <div className="grid grid-cols-1 gap-3 sm:gap-4">
             <AnimatePresence>
               {filteredClubs.length > 0 ? (
                 filteredClubs.map((club, index) => (
@@ -348,34 +350,36 @@ const Clubsmain = () => {
                     >
                       <motion.div 
                         whileHover={{ scale: 1.01 }}
-                        className="p-4 flex items-center"
+                        className="p-3 sm:p-4 flex items-center"
                       >
-                        <div className="flex-shrink-0 mr-4">
+                        <div className="flex-shrink-0 mr-3 sm:mr-4">
                           <motion.img 
                             whileHover={{ rotate: 5, scale: 1.1 }}
                             src={club.logo} 
                             alt={`${club.name} logo`} 
-                            className="w-16 h-16 object-contain rounded-full border-2 border-blue-400" 
+                            className="w-12 h-12 sm:w-16 sm:h-16 object-contain rounded-full border-2 border-blue-400" 
                           />
                         </div>
-                        <div className="flex-grow">
+                        <div className="flex-grow overflow-hidden">
                           <div className="flex items-center justify-between">
-                            <h2 className="text-lg font-bold text-white">{club.name}</h2>
+                            <h2 className="text-sm sm:text-lg font-bold text-white truncate">{club.name}</h2>
                             {club.category === 'Premier' && (
                               <motion.span 
                                 animate={{ scale: [1, 1.1, 1] }}
                                 transition={{ repeat: Infinity, duration: 2 }}
-                                className="flex items-center text-yellow-400 text-sm"
+                                className="flex items-center text-yellow-400 text-xs sm:text-sm ml-2"
                               >
                                 <FiStar className="mr-1" /> Premier
                               </motion.span>
                             )}
                           </div>
-                          <div className="flex items-center text-sm text-gray-400 mt-1">
-                            <FiMapPin className="mr-1" /> {club.location}
+                          <div className="flex items-center text-xs sm:text-sm text-gray-400 mt-1 truncate">
+                            <FiMapPin className="mr-1 flex-shrink-0" /> 
+                            <span className="truncate">{club.location}</span>
                           </div>
-                          <div className="flex items-center text-sm text-gray-400 mt-1">
-                            <FiUsers className="mr-1" /> {club.members} members | Est. {club.established}
+                          <div className="flex items-center text-xs sm:text-sm text-gray-400 mt-1 truncate">
+                            <FiUsers className="mr-1 flex-shrink-0" /> 
+                            <span className="truncate">{club.members} members | Est. {club.established}</span>
                           </div>
                         </div>
                       </motion.div>
@@ -387,10 +391,10 @@ const Clubsmain = () => {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="bg-gray-800 rounded-lg shadow-md p-8 text-center border border-gray-700"
+                  className="bg-gray-800 rounded-lg shadow-md p-6 text-center border border-gray-700"
                 >
-                  <h3 className="text-lg font-medium text-gray-300">No clubs found matching your criteria</h3>
-                  <p className="text-gray-500 mt-2">Try adjusting your search or filters</p>
+                  <h3 className="text-base sm:text-lg font-medium text-gray-300">No clubs found matching your criteria</h3>
+                  <p className="text-gray-500 mt-2 text-sm sm:text-base">Try adjusting your search or filters</p>
                   <motion.button 
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
@@ -398,7 +402,7 @@ const Clubsmain = () => {
                       setSearchTerm('');
                       setFilters({ location: '', category: '', establishedAfter: '' });
                     }}
-                    className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                    className="mt-3 px-3 py-1 sm:px-4 sm:py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm sm:text-base"
                   >
                     Reset Search
                   </motion.button>

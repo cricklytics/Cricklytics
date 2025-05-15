@@ -30,7 +30,7 @@ const SportsAppNavigation = () => {
     <div className="bg-gray-900 text-indigo-50 min-h-screen">
       {/* Tab Navigation */}
       <div className="sticky top-0 z-10">
-        <div className="flex overflow-x-auto border-b border-white scrollbar-hide">
+        <div className="flex overflow-x-auto border-b border-white scrollbar-hide bg-black">
           {tabs.map((tab) => (
             <button
               key={tab.key}
