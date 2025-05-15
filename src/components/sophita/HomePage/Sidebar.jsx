@@ -462,7 +462,7 @@ const Sidebar = ({ isOpen, closeMenu, userProfile }) => {
             )}
 
             <li className="px-4 py-2 md:px-6 md:py-3 flex items-center gap-2 md:gap-3 cursor-pointer hover:bg-[rgba(0,0,0,0.1)] transition-all duration-300"
-            onClick={() => navigate("/club")} >
+            onClick={() => navigate("/Clubsmain")} >
               <FaUsers className="min-w-[16px] md:min-w-[20px]" /> Club <FaLock className="text-gray-600 ml-1" />
             </li>
             <li className="px-4 py-2 md:px-6 md:py-3 flex items-center gap-2 md:gap-3 cursor-pointer hover:bg-[rgba(0,0,0,0.1)] transition-all duration-300"
