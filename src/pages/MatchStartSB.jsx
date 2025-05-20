@@ -394,7 +394,7 @@ const FixtureGenerator = () => {
       {/* Header */}
       <header className="w-screen shadow-md">
         {/* Added mx-auto here */}
-        <div className="w-full max-w-7xl py-4 flex justify-between items-center">
+        <div className="w-full max-w-6xl py-4 flex justify-between items-center">
           {/* Left side: Logo, Title, and Back Button */}
           <div className="flex flex-col items-start gap-1">
             <div className="flex items-center">

@@ -1,7 +1,7 @@
 import React from 'react';
 import Picture312Image from '../../assets/pawan/PlayerProfile/picture-312.png';
 import VectorImage from '../../assets/pawan/PlayerProfile/jam-info.svg';
-import FrameImage from '../../assets/kumar/right-chevron.png';
+import leftchevron from '../../assets/kumar/right-chevron.png';
 import { useNavigate } from "react-router-dom";
 
 const Frame1321317519 = () => {
@@ -24,7 +24,6 @@ const Frame1321317519 = () => {
       {/* Cricklytics Text - now comes AFTER the image with 3px space */}
       <div
         className="text-white font-raleway font-bold text-[20px] leading-[100%] cursor-pointer ml-[3px] pl-1.5"
-        onClick={() => navigate("/landingpage")}
       >
         Cricklytics
       </div>
@@ -42,11 +41,11 @@ const Frame1321317519 = () => {
   
     {/* Frame Image (back button) - positioned lower with margin-top and left padding */}
     <img
-      src={FrameImage}
+      src={leftchevron}
       alt="Frame 1321317522"
       loading="lazy"
       className="w-10 h-10 -scale-x-100 cursor-pointer mt-[20px] ml-[10px]" 
-      onClick={() => navigate("/landingpage")}
+      onClick={() => navigate(window.history.back())}
     />
   </div>
   );

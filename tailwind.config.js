@@ -56,6 +56,9 @@ export default {
         button: ['15px', { lineHeight: '22px' }],
         'button-lg': ['16px', { lineHeight: '24px' }],
       },
+      maxWidth: {
+        '5.5xl': '68rem', // Custom width between 5xl (64rem) and 6xl (72rem)
+      },
     },
   },
   plugins: [],
