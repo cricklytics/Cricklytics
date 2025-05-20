@@ -35,7 +35,7 @@ const Navbar = () => {
     <div className="absolute top-0 left-0 w-full flex justify-between items-center px-4 sm:px-8 py-4 z-50">
       {/* Logo */}
       <h1 className="text-white text-xl sm:text-2xl font-bold flex items-center">
-        <img src={logo} alt="Cricklytics Logo" className="h-8 mr-2" />
+        <img src={logo} alt="Cricklytics Logo" className="h-6 w-6 md:h-8 mr-2" />
         Cricklytics
       </h1>
 
@@ -63,7 +63,7 @@ const Navbar = () => {
       <div
         className={`${
           isMenuOpen ? "flex" : "hidden"
-        } sm:flex flex-col sm:flex-row absolute sm:static top-16 left-0 w-full sm:w-auto bg-gray-900 sm:bg-transparent items-center sm:items-center px-4 sm:px-0 py-4 sm:py-0 transition-all duration-300 ease-in-out z-40`}
+        } sm:flex flex-col sm:flex-row absolute sm:static top-10 right-0 w-50% sm:w-auto bg-gray-900 sm:bg-transparent items-center sm:items-center px-4 sm:px-0 py-4 sm:py-0 transition-all duration-300 ease-in-out z-40`}
       >
         {/* Contact Button with Dropdown */}
         <div className="relative mb-4 sm:mb-0 sm:mr-4">
