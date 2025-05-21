@@ -496,8 +496,10 @@ const handleModalOkClick = () => {
     }
   } else if (modalContent.title === 'Innings Break') {
       // Logic after innings break modal closes - e.g., prompt for next bowler
-      setBowlerVisible(true); // Show bowler selection after innings break
-      setCurrentView('toss'); // Stay on 'toss' view to select bowler
+     resetInnings();
+    setIsChasing(true);
+    setCurrentView('toss');
+    setBowlerVisible(false); // Stay on 'toss' view to select bowler
       setShowThirdButtonOnly(false); // Hide score board view
   }
 };
