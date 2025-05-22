@@ -529,16 +529,18 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd }) {
         navigate(originPage, { state: { activeTab: 'Match Results', winner: winnerTeamName } });
       } else {
         console.error("Origin page not found in state. Cannot navigate back correctly.");
-        navigate('/');
-      }
-    } else if (modalContent.title === 'Innings Break') {
-      resetInnings();
-      setIsChasing(true);
-      setBowlerVisible(false);
-      setCurrentView('toss');
-      setShowThirdButtonOnly(false);
+        // Example fallback: navigate to landing page or home
+        navigate('/'); // Uncomment a fallback if needed
     }
-  };
+  } else if (modalContent.title === 'Innings Break') {
+      // Logic after innings break modal closes - e.g., prompt for next bowler
+      setBowlerVisible(true); // Show bowler selection after innings break
+      setCurrentView('toss'); // Stay on 'toss' view to select bowler
+      setShowThirdButtonOnly(false); // Hide score board view
+  }
+};
+
+// Rest of your StartMatchPlayers component code...
 
   if (!currentView && !showThirdButtonOnly) {
     return (
