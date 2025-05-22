@@ -278,6 +278,7 @@ const FixtureGenerator = () => {
   const [generatedFixtures, setGeneratedFixtures] = useState([]);
   const [showFixtures, setShowFixtures] = useState(false);
   const navigate = useNavigate();
+  const [matchResultWinner, setMatchResultWinner] = useState(null); // State to store the winner
 
   const location = useLocation();
   const targetTab = location.state?.activeTab;
@@ -286,35 +287,17 @@ const FixtureGenerator = () => {
 
   const [cameFromSidebar, setCameFromSidebar] = useState(false);
 
- // Effect to check location state on mount and update activeTab
  useEffect(() => {
-  const tabFromModalClick = location.state?.activeTab;
-  const initialTabFromState = location.state?.initialTab;
-  const cameFromSidebarState = location.state?.fromSidebar; // Check for the sidebar flag
-
-    // Priority 1: Tab explicitly passed as 'activeTab' (e.g., from modal)
-    if (tabFromModalClick) {
-      setActiveTab(tabFromModalClick);
+    if (location.state) {
+      // Check if there's a state and if it contains activeTab and winner
+      if (location.state.activeTab) {
+        setActiveTab(location.state.activeTab);
+      }
+      if (location.state.winner) {
+        setMatchResultWinner(location.state.winner);
+      }
     }
-    // Priority 2: Tab passed as 'initialTab' (e.g., from homepage)
-    else if (initialTabFromState) {
-      setActiveTab(initialTabFromState);
-    }
-// If neither is present, activeTab remains its default initialized value.
-  // Set the cameFromSidebar state based on location state
-  if (cameFromSidebarState) {
-     setCameFromSidebar(true);
-  } else {
-     setCameFromSidebar(false);
-  }
-
-  // Clean up state if you navigate away (optional but good practice)
-  return () => {
-      // You might want to reset some state here if needed when the component unmounts
-  };
-
-}, [location.state?.activeTab, location.state?.initialTab, location.state?.fromSidebar, setActiveTab, navigate, location.pathname]); // Depend on initialTab and fromSidebar in location state
-
+  }, [location.state]); // Re-run effect when location.state changes
 
   // Default list of teams if none are passed from TournamentPage
   const defaultTeams = ['India', 'Australia', 'England', 'Pakistan', 'New Zealand', 'Netherlands', 'South Africa'];
@@ -710,12 +693,15 @@ const FixtureGenerator = () => {
                 alt="Trophy" 
                 className="w-[300px] h-auto mb-8 drop-shadow-lg mx-auto"
               />
-              <h1 className="text-4xl md:text-5xl font-bold text-blue-900 mb-4">
-                India Won the Match!
-              </h1>
-              <p className="text-xl md:text-2xl text-gray-700">
-                Won by 25 Runs 🎯
-              </p>
+              {matchResultWinner && matchResultWinner !== 'Tie' && (
+                <h1 className="text-4xl text-green-400 font-bold drop-shadow-[0_0_10px_#22c55e]">{matchResultWinner} won the match!</h1>
+              )}
+              {matchResultWinner === 'Tie' && (
+                <h1 className="text-xl text-green-400 font-bold drop-shadow-[0_0_10px_#22c55e]">The match was a Tie!</h1>
+              )}
+              {!matchResultWinner && (
+                <p>No match results available yet.</p>
+              )}
             </div>
           </motion.div>
         )}

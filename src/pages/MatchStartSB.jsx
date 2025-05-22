@@ -278,18 +278,21 @@ const FixtureGenerator = () => {
   const [generatedFixtures, setGeneratedFixtures] = useState([]);
   const [showFixtures, setShowFixtures] = useState(false);
   const navigate = useNavigate();
+  const [matchResultWinner, setMatchResultWinner] = useState(null); // State to store the winner
+
 
   const location = useLocation(); // Effect to update activeTab based on location state, primarily for direct navigation
-  useEffect(() => {
-      const tabFromLocationState = location.state?.activeTab;
-      if (tabFromLocationState) {
-          setActiveTab(tabFromLocationState);
+ useEffect(() => {
+    if (location.state) {
+      // Check if there's a state and if it contains activeTab and winner
+      if (location.state.activeTab) {
+        setActiveTab(location.state.activeTab);
       }
-       // Clean up state if you navigate away (optional but good practice)
-       return () => {
-            // You might want to reset some state here if needed when the component unmounts
-       };
-  }, [location.state?.activeTab]); // Depend only on activeTab in location state
+      if (location.state.winner) {
+        setMatchResultWinner(location.state.winner);
+      }
+    }
+  }, [location.state]); // Re-run effect when location.state changes
 
   const teamsFromTournament = location.state?.selectedTeams || [];
 
@@ -557,12 +560,15 @@ const FixtureGenerator = () => {
                 alt="Trophy" 
                 className="w-[300px] h-auto mb-8 drop-shadow-lg mx-auto"
               />
-              <h1 className="text-4xl md:text-5xl font-bold text-blue-900 mb-4">
-                India Won the Match!
-              </h1>
-              <p className="text-xl md:text-2xl text-gray-700">
-                Won by 25 Runs 🎯
-              </p>
+              {matchResultWinner && matchResultWinner !== 'Tie' && (
+                <h1 className="text-4xl text-green-400 font-bold drop-shadow-[0_0_10px_#22c55e]">{matchResultWinner} won the match!</h1>
+              )}
+              {matchResultWinner === 'Tie' && (
+                <h1 className="text-xl text-green-400 font-bold drop-shadow-[0_0_10px_#22c55e]">The match was a Tie!</h1>
+              )}
+              {!matchResultWinner && (
+                <p>No match results available yet.</p>
+              )}
             </div>
           </motion.div>
         )}
