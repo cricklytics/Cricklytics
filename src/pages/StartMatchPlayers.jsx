@@ -589,7 +589,7 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd }) {
 
         {showModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-[#4C0025] p-6 rounded-lg max-w-md w-full relative">
+            <div className="bg-[#4C0025] p-6 rounded-lg max-w-md w-full">
               {modalContent.title === 'Match Result' && (
                 <canvas id="fireworks-canvas" className="absolute inset-0 w-full h-full z-0"></canvas>
               )}
