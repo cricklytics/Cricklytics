@@ -1,14 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import nav from '../../assets/kumar/right-chevron.png';
 import frd1 from '../../assets/kumar/frd1.jpg';
 import frd2 from '../../assets/kumar/frd2.jpg';
 
+
+import { db } from "../../firebase";// Adjust path if your firebase config is elsewhere
+import { collection, getDocs } from "firebase/firestore";
+
 const TournamentPage = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState('menu');
-  const [teams, setTeams] = useState([]);
-  const [sharedLink, setSharedLink] = useState('');
+  const [teams, setTeams] = useState([]); // This will store the fetched teams  const [sharedLink, setSharedLink] = useState('');
   const [showTeamCards, setShowTeamCards] = useState(false);
   const [selectedTeams, setSelectedTeams] = useState([]);
  
@@ -17,10 +20,36 @@ const TournamentPage = () => {
     { id: 2, name: 'Team Bravo' },
   ]);
   const [acceptedTeams, setAcceptedTeams] = useState([]);
+  
  
   const handleAddTeamMode = () => {
     setShowTeamCards(true);
   };
+  const [loadingTeams, setLoadingTeams] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+  const fetchTeams = async () => {
+    try {
+      const teamsCollectionRef = collection(db, 'teams'); // 'teams' is your Firestore collection name
+      const data = await getDocs(teamsCollectionRef);
+      const fetchedTeams = data.docs.map((doc) => ({
+        ...doc.data(),
+        id: doc.id, // Important: Get the document ID as the team ID
+      }));
+      setTeams(fetchedTeams);
+    } catch (err) {
+      console.error("Error fetching teams: ", err);
+      setError("Failed to load teams. Please try again.");
+    } finally {
+      setLoadingTeams(false);
+    }
+  };
+
+  if (showTeamCards) { // Fetch teams only when 'Add Team' is clicked
+    fetchTeams();
+  }
+}, [showTeamCards]); // Dependency array: re-run when showTeamCards changes
  
   const handleCardClick = (teamName) => {
     // Check if team is already selected
@@ -139,31 +168,29 @@ const TournamentPage = () => {
                 + Add Team
               </button>
  
-              {showTeamCards && (
-                <div className="grid w-full grid-cols-1 sm:grid-cols-2 md:grid-cols-3 h-fit my-4 md:mt-10 gap-3 md:gap-5">
-                  {[
-                    { id: 'team1', name: 'India', img: frd1 },
-                    { id: 'team2', name: 'Australia', img: frd1 },
-                    { id: 'team3', name: 'England', img: frd2 },
-                    { id: 'team4', name: 'Pakistan', img: frd2 },
-                    { id: 'team5', name: 'New Zealand', img: frd1 },
-                    { id: 'team6', name: 'Netherlands', img: frd1 },
-                    { id: 'team7', name: 'South Africa', img: frd1 },
-                  ].map((team) => (
-                    <div
-                      key={team.id}
-                      className={`flex bg-blue-900 items-center gap-3 md:gap-5 h-16 md:h-20 hover:shadow-[0px_0px_13px_0px_#253A6E] hover:bg-blue-400 hover:cursor-pointer rounded-lg md:rounded-xl p-2 ${
-                        selectedTeams.includes(team.name) ? 'bg-blue-700' : ''
-                      }`}
-                      onClick={() => handleCardClick(team.name)}
-                    >
-                      <img src={team.img} className="h-10 w-10 md:h-12 md:w-12 rounded-full" alt={team.name} />
-                      <div className="w-full h-fit">
-                        <h1 className="text-sm md:text-lg font-bold">{team.name}</h1>
-                        <h3 className="text-xs md:text-sm">Lorem ipsum dolor sit amet consectetur.</h3>
-                      </div>
+            {showTeamCards && (
+                <>
+                  {loadingTeams && <p>Loading teams...</p>}
+                  {error && <p className="text-red-500">{error}</p>}
+                  {!loadingTeams && !error && (
+                    <div className="grid w-full grid-cols-1 sm:grid-cols-2 md:grid-cols-3 h-fit my-4 md:mt-10 gap-3 md:gap-5">
+                      {teams.map((team) => ( // Use the 'teams' state from Firebase
+                        <div
+                          key={team.id}
+                          className={`flex bg-blue-900 items-center gap-3 md:gap-5 h-16 md:h-20 hover:shadow-[0px_0px_13px_0px_#253A6E] hover:bg-blue-400 hover:cursor-pointer rounded-lg md:rounded-xl p-2 ${
+                            selectedTeams.includes(team.name) ? 'bg-blue-700' : ''
+                          }`}
+                          onClick={() => handleCardClick(team.name)}
+                        >
+                          <img src={team.flagUrl} className="h-10 w-10 md:h-12 md:w-12 rounded-full" alt={team.name} />
+                          <div className="w-full h-fit">
+                            <h1 className="text-sm md:text-lg font-bold">{team.name}</h1>
+                            <h3 className="text-xs md:text-sm">{team.description}</h3> {/* Assuming a 'description' field */}
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  )}
                   <div className="flex justify-center w-full gap-4 mt-20">
                     <button
                       type="button"
@@ -180,26 +207,26 @@ const TournamentPage = () => {
                       Next
                     </button>
                   </div>
-                </div>
+                </>
               )}
               {!showTeamCards && ( // Only show if cards are hidden
-                 <div className="flex justify-center w-full gap-4 mt-20">
-                     <button
-                       type="button"
-                       className="rounded-xl w-32 md:w-44 bg-gray-500 h-8 md:h-9 text-white cursor-pointer hover:shadow-[0px_0px_13px_0px_#5DE0E6] text-sm md:text-base"
-                       onClick={handleCancel}
-                     >
-                       Clear
-                     </button>
-                     <button
-                       type="button" // Changed to button type
-                       className="rounded-xl w-32 md:w-44 bg-gradient-to-l from-[#5DE0E6] to-[#004AAD] h-8 md:h-9 text-white cursor-pointer hover:shadow-[0px_0px_13px_0px_#5DE0E6] text-sm md:text-base"
-                       onClick={() => navigate('/match-start', { state: { selectedTeams: selectedTeams } })}
-                     >
-                       Next
-                     </button>
-                   </div>
-               )}
+                <div className="flex justify-center w-full gap-4 mt-20">
+                  <button
+                    type="button"
+                    className="rounded-xl w-32 md:w-44 bg-gray-500 h-8 md:h-9 text-white cursor-pointer hover:shadow-[0px_0px_13px_0px_#5DE0E6] text-sm md:text-base"
+                    onClick={handleCancel}
+                  >
+                    Clear
+                  </button>
+                  <button
+                    type="button" // Changed to button type
+                    className="rounded-xl w-32 md:w-44 bg-gradient-to-l from-[#5DE0E6] to-[#004AAD] h-8 md:h-9 text-white cursor-pointer hover:shadow-[0px_0px_13px_0px_#5DE0E6] text-sm md:text-base"
+                    onClick={() => navigate('/match-start', { state: { selectedTeams: selectedTeams } })}
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
             </div>
           )}
  

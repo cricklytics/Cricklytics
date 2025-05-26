@@ -591,9 +591,6 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd }) {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-[#4C0025] p-6 rounded-lg max-w-md w-full">
               {modalContent.title === 'Match Result' && (
-                <canvas id="fireworks-canvas" className="absolute inset-0 w-full h-full z-0"></canvas>
-              )}
-              {modalContent.title === 'Match Result' && (
                 <DotLottieReact
                   src="https://lottie.host/42c7d544-9ec0-4aaf-895f-3471daa49e49/a5beFhswU6.lottie"
                   style={{
@@ -879,14 +876,15 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd }) {
                   <div className="mt-2 md:mt-4 text-white w-full">
                     <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-4 text-center">Overs History</h3>
                     <div className="flex flex-wrap gap-2 md:gap-4 justify-center">
+                      {/* Render Completed Overs */}
                       {pastOvers.map((over, index) => (
-                        <div key={index} className="bg-[#4C0025] p-2 md:p-3 rounded-lg">
+                        <div key={`completed-over-${index}`} className="bg-[#4C0025] p-2 md:p-3 rounded-lg">
                           <h4 className="text-sm md:text-base">Over {index + 1}:</h4>
                           <div className="flex gap-1 md:gap-2">
                             {over.map((ball, ballIndex) => (
                               <span
-                                key={ballIndex}
-                                className={`w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 flex items-center justify-center rounded-full text-xs md:text-sm ${ball === 'W' || ball === 'O' ? 'bg-red-600' : 'bg-[#FF62A1]'}`}
+                                key={`completed-over-${index}-ball-${ballIndex}`}
+                                className={`w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 flex items-center justify-center rounded-full text-xs md:text-sm ${ball === 'W' || ball === 'O' || ball === 'OUT' || ball === 'lbw' ? 'bg-red-600' : 'bg-[#FF62A1]'}`}
                               >
                                 {ball}
                               </span>
@@ -894,6 +892,23 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd }) {
                           </div>
                         </div>
                       ))}
+
+                      {/* Render Current Incomplete Over */}
+                      {currentOverBalls.length > 0 && (
+                        <div key="current-over" className="bg-[#4C0025] p-2 md:p-3 rounded-lg">
+                          <h4 className="text-sm md:text-base">Current Over ({pastOvers.length + 1}):</h4>
+                          <div className="flex gap-1 md:gap-2">
+                            {currentOverBalls.map((ball, ballIndex) => (
+                              <span
+                                key={`current-over-ball-${ballIndex}`}
+                                className={`w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 flex items-center justify-center rounded-full text-xs md:text-sm ${ball === 'W' || ball === 'O' || ball === 'OUT' || ball === 'lbw' ? 'bg-red-600' : 'bg-[#FF62A1]'}`}
+                              >
+                                {ball}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
