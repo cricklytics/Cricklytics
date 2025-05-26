@@ -17,10 +17,10 @@ import ipl2021 from '../assets/sophita/HomePage/2021.jpeg';
 import ipl2020 from '../assets/sophita/HomePage/2020.jpeg';
 import ipl2018 from '../assets/sophita/HomePage/2018.jpeg';
 import advertisement1 from '../assets/sophita/HomePage/Advertisement1.webp'
-import { useNavigate } from 'react-router-dom';
-import { useLocation } from 'react-router-dom';
-import Startmatch  from '../pages/Startmatch';
+import { useNavigate, useLocation } from 'react-router-dom'; // Import useLocation
+import Startmatch from '../pages/Startmatch'; // Assuming this is StartmatchPlayers
 import nav from '../assets/kumar/right-chevron.png';
+import placeholderFlag from '../assets/sophita/HomePage/Netherland.jpeg'; // ADD a placeholder image (ensure this path is correct)
 
 const IPLCards = ({ setActiveTab }) => {
   const cards = [
@@ -273,6 +273,16 @@ const FallOfWicketsDetails = () => {
 const FixtureGenerator = () => {
   const [selectedTeamA, setSelectedTeamA] = useState('');
   const [selectedTeamB, setSelectedTeamB] = useState('');
+
+
+  // --- UPDATED NEW STATES for Live Score data from Startmatch ---
+  const [liveTeamA, setLiveTeamA] = useState({ name: 'Team A', flag: placeholderFlag, score: '0/0', overs: '(0.0)' });
+  const [liveTeamB, setLiveTeamB] = useState({ name: 'Team B', flag: placeholderFlag, score: '0/0', overs: '(0.0)' });
+  const [winningCaption, setWinningCaption] = useState(''); // To store the winning difference caption
+
+  // --- End of UPDATED NEW STATES ---
+
+
   const [activeTab, setActiveTab] = useState('Fixture Generator');
   const [activeAnalyticsTab, setActiveAnalyticsTab] = useState('scorecard');
   const [generatedFixtures, setGeneratedFixtures] = useState([]);
@@ -286,18 +296,63 @@ const FixtureGenerator = () => {
   const teamsFromTournament = location.state?.selectedTeams || [];
 
   const [cameFromSidebar, setCameFromSidebar] = useState(false);
+   useEffect(() => {
+        if (location.state) {
+            // Check if there's a state and if it contains activeTab and winner
+            if (location.state.activeTab) {
+                setActiveTab(location.state.activeTab);
+            }
+            if (location.state.winner) {
+                setMatchResultWinner(location.state.winner);
+                setWinningCaption(location.state.winningDifference); // Set the winning difference here
+            }
+            // If navigating with team data for live score (e.g. from Startmatch after game ends)
+            if (location.state.teamA && location.state.teamB) {
+                setLiveTeamA({
+                    name: location.state.teamA.name,
+                    flag: location.state.teamA.flagUrl || placeholderFlag, // Use passed flagUrl
+                    score: `${location.state.teamA.score}/${location.state.teamA.wickets}`,
+                    overs: location.state.teamA.balls ? `(${Math.floor(location.state.teamA.balls / 6)}.${location.state.teamA.balls % 6} overs)` : '(0.0 overs)' // Calculate overs from balls
+                });
+                setLiveTeamB({
+                    name: location.state.teamB.name,
+                    flag: location.state.teamB.flagUrl || placeholderFlag, // Use passed flagUrl
+                    score: `${location.state.teamB.score}/${location.state.teamB.wickets}`,
+                    overs: location.state.teamB.balls ? `(${Math.floor(location.state.teamB.balls / 6)}.${location.state.teamB.balls % 6} overs)` : '(0.0 overs)'
+                });
+            } else if (location.state.teamA) { // Fallback if only teamA is passed
+                setLiveTeamA(prevState => ({
+                    ...prevState,
+                    name: location.state.teamA.name,
+                    flag: location.state.teamA.flagUrl || placeholderFlag,
+                }));
+            } else if (location.state.teamB) { // Fallback if only teamB is passed
+                setLiveTeamB(prevState => ({
+                    ...prevState,
+                    name: location.state.teamB.name,
+                    flag: location.state.teamB.flagUrl || placeholderFlag,
+                }));
+            }
+        }
+    }, [location.state]); // Re-run effect when location.state changes
 
- useEffect(() => {
-    if (location.state) {
-      // Check if there's a state and if it contains activeTab and winner
-      if (location.state.activeTab) {
-        setActiveTab(location.state.activeTab);
-      }
-      if (location.state.winner) {
-        setMatchResultWinner(location.state.winner);
-      }
-    }
-  }, [location.state]); // Re-run effect when location.state changes
+        // Handler to update team data received from StartmatchPlayers
+    const handleTeamsSelected = (teamAData, teamBData) => {
+        setLiveTeamA({
+            name: teamAData.name,
+            flag: teamAData.flagUrl, // Ensure Startmatch passes flagUrl
+            score: teamAData.score || '0/0', // Default if not passed
+            overs: teamAData.overs || '(0.0)' // Default if not passed
+        });
+        setLiveTeamB({
+            name: teamBData.name,
+            flag: teamBData.flagUrl, // Ensure Startmatch passes flagUrl
+            score: teamBData.score || '0/0',
+            overs: teamBData.overs || '(0.0)'
+        });
+        // You might want to automatically switch to the Live Score tab here
+        // setActiveTab('Live Score');
+    };
 
   // Default list of teams if none are passed from TournamentPage
   const defaultTeams = ['India', 'Australia', 'England', 'Pakistan', 'New Zealand', 'Netherlands', 'South Africa'];
@@ -482,10 +537,12 @@ const FixtureGenerator = () => {
       {activeTab === 'Start Match' ? (
             // Render Startmatch, passing the selected teams
             <Startmatch
-                initialTeamA={selectedTeamA}
-                initialTeamB={selectedTeamB}
-                origin="/match-start"
-            />
+                    initialTeamA={selectedTeamA}
+                    initialTeamB={selectedTeamB}
+                    origin="/match-start"
+                    onTeamsSelectedForLiveScore={handleTeamsSelected} // Pass the handler
+                    setActiveTab={setActiveTab} // Pass setActiveTab so Startmatch can switch tabs
+                />
        ) : (
       <main className="w-full max-w-7xl px-4 sm:px-8 py-8 mx-auto">
         {activeTab === 'Fixture Generator' && (
@@ -585,126 +642,156 @@ const FixtureGenerator = () => {
         )}
 
         {activeTab === 'Live Score' && (
-          <div className="w-full">
-            <motion.div
-              className="bg-white rounded-2xl shadow-2xl overflow-hidden max-w-3xl mx-auto mt-10"
-              initial={{ opacity: 0, y: 50 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, ease: "easeOut" }}
-            >
-              <div className="bg-gradient-to-r from-blue-900 to-blue-700 text-white p-6">
-                <h3 className="text-2xl font-bold">ICC Cricket World Cup</h3>
-                <p className="text-sm opacity-90 mt-1">Today • 10:30 AM • Wankhede Stadium, Mumbai</p>
-              </div>
-
-              <div className="p-6 bg-gray-50">
-                <div className="flex justify-around items-center mb-6">
-                  <motion.div
-                    className="text-center"
-                    whileHover={{ scale: 1.05 }}
-                    transition={{ type: "spring", stiffness: 300 }}
-                  >
-                    <div className="w-20 h-20 mx-auto mb-2 bg-gray-200 rounded-full overflow-hidden shadow-md">
-                      <img 
-                        src={netherland}
-                        alt="Netherlands Flag" 
-                        className="w-full h-full object-contain p-1"
-                      />
-                    </div>
-                    <h4 className="font-bold text-xl text-gray-800">Netherlands</h4>
-                    <p className="text-3xl font-extrabold text-blue-700 mt-1">198/6</p>
-                    <p className="text-sm text-gray-600">(42.0 overs)</p>
-                  </motion.div>
-
-                  <div className="text-3xl font-bold text-gray-600 px-6">vs</div>
-
-                  <motion.div
-                    className="text-center"
-                    whileHover={{ scale: 1.05 }}
-                    transition={{ type: "spring", stiffness: 300 }}
-                  >
-                    <div className="w-20 h-20 mx-auto mb-2 bg-gray-200 rounded-full overflow-hidden shadow-md">
-                      <img 
-                        src={southAfrica}
-                        alt="South Africa Flag" 
-                        className="w-full h-full object-contain p-1"
-                      />
-                    </div>
-                    <h4 className="font-bold text-xl text-gray-800">South Africa</h4>
-                    <p className="text-3xl font-extrabold text-green-700 mt-1">178/3</p>
-                    <p className="text-sm text-gray-600">(15.2 overs)</p>
-                  </motion.div>
-                </div>
-
+            <div className="w-full">
                 <motion.div
-                  className="bg-white p-5 rounded-xl shadow-inner"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.5 }}
+                    className="bg-white rounded-2xl shadow-2xl overflow-hidden max-w-3xl mx-auto mt-10"
+                    initial={{ opacity: 0, y: 50 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, ease: "easeOut" }}
                 >
-                  <div className="flex justify-between items-center mb-3">
-                    <span className="text-gray-700 font-medium">Match Status:</span>
-                    <motion.span
-                      className="bg-green-400 text-black px-4 py-1 rounded-full text-sm font-semibold"
-                      animate={{ scale: [1, 1.1, 1] }}
-                      transition={{ repeat: Infinity, duration: 1.5 }}
-                    >
-                      Live
-                    </motion.span>
-                  </div>
-                  <div className="text-center">
-                    <p className="font-semibold text-gray-800 text-lg">
-                      South Africa need <span className="text-red-500 font-bold">21 runs</span> from <span className="text-red-500 font-bold">34 balls</span>
-                    </p>
-                    <p className="text-sm text-gray-600 mt-1">
-                      Current RR: <span className="font-semibold">11.60</span> • Required RR: <span className="font-semibold">3.70</span>
-                    </p>
-                  </div>
+                    <div className="bg-gradient-to-r from-blue-900 to-blue-700 text-white p-6">
+                        <h3 className="text-2xl font-bold">ICC Cricket World Cup</h3>
+                        <p className="text-sm opacity-90 mt-1">Today • 10:30 AM • Wankhede Stadium, Mumbai</p>
+                    </div>
+
+                    <div className="p-6 bg-gray-50">
+                        <div className="flex justify-around items-center mb-6">
+                            <motion.div
+                                className="text-center"
+                                whileHover={{ scale: 1.05 }}
+                                transition={{ type: "spring", stiffness: 300 }}
+                            >
+                                <div className="w-20 h-20 mx-auto mb-2 bg-gray-200 rounded-full overflow-hidden shadow-md">
+                                    <img
+                                        src={liveTeamA.flag || placeholderFlag} // Use liveTeamA.flag
+                                        alt={`${liveTeamA.name || 'Team A'} Flag`}
+                                        className="w-full h-full object-contain "
+                                    />
+                                </div>
+                                <h4 className="font-bold text-xl text-gray-800">{liveTeamA.name || 'Team A'}</h4>
+                                <p className="text-3xl font-extrabold text-blue-700 mt-1">{liveTeamA.score || '198/6'}</p>
+                                <p className="text-sm text-gray-600">{liveTeamA.overs || '(42.0 overs)'}</p>
+                            </motion.div>
+
+                            <div className="text-3xl font-bold text-gray-600 px-6">vs</div>
+
+                            <motion.div
+                                className="text-center"
+                                whileHover={{ scale: 1.05 }}
+                                transition={{ type: "spring", stiffness: 300 }}
+                            >
+                                <div className="w-20 h-20 mx-auto mb-2 bg-gray-200 rounded-full overflow-hidden shadow-md">
+                                    <img
+                                        src={liveTeamB.flag || placeholderFlag} // Use liveTeamB.flag
+                                        alt={`${liveTeamB.name || 'Team B'} Flag`}
+                                        className="w-full h-full object-contain"
+                                    />
+                                </div>
+                                <h4 className="font-bold text-xl text-gray-800">{liveTeamB.name || 'Team B'}</h4>
+                                <p className="text-3xl font-extrabold text-green-700 mt-1">{liveTeamB.score || '178/3'}</p>
+                                <p className="text-sm text-gray-600">{liveTeamB.overs || '(15.2 overs)'}</p>
+                            </motion.div>
+                        </div>
+
+                        <motion.div
+                            className="bg-white p-5 rounded-xl shadow-inner"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.5 }}
+                        >
+                            <div className="flex justify-between items-center mb-3">
+                                <span className="text-gray-700 font-medium">Match Status:</span>
+                                {winningCaption ? (
+                                    <motion.span
+                                        className="bg-yellow-400 text-black px-4 py-1 rounded-full text-sm font-semibold"
+                                        animate={{ scale: [1, 1.1, 1] }}
+                                        transition={{ repeat: Infinity, duration: 1.5 }}
+                                    >
+                                        {winningCaption}
+                                    </motion.span>
+                                ) : (
+                                    <motion.span
+                                        className="bg-green-400 text-black px-4 py-1 rounded-full text-sm font-semibold"
+                                        animate={{ scale: [1, 1.1, 1] }}
+                                        transition={{ repeat: Infinity, duration: 1.5 }}
+                                    >
+                                        Live
+                                    </motion.span>
+                                )}
+                            </div>
+                            {/* <div className="text-center">
+                                <p className="font-semibold text-gray-800 text-lg">
+                                    South Africa need <span className="text-red-500 font-bold">21 runs</span> from <span className="text-red-500 font-bold">34 balls</span>
+                                </p>
+                                <p className="text-sm text-gray-600 mt-1">
+                                    Current RR: <span className="font-semibold">11.60</span> • Required RR: <span className="font-semibold">3.70</span>
+                                </p>
+                            </div> */}
+                        </motion.div>
+                    </div>
                 </motion.div>
-              </div>
-            </motion.div>
-          </div>
+            </div>
         )}
 
         {activeTab === 'Match Results' && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5 }}
-            className="relative w-full min-h-[60vh] rounded-xl shadow-lg flex flex-col bg-white items-center justify-center overflow-hidden"
-            style={{
-              background: 'linear-gradient(to bottom right, #ffe4e6, #ffc1cc)'
-            }}
-          >
-            <FireworksCanvas />
-            <div className="absolute top-4 right-4 z-30">
-              <motion.button
-                onClick={() => setActiveTab('Highlights')}
-                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-full shadow-md transition-all"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                Next
-              </motion.button>
-            </div>
-            <div className="relative z-20 text-center p-8">
-              <img 
-                src={trophy}
-                alt="Trophy" 
-                className="w-[300px] h-auto mb-8 drop-shadow-lg mx-auto"
-              />
-              {matchResultWinner && matchResultWinner !== 'Tie' && (
-                <h1 className="text-4xl text-green-400 font-bold drop-shadow-[0_0_10px_#22c55e]">{matchResultWinner} won the match!</h1>
-              )}
-              {matchResultWinner === 'Tie' && (
-                <h1 className="text-xl text-green-400 font-bold drop-shadow-[0_0_10px_#22c55e]">The match was a Tie!</h1>
-              )}
-              {!matchResultWinner && (
-                <p>No match results available yet.</p>
-              )}
-            </div>
-          </motion.div>
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.5 }}
+                className="relative w-full min-h-[60vh] rounded-xl shadow-lg flex flex-col bg-white items-center justify-center overflow-hidden"
+                style={{
+                    background: 'linear-gradient(to bottom right, #ffe4e6, #ffc1cc)'
+                }}
+            >
+                <FireworksCanvas />
+                <div className="absolute top-4 right-4 z-30">
+                    <motion.button
+                        onClick={() => setActiveTab('Highlights')}
+                        className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-full shadow-md transition-all"
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                    >
+                        Next
+                    </motion.button>
+                </div>
+                <div className="relative z-20 text-center p-8">
+                    {/* Display winning team's flag here if available */}
+                    {matchResultWinner && matchResultWinner !== 'Tie' && (
+                        <div className="mb-4">
+                            {liveTeamA.name === matchResultWinner && liveTeamA.flag && (
+                                <img
+                                    src={liveTeamA.flag}
+                                    alt={`${liveTeamA.name} Flag`}
+                                    className="w-24 h-24 mx-auto object-cover shadow-lg"
+                                />
+                            )}
+                            {liveTeamB.name === matchResultWinner && liveTeamB.flag && (
+                                <img
+                                    src={liveTeamB.flag}
+                                    alt={`${liveTeamB.name} Flag`}
+                                    className="w-24 h-24 mx-auto object-cover shadow-lg"
+                                />
+                            )}
+                        </div>
+                    )}
+                    <img
+                        src={trophy}
+                        alt="Trophy"
+                        className="w-[300px] h-auto mb-8 drop-shadow-lg mx-auto"
+                    />
+                    {matchResultWinner && matchResultWinner !== 'Tie' && (
+                        <h1 className="text-4xl text-green-400 font-bold drop-shadow-[0_0_10px_#22c55e]">{matchResultWinner} won the match!</h1>
+                    )}
+                    {matchResultWinner === 'Tie' && (
+                        <h1 className="text-xl text-green-400 font-bold drop-shadow-[0_0_10px_#22c55e]">The match was a Tie!</h1>
+                    )}
+                    {!matchResultWinner && (
+                        <p>No match results available yet.</p>
+                    )}
+                </div>
+            </motion.div>
         )}
+
 
         {activeTab === 'Highlights' && (
           <motion.div

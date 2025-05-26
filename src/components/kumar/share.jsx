@@ -55,8 +55,6 @@ const TournamentPage = () => {
     // Check if team is already selected
     if (!selectedTeams.includes(teamName)) {
       setSelectedTeams([...selectedTeams, teamName]);
-      const newTeam = { id: Date.now(), name: teamName };
-      setTeams((prev) => [...prev, newTeam]);
     }
   };
  
