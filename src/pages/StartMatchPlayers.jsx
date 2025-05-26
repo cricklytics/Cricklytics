@@ -14,6 +14,10 @@ import flag2 from '../assets/kumar/ukraine.png';
 import btnbg from '../assets/kumar/button.png';
 import backButton from '../assets/kumar/right-chevron.png';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
+import sixAnimation from '../assets/Animation/six.json';
+import fourAnimation from '../assets/Animation/four.json';
+import outAnimation from '../assets/Animation/out.json';
+
 
 // Error Boundary Component
 class ErrorBoundary extends Component {
@@ -81,6 +85,10 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd }) {
   const [activeLabel, setActiveLabel] = useState(null); // Used for active button styling
   const [activeNumber, setActiveNumber] = useState(null); // Used for active button styling
   const [showRunInfo, setShowRunInfo] = useState(false); // Used for run info display
+  const [showAnimation, setShowAnimation] = useState(false);
+  const [animationType, setAnimationType] = useState(null);
+  const [pendingLegBy, setPendingLegBy] = useState(false);
+
 
   // --- NEW: Dynamic player data based on props (using photoUrl and role directly) ---
   const [battingTeamPlayers, setBattingTeamPlayers] = useState([]);
@@ -509,37 +517,77 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd }) {
     // If a ball was incremented for an OUT, decrement it
     setValidBalls(prev => Math.max(0, prev - 1));
   };
-
-  const handleModalOkClick = () => {
+const handleModalOkClick = () => {
     setShowModal(false);
 
     if (gameFinished && modalContent.title === 'Match Result') {
-      let winnerTeamName = '';
-      if (playerScore < targetScore - 1) {
-        winnerTeamName = teamA.name; // Team A won (if chasing team is teamB and score is less than target)
-      } else if (playerScore === targetScore - 1) {
-        winnerTeamName = 'Tie'; // Match tied
-      } else {
-        winnerTeamName = teamB.name; // Team B won (if chasing team is teamB and target is reached or surpassed)
-      }
+        let winnerTeamName = '';
+        let winningDifference = '';
+        let teamAScore = 0;
+        let teamAWickets = 0;
+        let teamBScore = 0;
+        let teamBWickets = 0;
 
-      const originPage = location.state?.origin;
-      console.log('Origin Page:', originPage);
-      if (originPage) {
-        navigate(originPage, { state: { activeTab: 'Match Results', winner: winnerTeamName } });
-      } else {
-        console.error("Origin page not found in state. Cannot navigate back correctly.");
-        navigate('/');
-      }
+        // Assuming Team A always bats first (or is the non-chasing team) and Team B chases
+        if (!isChasing) { // This scenario means Team A just finished their innings
+            teamAScore = playerScore;
+            teamAWickets = outCount;
+            teamBScore = 0; // Initialize, will be updated in next block if match concludes after chasing
+            teamBWickets = 0;
+        } else { // This scenario means Team B is chasing or has just finished chasing
+            teamBScore = playerScore;
+            teamBWickets = outCount;
+            teamAScore = targetScore - 1; // Team A's score was the target - 1
+            teamAWickets = 10; // Assuming all out for simplicity if target reached or overs complete, or track this properly
+        }
+
+        if (playerScore < targetScore - 1) { // Lose by runs (chasing team couldn't reach target)
+            winnerTeamName = teamA.name; // Team A wins
+            winningDifference = `${targetScore - 1 - playerScore} runs`;
+            teamAScore = targetScore - 1;
+            teamAWickets = 10;
+            teamBScore = playerScore;
+            teamBWickets = outCount;
+        } else if (playerScore === targetScore - 1) { // Tie
+            winnerTeamName = 'Tie'; // Match tied
+            winningDifference = 'Match tied';
+            teamAScore = targetScore - 1;
+            teamBScore = playerScore;
+            teamAWickets = outCount;
+            teamBWickets = outCount;
+        } else { // Win by wickets/runs (assuming target reached)
+            winnerTeamName = teamB.name; // Team B wins (chasing team)
+            winningDifference = `${10 - outCount} wickets`;
+            teamAScore = targetScore - 1;
+            teamBScore = playerScore;
+            teamAWickets = 10;
+            teamBWickets = outCount;
+        }
+
+        const originPage = location.state?.origin;
+        console.log('Origin Page:', originPage);
+        if (originPage) {
+            navigate(originPage, {
+                state: {
+                    activeTab: 'Match Results',
+                    winner: winnerTeamName,
+                    winningDifference: winningDifference,
+                    teamA: { name: teamA.name, flagUrl: teamA.flagUrl, score: teamAScore, wickets: teamAWickets }, // Include flagUrl
+                    teamB: { name: teamB.name, flagUrl: teamB.flagUrl, score: teamBScore, wickets: teamBWickets }, // Include flagUrl
+                },
+            });
+        } else {
+            console.error("Origin page not found in state. Cannot navigate back correctly.");
+            navigate('/');
+        }
     } else if (modalContent.title === 'Innings Break') {
-      resetInnings();
-      setIsChasing(true);
-      setBowlerVisible(false);
-      setCurrentView('toss');
-      setShowThirdButtonOnly(false);
+        resetInnings();
+        setIsChasing(true);
+        setBowlerVisible(false);
+        setCurrentView('toss');
+        setShowThirdButtonOnly(false);
     }
 };
-
 // Rest of your StartMatchPlayers component code...
 
   if (!currentView && !showThirdButtonOnly) {

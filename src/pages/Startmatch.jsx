@@ -251,7 +251,7 @@ const PlayerSelector = ({ teamA, teamB, overs, origin }) => {
 // =====================================================================
 // Startmatch Component
 // =====================================================================
-const Startmatch = ({ initialTeamA = '', initialTeamB = '', onMatchSetupComplete, origin }) => {
+const Startmatch = ({ initialTeamA = '', initialTeamB = '', origin }) => {
   console.log('Startmatch received origin prop:', origin);
 
   const [allTeams, setAllTeams] = useState([]); // New state to store fetched teams
