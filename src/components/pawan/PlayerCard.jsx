@@ -14,7 +14,7 @@ const PlayerCard = ({ player, onPlay }) => {
     >
       <div className="flex items-center gap-4 mb-4">
         <img
-          className="w-16 h-16 rounded-full object-cover border-2 border-gray-200"
+          className="w-16 h-16 rounded-full object-cover border-2 border-gray-200 aspect-square"
           src={player.photoUrl || 'https://via.placeholder.com/64'}
           alt={player.name}
         />
