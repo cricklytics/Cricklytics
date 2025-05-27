@@ -17,6 +17,7 @@ import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import sixAnimation from '../assets/Animation/six.json';
 import fourAnimation from '../assets/Animation/four.json';
 import outAnimation from '../assets/Animation/out.json';
+import { Player } from '@lottiefiles/react-lottie-player';
 
 
 // Error Boundary Component
@@ -170,6 +171,14 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd }) {
     }));
   };
 
+  const playAnimation = (type) => {
+    setAnimationType(type);
+    setShowAnimation(true);
+    setTimeout(() => {
+      setShowAnimation(false);
+    }, 5000); // Animation duration
+  };
+
   const handleScoreButtonClick = (value, isLabel) => {
     if (gameFinished) return;
 
@@ -200,6 +209,38 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd }) {
       return;
     }
 
+    if (pendingLegBy && !isLabel && typeof value === 'number') {
+      setPlayerScore(prev => prev + value);
+      setTopPlays(prev => [...prev, `L+${value}`]);
+      setCurrentOverBalls(prev => [...prev, `L+${value}`]);
+      if (striker) updateBatsmanScore(striker.index, value);
+      setPendingLegBy(false);
+      setValidBalls(prev => prev + 1);
+      if (striker) updateBatsmanBalls(striker.index);
+      if (value % 2 !== 0) {
+        const temp = striker;
+        setStriker(nonStriker);
+        setNonStriker(temp);
+      }
+      return;
+    }
+
+    if (pendingOut && !isLabel && typeof value === 'number') {
+
+        playAnimation('out');
+        setTimeout(() => {
+        setPlayerScore(prev => prev + value);
+        setTopPlays(prev => [...prev, `O+${value}`]);
+        setCurrentOverBalls(prev => [...prev, `O+${value}`]);
+        if (striker) updateBatsmanScore(striker.index, value);
+        setValidBalls(prev => prev + 1);
+        if (striker) updateBatsmanBalls(striker.index);
+        setShowBatsmanDropdown(true);
+      }, 5000);
+      setPendingOut(false);
+      return;
+    }
+
     const extraBalls = ['No-ball', 'Wide', 'No ball']; // 'No ball' seems redundant if 'No-ball' exists
     const playValue = typeof value === 'string' ? value.charAt(0) : value;
 
@@ -210,15 +251,23 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd }) {
         setShowRunInfo(false);
       }
       if (value === 'Six') {
+        playAnimation('six');
         setPlayerScore(prev => prev + 6);
         setTopPlays(prev => [...prev, 6]);
         setCurrentOverBalls(prev => [...prev, 6]);
         if (striker) updateBatsmanScore(striker.index, 6);
+        setValidBalls(prev => prev + 1);
+        if (striker) updateBatsmanBalls(striker.index);
+
       } else if (value === 'Four') {
+        playAnimation('four');
         setPlayerScore(prev => prev + 4);
         setTopPlays(prev => [...prev, 4]);
         setCurrentOverBalls(prev => [...prev, 4]);
         if (striker) updateBatsmanScore(striker.index, 4);
+        setValidBalls(prev => prev + 1);
+        if (striker) updateBatsmanBalls(striker.index);
+
       } else if (value === 'Wide') {
         setPendingWide(true);
         return;
@@ -226,17 +275,11 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd }) {
         setPendingNoBall(true);
         return;
       } else if (value === 'Leg By') {
-        setPlayerScore(prev => prev + 1);
-        setTopPlays(prev => [...prev, 'leg']);
-        setCurrentOverBalls(prev => [...prev, 'leg']);
-        if (striker) updateBatsmanScore(striker.index, 1);
-      } else {
-        setTopPlays(prev => [...prev, playValue]);
-        setCurrentOverBalls(prev => [...prev, playValue]);
-        if (value === 'OUT' || value === 'Wicket' || value === 'lbw') {
-          setPendingOut(true);
-          setShowBatsmanDropdown(true); // Ensure this dropdown is for selecting replacement batsman
-        }
+        setPendingLegBy(true);
+        return;
+      } else if (value === 'OUT' || value === 'Wicket' || value === 'lbw') {
+        setPendingOut(true);
+        return;
       }
 
       if (!extraBalls.includes(value)) {
@@ -262,6 +305,12 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd }) {
         setStriker(nonStriker);
         setNonStriker(temp);
       }
+       if (value === 6) {
+      playAnimation('six');
+    } else if (value === 4) {
+      playAnimation('four');
+    }
+
     }
   };
 
@@ -426,6 +475,7 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd }) {
     setPendingWide(false);
     setPendingNoBall(false);
     setPendingOut(false);
+    setPendingLegBy(false);
     setActiveLabel(null); // Reset active label/number for buttons
     setActiveNumber(null);
     setShowRunInfo(false);
@@ -621,6 +671,39 @@ const handleModalOkClick = () => {
         }}
       >
         {HeaderComponent ? <HeaderComponent /> : <div className="text-white">Header Missing</div>}
+
+        
+        {/* Animation Overlay */}
+        {showAnimation && (
+          <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
+            <div className="w-full h-full flex items-center justify-center">
+              {animationType === 'six' && (
+                <Player
+                  autoplay
+                  loop={true}
+                  src={sixAnimation}
+                  style={{ width: '300px', height: '300px' }}
+                />
+              )}
+              {animationType === 'four' && (
+                <Player
+                  autoplay
+                  loop={true}
+                  src={fourAnimation}
+                  style={{ width: '300px', height: '300px' }}
+                />
+              )}
+              {animationType === 'out' && (
+                <Player
+                  autoplay
+                  loop={true}
+                  src={outAnimation}
+                  style={{ width: '300px', height: '300px' }}
+                />
+              )}
+            </div>
+          </div>
+        )}
 
         {currentView === 'toss' && !striker && !nonStriker && !bowlerVisible && !showThirdButtonOnly && (
           <button
