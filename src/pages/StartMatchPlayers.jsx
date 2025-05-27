@@ -17,7 +17,6 @@ import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import sixAnimation from '../assets/Animation/six.json';
 import fourAnimation from '../assets/Animation/four.json';
 import outAnimation from '../assets/Animation/out.json';
-import { Player } from '@lottiefiles/react-lottie-player';
 
 
 // Error Boundary Component
@@ -171,231 +170,100 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd }) {
     }));
   };
 
-  const playAnimation = (type) => {
-    setAnimationType(type);
-    setShowAnimation(true);
-    setTimeout(() => {
-      setShowAnimation(false);
-    }, 5000); // Animation duration
-  };
-
   const handleScoreButtonClick = (value, isLabel) => {
-  if (gameFinished) return;
+    if (gameFinished) return;
 
-  // Set active buttons
-  if (isLabel) {
-    setActiveNumber(null);
-    setActiveLabel(value);
-  } else {
-    setActiveLabel(null);
-    setActiveNumber(value);
-  }
+    if (isLabel) {
+      setActiveNumber(null);
+      setActiveLabel(value);
+    } else {
+      setActiveLabel(null);
+      setActiveNumber(value);
+    }
+    if (gameFinished) return;
 
-  // Handle pending states (wide, no-ball, leg-bye, out)
-  if (pendingWide && !isLabel && typeof value === 'number') {
-    handleWideWithRuns(value);
-    return;
-  }
+    if (pendingWide && !isLabel && typeof value === 'number') {
+      setPlayerScore(prev => prev + value + 1);
+      setTopPlays(prev => [...prev, `W+${value}`]);
+      setCurrentOverBalls(prev => [...prev, `W+${value}`]);
+      if (striker) updateBatsmanScore(striker.index, value + 1);
+      setPendingWide(false);
+      return;
+    }
 
-  if (pendingNoBall && !isLabel && typeof value === 'number') {
-    handleNoBallWithRuns(value);
-    return;
-  }
+    if (pendingNoBall && !isLabel && typeof value === 'number') {
+      setPlayerScore(prev => prev + value + 1);
+      setTopPlays(prev => [...prev, `NB+${value}`]);
+      setCurrentOverBalls(prev => [...prev, `NB+${value}`]);
+      if (striker) updateBatsmanScore(striker.index, value + 1);
+      setPendingNoBall(false);
+      return;
+    }
 
-  if (pendingLegBy && !isLabel && typeof value === 'number') {
-    handleLegByeWithRuns(value);
-    return;
-  }
+    const extraBalls = ['No-ball', 'Wide', 'No ball']; // 'No ball' seems redundant if 'No-ball' exists
+    const playValue = typeof value === 'string' ? value.charAt(0) : value;
 
-  if (pendingOut && !isLabel && typeof value === 'number') {
-    handleOutWithRuns(value);
-    return;
-  }
-
-  // Handle direct label clicks (wicket, extras, boundaries)
-  if (isLabel) {
-    handleLabelClicks(value);
-    return;
-  }
-
-  // Handle numeric runs (0-6)
-  if (!isLabel && typeof value === 'number') {
-    handleRegularRuns(value);
-  }
-};
-
-// Helper functions for specific scenarios
-const handleWideWithRuns = (runs) => {
-  // Wide + runs: only team gets runs (value + 1), batsman doesn't get runs, ball not counted
-  setPlayerScore(prev => prev + runs + 1);
-  setTopPlays(prev => [...prev, `W+${runs}`]);
-  setCurrentOverBalls(prev => [...prev, `W+${runs}`]);
-  setPendingWide(false);
-  
-  // Play animations for boundaries
-  if (runs === 4) playAnimation('four');
-  else if (runs === 6) playAnimation('six');
-};
-
-const handleNoBallWithRuns = (runs) => {
-  // No ball + runs: team gets runs + 1, batsman gets runs, ball not counted
-  setPlayerScore(prev => prev + runs + 1);
-  setTopPlays(prev => [...prev, `NB+${runs}`]);
-  setCurrentOverBalls(prev => [...prev, `NB+${runs}`]);
-  if (striker) updateBatsmanScore(striker.index, runs);
-  setPendingNoBall(false);
-  
-  // Play animations for boundaries
-  if (runs === 4) playAnimation('four');
-  else if (runs === 6) playAnimation('six');
-  
-  // Handle strike rotation for odd runs
-  if (runs % 2 !== 0) {
-    const temp = striker;
-    setStriker(nonStriker);
-    setNonStriker(temp);
-  }
-};
-
-const handleNoBallWithOut = (runs) => {
-  // No ball + runs + out: team gets runs + 1, batsman gets runs, out is counted, ball not counted
-  playAnimation('out');
-  setTimeout(() => {
-    setPlayerScore(prev => prev + runs + 1);
-    setTopPlays(prev => [...prev, `NB+${runs}+O`]);
-    setCurrentOverBalls(prev => [...prev, `NB+${runs}+O`]);
-    if (striker) updateBatsmanScore(striker.index, runs);
-    setShowBatsmanDropdown(true);
-  }, 5000);
-  setPendingNoBall(false);
-  setPendingOut(false);
-};
-
-const handleLegByeWithRuns = (runs) => {
-  // Leg bye + runs: team gets runs, batsman doesn't get runs, ball is counted
-  setPlayerScore(prev => prev + runs);
-  setTopPlays(prev => [...prev, `L+${runs}`]);
-  setCurrentOverBalls(prev => [...prev, `L+${runs}`]);
-  setPendingLegBy(false);
-  setValidBalls(prev => prev + 1);
-  
-  // Count ball for batsman
-  if (striker) updateBatsmanBalls(striker.index);
-  
-  // Handle strike rotation for odd runs
-  if (runs % 2 !== 0) {
-    const temp = striker;
-    setStriker(nonStriker);
-    setNonStriker(temp);
-  }
-  
-  // Play animations for boundaries
-  if (runs === 4) playAnimation('four');
-  else if (runs === 6) playAnimation('six');
-};
-
-const handleOutWithRuns = (runs) => {
-  // Out + runs: team gets runs, batsman gets runs, out is counted, ball is counted
-  playAnimation('out');
-  setTimeout(() => {
-    setPlayerScore(prev => prev + runs);
-    setTopPlays(prev => [...prev, `O+${runs}`]);
-    setCurrentOverBalls(prev => [...prev, `O+${runs}`]);
-    if (striker) updateBatsmanScore(striker.index, runs);
-    setValidBalls(prev => prev + 1);
-    if (striker) updateBatsmanBalls(striker.index);
-    setShowBatsmanDropdown(true);
-  }, 5000);
-  setPendingOut(false);
-};
-
-const handleLabelClicks = (value) => {
-  switch (value) {
-    case 'Six':
-      playAnimation('six');
-      setPlayerScore(prev => prev + 6);
-      setTopPlays(prev => [...prev, 6]);
-      setCurrentOverBalls(prev => [...prev, 6]);
-      if (striker) updateBatsmanScore(striker.index, 6);
-      setValidBalls(prev => prev + 1);
-      if (striker) updateBatsmanBalls(striker.index);
-      break;
-      
-    case 'Four':
-      playAnimation('four');
-      setPlayerScore(prev => prev + 4);
-      setTopPlays(prev => [...prev, 4]);
-      setCurrentOverBalls(prev => [...prev, 4]);
-      if (striker) updateBatsmanScore(striker.index, 4);
-      setValidBalls(prev => prev + 1);
-      if (striker) updateBatsmanBalls(striker.index);
-      break;
-      
-    case 'Wide':
-      setPendingWide(true);
-      setShowRunInfo(true);
-      break;
-      
-    case 'No-ball':
-    case 'No Ball':
-      setPendingNoBall(true);
-      setShowRunInfo(true);
-      break;
-      
-    case 'Leg By':
-    case 'Leg Bye':
-      setPendingLegBy(true);
-      setShowRunInfo(true);
-      break;
-      
-    case 'OUT':
-    case 'Wicket':
-    case 'lbw':
-    case 'Bowled':
-    case 'Caught':
-      setPendingOut(true);
-      break;
-      
-    case 'Bye':
-      setPendingBye(true);
-      setShowRunInfo(true);
-      break;
-      
-    default:
-      // For other labels (like dot ball)
-      if (!['Wide', 'No-ball', 'No Ball', 'Leg By', 'Leg Bye', 'Bye'].includes(value)) {
-        setValidBalls(prev => prev + 1);
-        if (striker) updateBatsmanBalls(striker.index);
+    if (isLabel) {
+      if (value === 'Wide' || value === 'No-ball' || value === 'Leg By') {
+        setShowRunInfo(true);
+      } else {
+        setShowRunInfo(false);
       }
-  }
-};
+      if (value === 'Six') {
+        setPlayerScore(prev => prev + 6);
+        setTopPlays(prev => [...prev, 6]);
+        setCurrentOverBalls(prev => [...prev, 6]);
+        if (striker) updateBatsmanScore(striker.index, 6);
+      } else if (value === 'Four') {
+        setPlayerScore(prev => prev + 4);
+        setTopPlays(prev => [...prev, 4]);
+        setCurrentOverBalls(prev => [...prev, 4]);
+        if (striker) updateBatsmanScore(striker.index, 4);
+      } else if (value === 'Wide') {
+        setPendingWide(true);
+        return;
+      } else if (value === 'No-ball') {
+        setPendingNoBall(true);
+        return;
+      } else if (value === 'Leg By') {
+        setPlayerScore(prev => prev + 1);
+        setTopPlays(prev => [...prev, 'leg']);
+        setCurrentOverBalls(prev => [...prev, 'leg']);
+        if (striker) updateBatsmanScore(striker.index, 1);
+      } else {
+        setTopPlays(prev => [...prev, playValue]);
+        setCurrentOverBalls(prev => [...prev, playValue]);
+        if (value === 'OUT' || value === 'Wicket' || value === 'lbw') {
+          setPendingOut(true);
+          setShowBatsmanDropdown(true); // Ensure this dropdown is for selecting replacement batsman
+        }
+      }
 
-const handleRegularRuns = (runs) => {
-  setShowRunInfo(false);
-  setPlayerScore(prev => prev + runs);
-  setTopPlays(prev => [...prev, runs]);
-  setCurrentOverBalls(prev => [...prev, runs]);
-  setValidBalls(prev => prev + 1);
-  
-  if (striker) {
-    updateBatsmanScore(striker.index, runs);
-    updateBatsmanBalls(striker.index);
-  }
-  
-  // Strike rotation for odd runs
-  if (runs % 2 !== 0) {
-    const temp = striker;
-    setStriker(nonStriker);
-    setNonStriker(temp);
-  }
-  
-  // Play animations for boundaries
-  if (runs === 6) {
-    playAnimation('six');
-  } else if (runs === 4) {
-    playAnimation('four');
-  }
-};
+      if (!extraBalls.includes(value)) {
+        setValidBalls(prev => prev + 1);
+        if (striker && value !== 'Wide' && value !== 'No-ball') {
+          updateBatsmanBalls(striker.index);
+        }
+      }
+    } else { // Handle numeric values
+      setShowRunInfo(false);
+      setActiveNumber(value);
+      setActiveLabel(null);
+      setPlayerScore(prev => prev + value);
+      setTopPlays(prev => [...prev, value]);
+      setCurrentOverBalls(prev => [...prev, value]);
+      setValidBalls(prev => prev + 1);
+      if (striker) {
+        updateBatsmanScore(striker.index, value);
+        updateBatsmanBalls(striker.index);
+      }
+      if (value % 2 !== 0) { // If runs are odd (1, 3, 5) swap strike
+        const temp = striker;
+        setStriker(nonStriker);
+        setNonStriker(temp);
+      }
+    }
+  };
 
   useEffect(() => {
     if (modalContent.title !== 'Match Result') return;
@@ -558,7 +426,6 @@ const handleRegularRuns = (runs) => {
     setPendingWide(false);
     setPendingNoBall(false);
     setPendingOut(false);
-    setPendingLegBy(false);
     setActiveLabel(null); // Reset active label/number for buttons
     setActiveNumber(null);
     setShowRunInfo(false);
@@ -754,39 +621,6 @@ const handleModalOkClick = () => {
         }}
       >
         {HeaderComponent ? <HeaderComponent /> : <div className="text-white">Header Missing</div>}
-
-        
-        {/* Animation Overlay */}
-        {showAnimation && (
-          <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
-            <div className="w-full h-full flex items-center justify-center">
-              {animationType === 'six' && (
-                <Player
-                  autoplay
-                  loop={true}
-                  src={sixAnimation}
-                  style={{ width: '300px', height: '300px' }}
-                />
-              )}
-              {animationType === 'four' && (
-                <Player
-                  autoplay
-                  loop={true}
-                  src={fourAnimation}
-                  style={{ width: '300px', height: '300px' }}
-                />
-              )}
-              {animationType === 'out' && (
-                <Player
-                  autoplay
-                  loop={true}
-                  src={outAnimation}
-                  style={{ width: '300px', height: '300px' }}
-                />
-              )}
-            </div>
-          </div>
-        )}
 
         {currentView === 'toss' && !striker && !nonStriker && !bowlerVisible && !showThirdButtonOnly && (
           <button
