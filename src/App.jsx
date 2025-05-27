@@ -67,7 +67,8 @@ import TeamProfile from './components/kumar/team_profile';
 import Tournament_nextpg from './components/kumar/tournament_nextpg';
 import Greeting from './pages/greeting';
 import StartMatchPlayers from './pages/StartMatchPlayers';
-
+import Selection from './components/kumar/selection';
+import Flowchart from './components/kumar/flowchart';
 
 
 // Import auth and db
@@ -228,6 +229,8 @@ function App() {
           <Route path="/TournamentPage" element={<TournamentPage />} />
           <Route path="/welcome" element={<Greeting/>} />
           <Route path="/StartMatchPlayers" element={<StartMatchPlayers />} />
+          <Route path='/selection' element={<Selection />} />
+          <Route path='/flowchart' element={<Flowchart />} />
 
 
 

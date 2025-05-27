@@ -12,6 +12,7 @@ const TournamentPage = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState('menu');
   const [teams, setTeams] = useState([]); // This will store the fetched teams  const [sharedLink, setSharedLink] = useState('');
+  const [sharedLink, setSharedLink] = useState('');
   const [showTeamCards, setShowTeamCards] = useState(false);
   const [selectedTeams, setSelectedTeams] = useState([]);
  
@@ -82,6 +83,17 @@ const TournamentPage = () => {
     setSelectedTeams([]);
     setTeams([]);
     setShowTeamCards(false);
+  };
+
+  const handleStartMatch = () => {
+    const allTeams = [...teams, ...acceptedTeams];
+   
+    if (teams.length <= 6) {
+      navigate('/selection', { state: { teams: allTeams } });
+    } else {
+      navigate('/selection', { state: { teams:allTeams } });
+    }
+    
   };
  
   return (
@@ -200,7 +212,7 @@ const TournamentPage = () => {
                     <button
                       type="button"
                       className="rounded-xl w-32 md:w-44 bg-gradient-to-l from-[#5DE0E6] to-[#004AAD] h-8 md:h-9 text-white cursor-pointer hover:shadow-[0px_0px_13px_0px_#5DE0E6] text-sm md:text-base"
-                      onClick={() => navigate('/match-start', { state: { selectedTeams: selectedTeams } })}
+                      onClick={handleStartMatch}
                     >
                       Next
                     </button>
@@ -219,7 +231,7 @@ const TournamentPage = () => {
                   <button
                     type="button" // Changed to button type
                     className="rounded-xl w-32 md:w-44 bg-gradient-to-l from-[#5DE0E6] to-[#004AAD] h-8 md:h-9 text-white cursor-pointer hover:shadow-[0px_0px_13px_0px_#5DE0E6] text-sm md:text-base"
-                    onClick={() => navigate('/match-start', { state: { selectedTeams: selectedTeams } })}
+                    onClick={handleStartMatch}
                   >
                     Next
                   </button>
@@ -312,7 +324,8 @@ const TournamentPage = () => {
                       Clear
                     </button>
                     <button
-                      type="submit"
+                      type="button"
+                      onClick={handleStartMatch}
                       className="rounded-xl w-32 md:w-44 bg-gradient-to-l from-[#5DE0E6] to-[#004AAD] h-8 md:h-9 text-white cursor-pointer hover:shadow-[0px_0px_13px_0px_#5DE0E6] text-sm md:text-base"
                     >
                       Next
