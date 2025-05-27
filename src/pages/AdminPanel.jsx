@@ -48,6 +48,51 @@ function AdminPanel() {
   const [existingTeamsForDropdown, setExistingTeamsForDropdown] = useState([]);
   // --- END NEW STATE ---
 
+  // --- NEW STATE FOR CLUB PLAYERS TAB ---
+  const [clubPlayerFormData, setClubPlayerFormData] = useState({
+    name: '',
+    image: '', // This will be a file or URL
+    team: '',
+    role: '',
+    age: '',
+    battingStyle: '',
+    bowlingStyle: '',
+    matches: '',
+    runs: '',
+    highestScore: '',
+    average: '',
+    strikeRate: '',
+    centuries: '',
+    fifties: '',
+    wickets: '',
+    bestBowling: '',
+    bio: '',
+    recentMatches: [], // Store as an array of objects
+    careerStatsBattingMatches: '',
+    careerStatsBattingInnings: '',
+    careerStatsBattingNotOuts: '',
+    careerStatsBattingRuns: '',
+    careerStatsBattingHighest: '',
+    careerStatsBattingAverage: '',
+    careerStatsBattingStrikeRate: '',
+    careerStatsBattingCenturies: '',
+    careerStatsBattingFifties: '',
+    careerStatsBattingFours: '',
+    careerStatsBattingSixes: '',
+    careerStatsBowlingInnings: '',
+    careerStatsBowlingWickets: '',
+    careerStatsBowlingBest: '',
+    careerStatsBowlingAverage: '',
+    careerStatsBowlingEconomy: '',
+    careerStatsBowlingStrikeRate: '',
+    careerStatsFieldingCatches: '',
+    careerStatsFieldingStumpings: '',
+    careerStatsFieldingRunOuts: '',
+  });
+  const [clubPlayerImageFile, setClubPlayerImageFile] = useState(null); // State for the club player image file
+  // --- END NEW STATE FOR CLUB PLAYERS TAB ---
+
+
   // Initialize Firebase Storage
   const storage = getStorage();
 
@@ -66,7 +111,7 @@ function AdminPanel() {
         console.error("Error fetching team names for dropdown:", err);
       }
     };
-    if (activeTab === 'team' || activeTab === 'addPlayerToTeam') {
+    if (activeTab === 'team' || activeTab === 'addPlayerToTeam' || activeTab === 'clubPlayer') {
       fetchTeams();
     }
   }, [activeTab]);
@@ -287,6 +332,164 @@ function AdminPanel() {
   };
   // --- END NEW HANDLERS ---
 
+  // --- NEW HANDLERS FOR CLUB PLAYERS TAB ---
+  const handleClubPlayerChange = (e) => {
+    const { name, value } = e.target;
+    setClubPlayerFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleClubPlayerImageFileChange = (e) => {
+    if (e.target.files[0]) {
+      setClubPlayerImageFile(e.target.files[0]);
+    } else {
+      setClubPlayerImageFile(null);
+    }
+  };
+
+// ... (rest of your code)
+
+const handleClubPlayerSubmit = async (e) => {
+    e.preventDefault();
+    const playerName = clubPlayerFormData.name.trim();
+    if (!playerName) {
+        alert("Player name cannot be empty.");
+        return;
+    }
+
+    let uploadedImageUrl = clubPlayerFormData.image;
+    try {
+        if (clubPlayerImageFile) {
+            const filePath = `club_player_photos/${playerName.toLowerCase().replace(/\s+/g, '_')}_${clubPlayerImageFile.name}`;
+            uploadedImageUrl = await uploadFile(clubPlayerImageFile, filePath);
+            if (!uploadedImageUrl) {
+                throw new Error("Failed to upload club player image.");
+            }
+        }
+
+        // Parse recent matches and career stats
+        const recentMatchesParsed = clubPlayerFormData.recentMatches
+            .split('\n')
+            .filter(line => line.trim() !== '')
+            .map(line => {
+                const parts = line.split(',').map(p => p.trim());
+                // FIX START: Changed parts.length === 3 to parts.length === 4
+                if (parts.length === 4) {
+                    return {
+                        opponent: parts[0],
+                        runs: parseInt(parts[1]),
+                        wickets: parseInt(parts[2]),
+                        result: parts[3] // Correctly assign the fourth part as 'result'
+                    };
+                }
+                // FIX END
+                console.warn(`Skipping malformed recent match line: ${line}`); // Add a warning for malformed lines
+                return null; // Handle invalid lines
+            })
+            .filter(item => item !== null);
+
+        const clubPlayerData = {
+            name: playerName,
+            image: uploadedImageUrl,
+            team: clubPlayerFormData.team,
+            role: clubPlayerFormData.role,
+            age: parseInt(clubPlayerFormData.age),
+            battingStyle: clubPlayerFormData.battingStyle,
+            bowlingStyle: clubPlayerFormData.bowlingStyle,
+            matches: parseInt(clubPlayerFormData.matches),
+            runs: parseInt(clubPlayerFormData.runs),
+            highestScore: parseInt(clubPlayerFormData.highestScore),
+            average: parseFloat(clubPlayerFormData.average),
+            strikeRate: parseFloat(clubPlayerFormData.strikeRate),
+            centuries: parseInt(clubPlayerFormData.centuries),
+            fifties: parseInt(clubPlayerFormData.fifties),
+            wickets: parseInt(clubPlayerFormData.wickets),
+            bestBowling: clubPlayerFormData.bestBowling,
+            bio: clubPlayerFormData.bio,
+            recentMatches: recentMatchesParsed, // This will now correctly populate
+            careerStats: {
+                batting: {
+                    matches: parseInt(clubPlayerFormData.careerStatsBattingMatches),
+                    innings: parseInt(clubPlayerFormData.careerStatsBattingInnings),
+                    notOuts: parseInt(clubPlayerFormData.careerStatsBattingNotOuts),
+                    runs: parseInt(clubPlayerFormData.careerStatsBattingRuns),
+                    highest: parseInt(clubPlayerFormData.careerStatsBattingHighest),
+                    average: parseFloat(clubPlayerFormData.careerStatsBattingAverage),
+                    strikeRate: parseFloat(clubPlayerFormData.careerStatsBattingStrikeRate),
+                    centuries: parseInt(clubPlayerFormData.careerStatsBattingCenturies),
+                    fifties: parseInt(clubPlayerFormData.careerStatsBattingFifties),
+                    fours: parseInt(clubPlayerFormData.careerStatsBattingFours),
+                    sixes: parseInt(clubPlayerFormData.careerStatsBattingSixes),
+                },
+                bowling: {
+                    innings: parseInt(clubPlayerFormData.careerStatsBowlingInnings),
+                    wickets: parseInt(clubPlayerFormData.careerStatsBowlingWickets),
+                    best: clubPlayerFormData.careerStatsBowlingBest,
+                    average: parseFloat(clubPlayerFormData.careerStatsBowlingAverage),
+                    economy: parseFloat(clubPlayerFormData.careerStatsBowlingEconomy),
+                    strikeRate: parseFloat(clubPlayerFormData.careerStatsBowlingStrikeRate),
+                },
+                fielding: {
+                    catches: parseInt(clubPlayerFormData.careerStatsFieldingCatches),
+                    stumpings: parseInt(clubPlayerFormData.careerStatsFieldingStumpings),
+                    runOuts: parseInt(clubPlayerFormData.careerStatsFieldingRunOuts),
+                }
+            }
+        };
+
+        const clubPlayerId = playerName.toLowerCase().replace(/\s+/g, "_");
+        await setDoc(doc(db, "clubPlayers", clubPlayerId), clubPlayerData);
+        alert("Club Player added successfully!");
+        setClubPlayerFormData({
+            // ... (your reset data, ensure recentMatches is reset to an empty string for the textarea)
+            name: '',
+            image: '',
+            team: '',
+            role: '',
+            age: '',
+            battingStyle: '',
+            bowlingStyle: '',
+            matches: '',
+            runs: '',
+            highestScore: '',
+            average: '',
+            strikeRate: '',
+            centuries: '',
+            fifties: '',
+            wickets: '',
+            bestBowling: '',
+            bio: '',
+            recentMatches: '', // Reset to empty string for the textarea input
+            careerStatsBattingMatches: '',
+            careerStatsBattingInnings: '',
+            careerStatsBattingNotOuts: '',
+            careerStatsBattingRuns: '',
+            careerStatsBattingHighest: '',
+            careerStatsBattingAverage: '',
+            careerStatsBattingStrikeRate: '',
+            careerStatsBattingCenturies: '',
+            careerStatsBattingFifties: '',
+            careerStatsBattingFours: '',
+            careerStatsBattingSixes: '',
+            careerStatsBowlingInnings: '',
+            careerStatsBowlingWickets: '',
+            careerStatsBowlingBest: '',
+            careerStatsBowlingAverage: '',
+            careerStatsBowlingEconomy: '',
+            careerStatsBowlingStrikeRate: '',
+            careerStatsFieldingCatches: '',
+            careerStatsFieldingStumpings: '',
+            careerStatsFieldingRunOuts: '',
+        });
+        setClubPlayerImageFile(null);
+    } catch (err) {
+        console.error("Error adding club player:", err);
+        alert("Failed to add club player");
+    }
+};
+
+// ... (rest of your AdminPanel component)
+  // --- END NEW HANDLERS FOR CLUB PLAYERS TAB ---
+
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-10">
@@ -294,7 +497,7 @@ function AdminPanel() {
 
       {/* Toggle Tabs */}
       <div className="flex gap-4 mb-8">
-        {['Leaderboard player', 'team', 'addPlayerToTeam', 'highlight', 'ai'].map(tab => (
+        {['Leaderboard player', 'team', 'addPlayerToTeam', 'clubPlayer', 'highlight', 'ai'].map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -302,7 +505,7 @@ function AdminPanel() {
               activeTab === tab ? 'bg-blue-600' : 'bg-gray-700'
             }`}
           >
-            {tab === 'ai' ? 'AI Assistance' : tab}
+            {tab === 'ai' ? 'AI Assistance' : tab === 'clubPlayer' ? 'Club Players' : tab}
           </button>
         ))}
       </div>
@@ -453,6 +656,194 @@ function AdminPanel() {
         </form>
       )}
       {/* --- END NEW 'ADD PLAYER TO TEAM' TAB --- */}
+
+      {/* --- NEW 'CLUB PLAYERS' TAB --- */}
+      {/* --- NEW 'CLUB PLAYERS' TAB --- */}
+        {activeTab === 'clubPlayer' && (
+          <form onSubmit={handleClubPlayerSubmit} className="space-y-4 max-w-xl">
+            <h3 className="text-xl font-bold mb-4">Add Club Player</h3>
+            <div>
+              <label className="block mb-1">Name</label>
+              <input type="text" name="name" value={clubPlayerFormData.name} onChange={handleClubPlayerChange} className="w-full p-2 rounded bg-gray-800 border border-gray-700" required />
+            </div>
+            <div>
+                <label className="block mb-1">Team Name</label>
+                <input
+                    type="text"
+                    name="team"
+                    value={clubPlayerFormData.team}
+                    onChange={handleClubPlayerChange}
+                    className="w-full p-2 rounded bg-gray-800 border border-gray-700"
+                    required
+                />
+            </div>
+            <div>
+              <label className="block mb-1">Player Image (Upload)</label>
+              <input type="file" accept="image/*" onChange={handleClubPlayerImageFileChange} className="w-full p-2 rounded bg-gray-800 border border-gray-700" />
+              {clubPlayerImageFile && <p className="text-sm mt-1 text-gray-400">Selected: {clubPlayerImageFile.name}</p>}
+            </div>
+            <div>
+              <label className="block mb-1">Or Paste Player Image URL (Optional fallback)</label>
+              <input type="text" name="image" value={clubPlayerFormData.image} onChange={handleClubPlayerChange} placeholder="https://example.com/player.png" className="w-full p-2 rounded bg-gray-800 border border-gray-700" />
+            </div>
+
+            <div>
+              <label className="block mb-1">Role (e.g., Top Order Batsman)</label>
+              <input type="text" name="role" value={clubPlayerFormData.role} onChange={handleClubPlayerChange} className="w-full p-2 rounded bg-gray-800 border border-gray-700" required />
+            </div>
+            <div>
+              <label className="block mb-1">Age</label>
+              <input type="number" name="age" value={clubPlayerFormData.age} onChange={handleClubPlayerChange} className="w-full p-2 rounded bg-gray-800 border border-gray-700" required />
+            </div>
+            <div>
+              <label className="block mb-1">Batting Style (e.g., Right Handed Bat)</label>
+              <input type="text" name="battingStyle" value={clubPlayerFormData.battingStyle} onChange={handleClubPlayerChange} className="w-full p-2 rounded bg-gray-800 border border-gray-700" required />
+            </div>
+            <div>
+              <label className="block mb-1">Bowling Style (e.g., Right Arm Off Spin)</label>
+              <input type="text" name="bowlingStyle" value={clubPlayerFormData.bowlingStyle} onChange={handleClubPlayerChange} className="w-full p-2 rounded bg-gray-800 border border-gray-700" />
+            </div>
+            <div>
+              <label className="block mb-1">Matches Played</label>
+              <input type="number" name="matches" value={clubPlayerFormData.matches} onChange={handleClubPlayerChange} className="w-full p-2 rounded bg-gray-800 border border-gray-700" required />
+            </div>
+            <div>
+              <label className="block mb-1">Total Runs</label>
+              <input type="number" name="runs" value={clubPlayerFormData.runs} onChange={handleClubPlayerChange} className="w-full p-2 rounded bg-gray-800 border border-gray-700" required />
+            </div>
+            <div>
+              <label className="block mb-1">Highest Score</label>
+              <input type="number" name="highestScore" value={clubPlayerFormData.highestScore} onChange={handleClubPlayerChange} className="w-full p-2 rounded bg-gray-800 border border-gray-700" required />
+            </div>
+            <div>
+              <label className="block mb-1">Batting Average</label>
+              <input type="number" step="0.01" name="average" value={clubPlayerFormData.average} onChange={handleClubPlayerChange} className="w-full p-2 rounded bg-gray-800 border border-gray-700" required />
+            </div>
+            <div>
+              <label className="block mb-1">Strike Rate</label>
+              <input type="number" step="0.01" name="strikeRate" value={clubPlayerFormData.strikeRate} onChange={handleClubPlayerChange} className="w-full p-2 rounded bg-gray-800 border border-gray-700" required />
+            </div>
+            <div>
+              <label className="block mb-1">Centuries</label>
+              <input type="number" name="centuries" value={clubPlayerFormData.centuries} onChange={handleClubPlayerChange} className="w-full p-2 rounded bg-gray-800 border border-gray-700" required />
+            </div>
+            <div>
+              <label className="block mb-1">Fifties</label>
+              <input type="number" name="fifties" value={clubPlayerFormData.fifties} onChange={handleClubPlayerChange} className="w-full p-2 rounded bg-gray-800 border border-gray-700" required />
+            </div>
+            <div>
+              <label className="block mb-1">Wickets</label>
+              <input type="number" name="wickets" value={clubPlayerFormData.wickets} onChange={handleClubPlayerChange} className="w-full p-2 rounded bg-gray-800 border border-gray-700" />
+            </div>
+            <div>
+              <label className="block mb-1">Best Bowling (e.g., 3/22)</label>
+              <input type="text" name="bestBowling" value={clubPlayerFormData.bestBowling} onChange={handleClubPlayerChange} className="w-full p-2 rounded bg-gray-800 border border-gray-700" />
+            </div>
+            <div>
+              <label className="block mb-1">Bio</label>
+              <textarea name="bio" value={clubPlayerFormData.bio} onChange={handleClubPlayerChange} rows="4" className="w-full p-2 rounded bg-gray-800 border border-gray-700" required />
+            </div>
+            <div>
+              <label className="block mb-1">Recent Matches (one per line, format: "Opponent, Runs, Wickets, Result")</label>
+              <textarea name="recentMatches" value={clubPlayerFormData.recentMatches} onChange={handleClubPlayerChange} rows="6" className="w-full p-2 rounded bg-gray-800 border border-gray-700" placeholder={`Jaipur Strikers, 98, 1, Won by 28 runs\nLUT Biggieagles XI, 64, 0, Lost by 5 wickets`} />
+            </div>
+
+            <h4 className="text-lg font-bold mb-2">Career Stats - Batting</h4>
+            <div>
+              <label className="block mb-1">Matches</label>
+              <input type="number" name="careerStatsBattingMatches" value={clubPlayerFormData.careerStatsBattingMatches} onChange={handleClubPlayerChange} className="w-full p-2 rounded bg-gray-800 border border-gray-700" />
+            </div>
+            <div>
+              <label className="block mb-1">Innings</label>
+              <input type="number" name="careerStatsBattingInnings" value={clubPlayerFormData.careerStatsBattingInnings} onChange={handleClubPlayerChange} className="w-full p-2 rounded bg-gray-800 border border-gray-700" />
+            </div>
+            <div>
+              <label className="block mb-1">Not Outs</label>
+              <input type="number" name="careerStatsBattingNotOuts" value={clubPlayerFormData.careerStatsBattingNotOuts} onChange={handleClubPlayerChange} className="w-full p-2 rounded bg-gray-800 border border-gray-700" />
+            </div>
+            <div>
+              <label className="block mb-1">Runs</label>
+              <input type="number" name="careerStatsBattingRuns" value={clubPlayerFormData.careerStatsBattingRuns} onChange={handleClubPlayerChange} className="w-full p-2 rounded bg-gray-800 border border-gray-700" />
+            </div>
+            <div>
+              <label className="block mb-1">Highest Score</label>
+              <input type="number" name="careerStatsBattingHighest" value={clubPlayerFormData.careerStatsBattingHighest} onChange={handleClubPlayerChange} className="w-full p-2 rounded bg-gray-800 border border-gray-700" />
+            </div>
+            <div>
+              <label className="block mb-1">Average</label>
+              <input type="number" step="0.01" name="careerStatsBattingAverage" value={clubPlayerFormData.careerStatsBattingAverage} onChange={handleClubPlayerChange} className="w-full p-2 rounded bg-gray-800 border border-gray-700" />
+            </div>
+            <div>
+              <label className="block mb-1">Strike Rate</label>
+              <input type="number" step="0.01" name="careerStatsBattingStrikeRate" value={clubPlayerFormData.careerStatsBattingStrikeRate} onChange={handleClubPlayerChange} className="w-full p-2 rounded bg-gray-800 border border-gray-700" />
+            </div>
+            <div>
+              <label className="block mb-1">Centuries</label>
+              <input type="number" name="careerStatsBattingCenturies" value={clubPlayerFormData.careerStatsBattingCenturies} onChange={handleClubPlayerChange} className="w-full p-2 rounded bg-gray-800 border border-gray-700" />
+            </div>
+            <div>
+              <label className="block mb-1">Fifties</label>
+              <input type="number" name="careerStatsBattingFifties" value={clubPlayerFormData.careerStatsBattingFifties} onChange={handleClubPlayerChange} className="w-full p-2 rounded bg-gray-800 border border-gray-700" />
+            </div>
+            <div>
+              <label className="block mb-1">Fours</label>
+              <input type="number" name="careerStatsBattingFours" value={clubPlayerFormData.careerStatsBattingFours} onChange={handleClubPlayerChange} className="w-full p-2 rounded bg-gray-800 border border-gray-700" />
+            </div>
+            <div>
+              <label className="block mb-1">Sixes</label>
+              <input type="number" name="careerStatsBattingSixes" value={clubPlayerFormData.careerStatsBattingSixes} onChange={handleClubPlayerChange} className="w-full p-2 rounded bg-gray-800 border border-gray-700" />
+            </div>
+
+            <h4 className="text-lg font-bold mb-2">Career Stats - Bowling</h4>
+            <div>
+              <label className="block mb-1">Innings</label>
+              <input type="number" name="careerStatsBowlingInnings" value={clubPlayerFormData.careerStatsBowlingInnings} onChange={handleClubPlayerChange} className="w-full p-2 rounded bg-gray-800 border border-gray-700" />
+            </div>
+            <div>
+              <label className="block mb-1">Wickets</label>
+              <input type="number" name="careerStatsBowlingWickets" value={clubPlayerFormData.careerStatsBowlingWickets} onChange={handleClubPlayerChange} className="w-full p-2 rounded bg-gray-800 border border-gray-700" />
+            </div>
+            <div>
+              <label className="block mb-1">Best Bowling</label>
+              <input type="text" name="careerStatsBowlingBest" value={clubPlayerFormData.careerStatsBowlingBest} onChange={handleClubPlayerChange} className="w-full p-2 rounded bg-gray-800 border border-gray-700" />
+            </div>
+            <div>
+              <label className="block mb-1">Average</label>
+              <input type="number" step="0.01" name="careerStatsBowlingAverage" value={clubPlayerFormData.careerStatsBowlingAverage} onChange={handleClubPlayerChange} className="w-full p-2 rounded bg-gray-800 border border-gray-700" />
+            </div>
+            <div>
+              <label className="block mb-1">Economy</label>
+              <input type="number" step="0.01" name="careerStatsBowlingEconomy" value={clubPlayerFormData.careerStatsBowlingEconomy} onChange={handleClubPlayerChange} className="w-full p-2 rounded bg-gray-800 border border-gray-700" />
+            </div>
+            <div>
+              <label className="block mb-1">Strike Rate</label>
+              <input type="number" step="0.01" name="careerStatsBowlingStrikeRate" value={clubPlayerFormData.careerStatsBowlingStrikeRate} onChange={handleClubPlayerChange} className="w-full p-2 rounded bg-gray-800 border border-gray-700" />
+            </div>
+
+            <h4 className="text-lg font-bold mb-2">Career Stats - Fielding</h4>
+            <div>
+              <label className="block mb-1">Catches</label>
+              <input type="number" name="careerStatsFieldingCatches" value={clubPlayerFormData.careerStatsFieldingCatches} onChange={handleClubPlayerChange} className="w-full p-2 rounded bg-gray-800 border border-gray-700" />
+            </div>
+            <div>
+              <label className="block mb-1">Stumpings</label>
+              <input type="number" name="careerStatsFieldingStumpings" value={clubPlayerFormData.careerStatsFieldingStumpings} onChange={handleClubPlayerChange} className="w-full p-2 rounded bg-gray-800 border border-gray-700" />
+            </div>
+            <div>
+              <label className="block mb-1">Run Outs</label>
+              <input type="number" name="careerStatsFieldingRunOuts" value={clubPlayerFormData.careerStatsFieldingRunOuts} onChange={handleClubPlayerChange} className="w-full p-2 rounded bg-gray-800 border border-gray-700" />
+            </div>
+
+            <button
+              type="submit"
+              className="bg-orange-600 hover:bg-orange-700 px-4 py-2 rounded text-white"
+            >
+              Add Club Player
+            </button>
+          </form>
+        )}
+        {/* --- END NEW 'CLUB PLAYERS' TAB --- */}
+      {/* --- END NEW 'CLUB PLAYERS' TAB --- */}
 
 
       {/* --- EXISTING HIGHLIGHTS TAB (DO NOT TOUCH) --- */}

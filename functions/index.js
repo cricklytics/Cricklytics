@@ -299,3 +299,59 @@ exports.generateAiAssistanceAudio = onDocumentCreated("ai_assistance/{aiId}", as
     }
 });
 
+exports.generateClubPlayerDetailsAudio = onDocumentCreated("clubPlayers/{clubPlayerId}", async (event) => {
+    const snap = event.data;
+    if (!snap) {
+        log("❌ No snapshot data received for club player.");
+        return;
+    }
+
+    const clubPlayerData = snap.data();
+    const clubPlayerId = event.params.clubPlayerId;
+
+    log("📌 New club player added:", clubPlayerId);
+
+    const text = `${clubPlayerData.name}, a ${clubPlayerData.age}-year-old ${clubPlayerData.role} from the ${clubPlayerData.team}.
+    They are a ${clubPlayerData.battingStyle}, and their bowling style is ${clubPlayerData.bowlingStyle || "not specified"}.`;
+
+    log("📝 Generated text for club player:", text);
+
+    const request = {
+        input: { text },
+        voice: {
+            languageCode: "en-IN",
+            ssmlGender: "MALE",
+            name: "en-IN-Wavenet-C",
+        },
+        audioConfig: {
+            audioEncoding: "MP3",
+            speakingRate: 1.0,
+            pitch: 0.0,
+            volumeGainDb: 0.0,
+            effectsProfileId: ["handset-class-device"],
+        },
+    };
+
+    try {
+        const [response] = await client.synthesizeSpeech(request);
+        const fileName = `club_player_audio/${clubPlayerId}.mp3`;
+        const tempFilePath = path.join("/tmp", `${clubPlayerId}.mp3`);
+
+        await util.promisify(fs.writeFile)(tempFilePath, response.audioContent, "binary");
+        log("💾 Club player audio file saved locally:", tempFilePath);
+
+        await storage.bucket().upload(tempFilePath, {
+            destination: fileName,
+            metadata: { contentType: "audio/mpeg" },
+        });
+        log("🚀 Club player audio file uploaded to Firebase Storage:", fileName);
+
+        // Ensure the bucket name matches your project's bucket for public access
+        const fileUrl = `https://firebasestorage.googleapis.com/v0/b/${storage.bucket().name}/o/${encodeURIComponent(fileName)}?alt=media`;
+
+        await db.collection("clubPlayers").doc(clubPlayerId).update({ audioUrl: fileUrl });
+        log("✅ Club player audio URL updated in Firestore:", fileUrl);
+    } catch (error) {
+        log("❌ Error generating/storing club player AI voice:", error.message);
+    }
+});
