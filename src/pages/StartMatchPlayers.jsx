@@ -14,9 +14,10 @@ import flag2 from '../assets/kumar/ukraine.png';
 import btnbg from '../assets/kumar/button.png';
 import backButton from '../assets/kumar/right-chevron.png';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
+import { Player } from '@lottiefiles/react-lottie-player';
 import sixAnimation from '../assets/Animation/six.json';
 import fourAnimation from '../assets/Animation/four.json';
-import outAnimation from '../assets/Animation/out.json';
+
 
 
 // Error Boundary Component
@@ -170,6 +171,14 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd }) {
     }));
   };
 
+   const playAnimation = (type) => {
+    setAnimationType(type);
+    setShowAnimation(true);
+    setTimeout(() => {
+      setShowAnimation(false);
+    }, 5000); // Animation duration
+  };
+
   const handleScoreButtonClick = (value, isLabel) => {
     if (gameFinished) return;
 
@@ -210,11 +219,13 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd }) {
         setShowRunInfo(false);
       }
       if (value === 'Six') {
+         playAnimation('six');
         setPlayerScore(prev => prev + 6);
         setTopPlays(prev => [...prev, 6]);
         setCurrentOverBalls(prev => [...prev, 6]);
         if (striker) updateBatsmanScore(striker.index, 6);
       } else if (value === 'Four') {
+         playAnimation('four');
         setPlayerScore(prev => prev + 4);
         setTopPlays(prev => [...prev, 4]);
         setCurrentOverBalls(prev => [...prev, 4]);
@@ -262,6 +273,11 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd }) {
         setStriker(nonStriker);
         setNonStriker(temp);
       }
+       if (value === 6) {
+      playAnimation('six');
+    } else if (value === 4) {
+      playAnimation('four');
+    }
     }
   };
 
@@ -621,6 +637,39 @@ const handleModalOkClick = () => {
         }}
       >
         {HeaderComponent ? <HeaderComponent /> : <div className="text-white">Header Missing</div>}
+
+         {/* Animation Overlay */}
+                {showAnimation && (
+                  <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
+                    <div className="w-full h-full flex items-center justify-center">
+                      {animationType === 'six' && (
+                        <Player
+                          autoplay
+                          loop={true}
+                          src={sixAnimation}
+                          style={{ width: '300px', height: '300px' }}
+                        />
+                      )}
+                      {animationType === 'four' && (
+                        <Player
+                          autoplay
+                          loop={true}
+                          src={fourAnimation}
+                          style={{ width: '300px', height: '300px' }}
+                        />
+                      )}
+                      {/* {animationType === 'out' && (
+                        <Player
+                          autoplay
+                          loop={true}
+                          src={outAnimation}
+                          style={{ width: '300px', height: '300px' }}
+                        />
+                      )} */}
+                    </div>
+                  </div>
+                )}
+        
 
         {currentView === 'toss' && !striker && !nonStriker && !bowlerVisible && !showThirdButtonOnly && (
           <button
