@@ -88,10 +88,10 @@ const TournamentPage = () => {
   const handleStartMatch = () => {
     const allTeams = [...teams, ...acceptedTeams];
    
-    if (teams.length <= 6) {
-      navigate('/selection', { state: { teams: allTeams } });
+    if (selectedTeams.length <= 6) {
+      navigate('/match-start', { state: { activeTab: 'Fixture Generator' , selectedTeams: selectedTeams  } });
     } else {
-      navigate('/selection', { state: { teams:allTeams } });
+      navigate('/selection', { state: { teams: allTeams } });
     }
     
   };

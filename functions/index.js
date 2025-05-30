@@ -312,7 +312,7 @@ exports.generateClubPlayerDetailsAudio = onDocumentCreated("clubPlayers/{clubPla
     log("📌 New club player added:", clubPlayerId);
 
     const text = `${clubPlayerData.name}, a ${clubPlayerData.age}-year-old ${clubPlayerData.role} from the ${clubPlayerData.team}.
-    They are a ${clubPlayerData.battingStyle}, and their bowling style is ${clubPlayerData.bowlingStyle || "not specified"}.`;
+    ${clubPlayerData.name} is a ${clubPlayerData.battingStyle}, and ${clubPlayerData.name}'s bowling style is ${clubPlayerData.bowlingStyle || "not specified"}.`;
 
     log("📝 Generated text for club player:", text);
 

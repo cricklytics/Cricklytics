@@ -49,7 +49,7 @@ const SportsAppNavigation = () => {
       
       {/* Tab Content - THIS WAS MISSING IN YOUR CODE */}
       <div className="p-4">
-        <div className=" rounded-lg p-6">
+        <div className=" rounded-lg md:p-6">
           {activeComponent}
         </div>
       </div>

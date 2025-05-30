@@ -291,9 +291,8 @@ const FixtureGenerator = () => {
   const [matchResultWinner, setMatchResultWinner] = useState(null); // State to store the winner
 
   const location = useLocation();
-  const targetTab = location.state?.activeTab;
-
   const teamsFromTournament = location.state?.selectedTeams || [];
+  console.log(teamsFromTournament);
 
   const [cameFromSidebar, setCameFromSidebar] = useState(false);
    useEffect(() => {
@@ -359,6 +358,7 @@ const FixtureGenerator = () => {
 
   // Determine which team list to use
   const availableTeams = teamsFromTournament.length > 0 ? teamsFromTournament : defaultTeams;
+  console.log(availableTeams);
 
 
   // Sample data for charts
@@ -542,6 +542,7 @@ const FixtureGenerator = () => {
                     origin="/match-start"
                     onTeamsSelectedForLiveScore={handleTeamsSelected} // Pass the handler
                     setActiveTab={setActiveTab} // Pass setActiveTab so Startmatch can switch tabs
+                    
                 />
        ) : (
       <main className="w-full max-w-7xl px-4 sm:px-8 py-8 mx-auto">

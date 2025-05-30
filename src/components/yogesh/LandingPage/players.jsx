@@ -106,6 +106,17 @@ const PlayersList = () => {
     }
   };
 
+  // Function to generate the descriptive text
+  const generatePlayerDescription = (playerData) => {
+    const name = playerData.name;
+    const battingDetail = playerData.battingStyle || "not specified";
+    const bowlingDetail = playerData.bowlingStyle || "not specified";
+
+    return `${name}, a ${playerData.age}-year-old ${playerData.role} from the ${playerData.team}. ` +
+           `${name} is a ${battingDetail}, and ${name}'s bowling style is ${bowlingDetail}.`;
+  };
+
+
   if (loading) {
     return (
       <div className="bg-gray-900 min-h-screen flex items-center justify-center">
@@ -123,14 +134,14 @@ const PlayersList = () => {
   }
 
   return (
-    <div className="bg-gray-900 min-h-screen p-6">
+    <div className="bg-gray-900 min-h-screen md:p-6">
       {/* Hidden audio element */}
       <audio ref={audioRef} />
 
       <div>
-        <h1 className="text-3xl font-bold text-white mb-6">Players List</h1>
+        <h1 className="text-3xl font-bold text-white mb-6 text-center md:text-left">Players List</h1> {/* Added text-center for mobile */}
         {/* Filters */}
-        <div className="mb-6 flex flex-col md:flex-row gap-4">
+        <div className="mb-6 flex flex-col md:flex-row gap-4"> {/* flex-col for mobile, md:flex-row for larger screens */}
           <input
             type="text"
             placeholder="Search by name..."
@@ -168,8 +179,10 @@ const PlayersList = () => {
                   ${playingPlayerId === player.id ? 'border-blue-500 ring-2 ring-blue-500' : 'border-gray-700 hover:border-blue-500 transition'}`}
                 onClick={() => handlePlayerClick(player)}
               >
-                <div className="flex items-center space-x-4 mb-4">
-                  <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-gray-600 flex-shrink-0">
+                {/* Image and Basic Info - Responsive adjustments */}
+                {/* On mobile, this will naturally stack with flex-col, but flex-row keeps it horizontal on larger screens. */}
+                <div className="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-4 mb-4">
+                  <div className="w-24 h-24 sm:w-20 sm:h-20 rounded-full overflow-hidden border-2 border-gray-600 flex-shrink-0"> {/* Slightly larger image on small screens for better visibility */}
                     <img
                       src={player.image}
                       alt={player.name}
@@ -180,7 +193,7 @@ const PlayersList = () => {
                       }}
                     />
                   </div>
-                  <div>
+                  <div className="text-center sm:text-left"> {/* Center text on mobile, left align on sm screens and up */}
                     <h2 className="text-xl font-bold text-white">{player.name}</h2>
                     <p className="text-gray-400">{player.team}</p>
                     <p className="text-gray-400 text-sm mt-1">Role: <span className="font-medium text-gray-300">{player.role || '-'}</span></p>
@@ -188,7 +201,13 @@ const PlayersList = () => {
                   </div>
                 </div>
 
-                {/* Small Container for Stats */}
+                {/* Display the generated description */}
+                <p className="text-gray-400 text-sm mb-4 text-center sm:text-left"> {/* Center text on mobile, left align on sm screens and up */}
+                  {generatePlayerDescription(player)}
+                </p>
+
+                {/* Small Container for Stats - Grid layout adapts well */}
+                {/* grid-cols-2 for mobile is good, it keeps pairs of stats together. */}
                 <div className="bg-gray-700 rounded-lg p-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm border border-gray-600">
                   <div className="flex justify-between items-center">
                     <span className="text-gray-400">Matches:</span>
