@@ -1,7 +1,7 @@
 import React, { useState, useEffect, Component } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import HeaderComponent from '../components/kumar/startMatchHeader';
-import flag1 from '../assets/kumar/Netherland.png';
+import flag1 from '../assets/kumar/Netherland.png'; // Fallback flags, used only if team.flagUrl is unavailable
 import flag2 from '../assets/kumar/ukraine.png';
 import btnbg from '../assets/kumar/button.png';
 import backButton from '../assets/kumar/right-chevron.png';
@@ -35,8 +35,8 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
   // Extract all relevant data from location.state
   const originPage = location.state?.origin;
   const maxOvers = location.state?.overs;
-  const teamA = location.state?.teamA;
-  const teamB = location.state?.teamB;
+  const teamA = location.state?.teamA; // Full team object with name, flagUrl, players
+  const teamB = location.state?.teamB; // Full team object with name, flagUrl, players
   const selectedPlayersFromProps = location.state?.selectedPlayers || { left: [], right: [] };
   const groupIndex = location.state?.groupIndex;
   const phase = location.state?.phase;
@@ -77,8 +77,6 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
   const [activeLabel, setActiveLabel] = useState(null);
   const [activeNumber, setActiveNumber] = useState(null);
   const [showRunInfo, setShowRunInfo] = useState(false);
-  const [firstInningsScore, setFirstInningsScore] = useState(0);
-  const [firstInningsBalls, setFirstInningsBalls] = useState(0);
 
   // Dynamic player data based on props
   const [battingTeamPlayers, setBattingTeamPlayers] = useState([]);
@@ -94,10 +92,11 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
 
     // Set batting and bowling teams based on isChasing
     if (!isChasing) {
+      // First innings: Team A (left) bats, Team B (right) bowls
       setBattingTeamPlayers(
         selectedPlayersFromProps.left.map((player, index) => ({
           ...player,
-          index: player.name + index
+          index: player.name + index // Use player.id if available for uniqueness
         }))
       );
       setBowlingTeamPlayers(
@@ -107,6 +106,7 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
         }))
       );
     } else {
+      // Second innings: Team B (right) bats, Team A (left) bowls
       setBattingTeamPlayers(
         selectedPlayersFromProps.right.map((player, index) => ({
           ...player,
@@ -143,16 +143,7 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
     if (gameFinished && showModal) {
       return;
     }
-    navigate('/start-match', {
-      state: {
-        teams,
-        groups,
-        matches,
-        currentPhase,
-        currentGroupIndex,
-        origin: '/start-match'
-      }
-    });
+    navigate(-1);
   };
 
   const updateBatsmanScore = (batsmanIndex, runs) => {
@@ -354,21 +345,33 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
     // Check for end of innings or match
     if (outCount >= 10 || (validBalls === 6 && overNumber > maxOvers - 1)) {
       if (!isChasing) {
-        setFirstInningsScore(playerScore);
-        setFirstInningsBalls(validBalls);
         setTargetScore(playerScore + 1);
         setIsChasing(true);
         resetInnings();
         displayModal('Innings Break', `You need to chase ${playerScore + 1} runs`);
       } else {
-        determineWinner();
+        let winnerTeamName = '';
+        let message = '';
+        if (playerScore < targetScore - 1) {
+          winnerTeamName = teamA.name;
+          message = `${teamA.name} wins by ${targetScore - 1 - playerScore} runs!`;
+        } else if (playerScore === targetScore - 1) {
+          winnerTeamName = 'Tie';
+          message = 'Match tied!';
+        } else {
+          winnerTeamName = teamB.name;
+          message = `${teamB.name} wins!`;
+        }
+        displayModal('Match Result', message);
+        setGameFinished(true);
       }
       return;
     }
 
     // Check for target achieved during chasing
     if (isChasing && playerScore >= targetScore && targetScore > 0) {
-      determineWinner();
+      displayModal('Match Result', `${teamB.name} wins!`);
+      setGameFinished(true);
       return;
     }
 
@@ -386,39 +389,7 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
         setShowBowlerDropdown(true);
       }, 1000);
     }
-  }, [validBalls, currentOverBalls, nonStriker, overNumber, isChasing, targetScore, playerScore, gameFinished, outCount, maxOvers]);
-
-  const determineWinner = () => {
-    let winnerTeamName = '';
-    let message = '';
-    let matchResult = {
-      team1: isChasing ? teamB.name : teamA.name,
-      team2: isChasing ? teamA.name : teamB.name,
-      team1Runs: isChasing ? playerScore : firstInningsScore,
-      team2Runs: isChasing ? firstInningsScore : playerScore,
-      team1Overs: isChasing ? calculateOvers(validBalls) : calculateOvers(firstInningsBalls),
-      team2Overs: isChasing ? calculateOvers(firstInningsBalls) : calculateOvers(validBalls)
-    };
-
-    if (playerScore < targetScore - 1) {
-      winnerTeamName = teamA.name;
-      message = `${teamA.name} wins by ${targetScore - 1 - playerScore} runs!`;
-    } else if (playerScore === targetScore - 1) {
-      winnerTeamName = 'Tie';
-      message = 'Match tied!';
-    } else {
-      winnerTeamName = teamB.name;
-      message = `${teamB.name} wins!`;
-    }
-
-    setGameFinished(true);
-    displayModal('Match Result', message);
-    setMatchResult({ winner: winnerTeamName, matchResult });
-  };
-
-  const calculateOvers = (balls) => {
-    return Math.floor(balls / 6) + (balls % 6) / 10;
-  };
+  }, [validBalls, currentOverBalls, nonStriker, overNumber, isChasing, targetScore, playerScore, gameFinished, outCount, maxOvers, teamA, teamB]);
 
   const resetInnings = () => {
     setCurrentOverBalls([]);
@@ -437,6 +408,7 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
     setShowThirdButtonOnly(false);
     setBatsmenScores({});
     setBatsmenBalls({});
+    setGameFinished(false);
     setPendingWide(false);
     setPendingNoBall(false);
     setPendingOut(false);
@@ -449,8 +421,6 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
     resetInnings();
     setIsChasing(false);
     setTargetScore(0);
-    setFirstInningsScore(0);
-    setFirstInningsBalls(0);
   };
 
   const getStrikeRate = (batsmanIndex) => {
@@ -528,17 +498,27 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
   const handleModalOkClick = () => {
     setShowModal(false);
 
-    if (gameFinished && modalContent.title === 'Match Result' && matchResult) {
-      navigate('/start-match', {
+    if (gameFinished && modalContent.title === 'Match Result') {
+      let winnerTeamName = '';
+      if (playerScore < targetScore - 1) {
+        winnerTeamName = teamA.name; // Team A (first batting) wins
+      } else if (playerScore === targetScore - 1) {
+        winnerTeamName = 'Tie';
+      } else {
+        winnerTeamName = teamB.name; // Team B (chasing) wins
+      }
+
+      // Navigate to /start-match to play the next match
+      navigate('/match-start', {
         state: {
           teams,
           groups,
           matches,
           currentPhase,
           currentGroupIndex,
-          winner: matchResult.winner,
-          matchResult: matchResult.matchResult,
-          origin: '/start-match'
+          winner: winnerTeamName,
+          origin: '/tournament-bracket', // Preserve origin for potential further navigation
+          activeTab: 'Start Match'
         }
       });
     } else if (modalContent.title === 'Innings Break') {
@@ -549,8 +529,6 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
       setShowThirdButtonOnly(false);
     }
   };
-
-  const [matchResult, setMatchResult] = useState(null);
 
   if (!teamA || !teamB || !selectedPlayersFromProps.left || !selectedPlayersFromProps.right) {
     return (
@@ -615,7 +593,7 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
                   onClick={handleModalOkClick}
                   className="w-40 h-12 bg-[#FF62A1] text-white font-bold text-lg rounded-lg border-2 border-white"
                 >
-                  {gameFinished && modalContent.title === 'Match Result' ? 'Back to Chart' : 'OK'}
+                  OK
                 </button>
               </div>
             </div>
@@ -980,9 +958,11 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
                         className="cursor-pointer flex flex-col items-center text-white text-center p-2 hover:bg-[#FF62A1] rounded-lg"
                       >
                         <img
-                          src={player.photoUrl} 
-                            alt="player"
-                          className="w-12 h-12 md:w-16 md:h-16 rounded-full object-cover" />
+                          src={player.photoUrl}
+                          alt="Player"
+                          className="w-12 h-12 md:w-16 md:h-16 rounded-full object-cover aspect-square"
+                          onError={(e) => (e.target.src = '')}
+                        />
                         <span className="text-xs md:text-sm">{player.name}</span>
                         <span className="text-xs">{player.role}</span>
                       </div>
@@ -994,34 +974,33 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
 
             {showBowlerDropdown && (
               <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                <div className="bg-[#4C0025] p-4 md:p-6 rounded-lg max-w-md w-full mx-4 relative z-10">
-                  <div className="bg-[#4C0025] p-4 rounded-lg max-w-md w-full mx-auto">
+                <div className="bg-[#4C0025] p-4 md:p-6 rounded-lg max-w-md w-full mx-4 relative">
                   <button
                     onClick={() => setShowBowlerDropdown(false)}
-                    className="absolute top-2 right-2 w-6 h-6 bg-white text-[#4C0025] font-bold flex items-center justify-center rounded-full text-sm">
+                    className="absolute top-2 right-2 w-6 h-6 text-white font-bold flex items-center justify-center text-xl"
+                  >
                     ×
                   </button>
-                  <h3 className="text-white font-semibold text-xl mb-3">Select Next Bowler</h3>
-                    <div className="grid grid-cols-2 gap-2 md:gap-4">
-                      {bowlingTeamPlayers
-                        .filter((player) => player !== selectedBowler)
-                        .map((player) => (
-                          <div
-                            key={player.index}
-                            onClick={() => handleSelectBowler(player)}
-                            className="cursor-pointer flex flex-col items-center p-3 hover:bg-[#FF62A1] rounded-lg"
-                          >
-                            <img
-                              src={player.photoUrl}
-                              alt="Player"
-                              className="w-12 h-12 md:w-16 md:h-16 rounded-full object-cover aspect-square"
-                              onError={(e) => (e.target.src = '')}
-                            />
-                            <span className="text-xs md:text-sm">{player.name}</span>
-                            <span className="text-xs">{player.role}</span>
-                          </div>
-                        ))}
-                    </div>
+                  <h3 className="text-white text-lg md:text-xl font-bold mb-4">Select Next Bowler</h3>
+                  <div className="grid grid-cols-2 gap-2 md:gap-4">
+                    {bowlingTeamPlayers
+                      .filter((player) => player.index !== selectedBowler?.index)
+                      .map((player) => (
+                        <div
+                          key={player.index}
+                          onClick={() => handleBowlerSelect(player)}
+                          className="cursor-pointer flex flex-col items-center text-white text-center p-2 hover:bg-[#FF62A1] rounded-lg"
+                        >
+                          <img
+                            src={player.photoUrl}
+                            alt="Player"
+                            className="w-12 h-12 md:w-16 md:h-16 rounded-full object-cover aspect-square"
+                            onError={(e) => (e.target.src = '')}
+                          />
+                          <span className="text-xs md:text-sm">{player.name}</span>
+                          <span className="text-xs">{player.role}</span>
+                        </div>
+                      ))}
                   </div>
                 </div>
               </div>
