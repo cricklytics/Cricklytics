@@ -12,6 +12,8 @@ import comment from '../assets/yogesh/login/msg.png';
 import SearchBar from '../components/yogesh/LandingPage/searcbar_aft';
 import AIAssistance from "../components/sophita/HomePage/AIAssistance";
 import { useNavigate } from "react-router-dom";
+import { FaUserShield } from "react-icons/fa";
+
 
 import { db } from "../firebase";
 import { collection, getDocs } from "firebase/firestore";
@@ -495,30 +497,44 @@ useEffect(() => {
             />
           </div>
  
-          <div className="mt-1 md:mt-9  flex items-center gap-4 md:gap-8">
-            <div className="z-[2000] mt-9  md:mt-5 h-16 md:h-22 w-fit">
-              <button className="w-8 h-8 md:w-14 md:h-14 rounded-full border-4 border-cyan-500 flex items-center justify-center" onClick={() => navigate("/search-aft")}>
-                <Search className="text-white w-4 h-4 md:w-6 md:h-6" />
-              </button>
-            </div>
-            <div>
-              <button className="text-sm md:text-2xl font-bold cursor-pointer hover:text-[#3edcff]" onClick={() => navigate("/contacts")}>
-                Contacts
-              </button>
-            </div>
-            {/* <span className="text-sm md:text-2xl font-bold cursor-pointer hover:text-[#3edcff] hidden sm:inline">Contact</span> */}
-            <FaBell className="cursor-pointer hover:scale-110" size={24} />
-            
+          <div className="mt-1 md:mt-9 flex items-center gap-4 md:gap-8">
+  <div className="z-[2000] mt-9 md:mt-5 h-16 md:h-22 w-fit">
+    <button
+      className="w-8 h-8 md:w-14 md:h-14 rounded-full border-4 border-cyan-500 flex items-center justify-center"
+      onClick={() => navigate("/search-aft")}
+    >
+      <Search className="text-white w-4 h-4 md:w-6 md:h-6" />
+    </button>
+  </div>
+  <div>
+    <button
+      className="text-sm md:text-2xl font-bold cursor-pointer hover:text-[#3edcff]"
+      onClick={() => navigate("/contacts")}
+    >
+      Contacts
+    </button>
+  </div>
+  <FaBell className="cursor-pointer hover:scale-110" size={24} />
 
-            {/* Message Icon */}
-            <div className="relative">
-              <FaComment
-                className="message-icon cursor-pointer text-white transition-transform duration-200 hover:scale-110"
-                size={24}
-                onClick={handleOpenMessagesPage}
-              />
-            </div>
-          </div>
+  {/* Message Icon */}
+  <div className="relative">
+    <FaComment
+      className="message-icon cursor-pointer text-white transition-transform duration-200 hover:scale-110"
+      size={24}
+      onClick={handleOpenMessagesPage}
+    />
+  </div>
+
+  {/* Admin Panel Icon */}
+  <div className="relative">
+    <FaUserShield
+      className="cursor-pointer text-white transition-transform duration-200 hover:scale-110"
+      size={24}
+      onClick={() => navigate("/admin")}
+    />
+  </div>
+</div>
+
         </nav>
  
         <Sidebar isOpen={menuOpen} closeMenu={() => setMenuOpen(false)} />
