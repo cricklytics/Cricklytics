@@ -422,21 +422,33 @@ const TournamentBracket = () => {
       setCurrentPhase('league');
       setCurrentGroupIndex(0);
     } else if (formatType === 'knockout') {
-      if (teamCount >= 9) {
-        const seeded = [...teams].sort((a, b) => a.seed - b.seed);
-        newMatches = [{
-          id: 'pre-quarter',
-          team1: seeded[7],
-          team2: seeded[8],
-          round: 0,
-          phase: 'pre-quarter',
-          winner: null,
-          played: false
-        }];
-        setCurrentPhase('pre-quarter');
-      } else {
-        initializeSemiFinals();
-      }
+      // if (teamCount >= 9) {
+      //   const seeded = [...teams].sort((a, b) => a.seed - b.seed);
+      //   newMatches = [{
+      //     id: 'pre-quarter',
+      //     team1: seeded[7],
+      //     team2: seeded[8],
+      //     round: 0,
+      //     phase: 'pre-quarter',
+      //     winner: null,
+      //     played: false
+      //   }];
+      //   setCurrentPhase('pre-quarter');
+      // } else {
+      //   initializeSemiFinals();
+      // }
+      navigate('/Selection1',{
+        state: {
+          teams,
+          format: 'knockout',
+          matches: [],
+          currentPhase: null,
+          tournamentWinner: null,
+          phaseHistory: [],
+          groups: [],
+          oddTeam: null
+        }
+      })
     } else if (formatType === 'test') {
       if (teamCount === 2) {
         newMatches = Array.from({ length: 5 }, (_, i) => ({

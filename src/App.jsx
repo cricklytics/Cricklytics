@@ -68,6 +68,7 @@ import Tournament_nextpg from './components/kumar/tournament_nextpg';
 import Greeting from './pages/greeting';
 import StartMatchPlayers from './pages/StartMatchPlayers';
 import Selection from './components/kumar/selection';
+import Selection1 from './components/kumar/Selection1';
 import Flowchart from './components/kumar/flowchart';
 
 
@@ -230,6 +231,7 @@ function App() {
           <Route path="/welcome" element={<Greeting/>} />
           <Route path="/StartMatchPlayers" element={<StartMatchPlayers />} />
           <Route path='/selection' element={<Selection />} />
+          <Route path='/selection1' element={<Selection1 />} />
           <Route path='/flowchart' element={<Flowchart />} />
 
 

@@ -77,6 +77,13 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
   const [activeLabel, setActiveLabel] = useState(null);
   const [activeNumber, setActiveNumber] = useState(null);
   const [showRunInfo, setShowRunInfo] = useState(false);
+  // New states for NRR calculation
+  const [firstInningsScore, setFirstInningsScore] = useState(0);
+  const [firstInningsOvers, setFirstInningsOvers] = useState(0);
+  const [firstInningsWickets, setFirstInningsWickets] = useState(0);
+  const [secondInningsScore, setSecondInningsScore] = useState(0);
+  const [secondInningsOvers, setSecondInningsOvers] = useState(0);
+  const [secondInningsWickets, setSecondInningsWickets] = useState(0);
 
   // Dynamic player data based on props
   const [battingTeamPlayers, setBattingTeamPlayers] = useState([]);
@@ -345,33 +352,109 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
     // Check for end of innings or match
     if (outCount >= 10 || (validBalls === 6 && overNumber > maxOvers - 1)) {
       if (!isChasing) {
+        // Store first innings data for NRR calculation
+        setFirstInningsScore(playerScore);
+        setFirstInningsOvers(overNumber - 1 + validBalls / 6);
+        setFirstInningsWickets(outCount);
         setTargetScore(playerScore + 1);
         setIsChasing(true);
         resetInnings();
         displayModal('Innings Break', `You need to chase ${playerScore + 1} runs`);
       } else {
+        // Store second innings data
+        setSecondInningsScore(playerScore);
+        setSecondInningsOvers(overNumber - 1 + validBalls / 6);
+        setSecondInningsWickets(outCount);
+
         let winnerTeamName = '';
+        let loserTeamName = '';
         let message = '';
         if (playerScore < targetScore - 1) {
           winnerTeamName = teamA.name;
+          loserTeamName = teamB.name;
           message = `${teamA.name} wins by ${targetScore - 1 - playerScore} runs!`;
         } else if (playerScore === targetScore - 1) {
           winnerTeamName = 'Tie';
+          loserTeamName = null;
           message = 'Match tied!';
         } else {
           winnerTeamName = teamB.name;
+          loserTeamName = teamA.name;
           message = `${teamB.name} wins!`;
         }
+
+        // Calculate NRR
+        // NRR = (Runs Scored / Overs Faced) - (Runs Conceded / Overs Bowled)
+        const teamARunsScored = firstInningsScore;
+        const teamARunsConceded = secondInningsScore;
+        const teamAOversFaced = firstInningsOvers;
+        const teamAOversBowled = secondInningsOvers;
+        const teamBRunsScored = secondInningsScore;
+        const teamBRunsConceded = firstInningsScore;
+        const teamBOversFaced = secondInningsOvers;
+        const teamBOversBowled = firstInningsOvers;
+
+        const teamANRR = teamAOversFaced > 0 && teamBOversBowled > 0
+          ? (teamARunsScored / teamAOversFaced) - (teamARunsConceded / teamBOversBowled)
+          : 0;
+        const teamBNRR = teamBOversFaced > 0 && teamAOversBowled > 0
+          ? (teamBRunsScored / teamBOversFaced) - (teamBRunsConceded / teamAOversBowled)
+          : 0;
+
         displayModal('Match Result', message);
         setGameFinished(true);
+
+        // Store winner, loser, and NRR for navigation
+        setModalContent(prev => ({
+          ...prev,
+          winnerTeamName,
+          loserTeamName,
+          teamANRR: teamANRR.toFixed(3),
+          teamBNRR: teamBNRR.toFixed(3)
+        }));
       }
       return;
     }
 
     // Check for target achieved during chasing
     if (isChasing && playerScore >= targetScore && targetScore > 0) {
-      displayModal('Match Result', `${teamB.name} wins!`);
+      // Store second innings data
+      setSecondInningsScore(playerScore);
+      setSecondInningsOvers(overNumber - 1 + validBalls / 6);
+      setSecondInningsWickets(outCount);
+
+      let winnerTeamName = teamB.name;
+      let loserTeamName = teamA.name;
+      let message = `${teamB.name} wins!`;
+
+      // Calculate NRR
+      const teamARunsScored = firstInningsScore;
+      const teamARunsConceded = secondInningsScore;
+      const teamAOversFaced = firstInningsOvers;
+      const teamAOversBowled = secondInningsOvers;
+      const teamBRunsScored = secondInningsScore;
+      const teamBRunsConceded = firstInningsScore;
+      const teamBOversFaced = secondInningsOvers;
+      const teamBOversBowled = firstInningsOvers;
+
+      const teamANRR = teamAOversFaced > 0 && teamBOversBowled > 0
+        ? (teamARunsScored / teamAOversFaced) - (teamARunsConceded / teamBOversBowled)
+        : 0;
+      const teamBNRR = teamBOversFaced > 0 && teamAOversBowled > 0
+        ? (teamBRunsScored / teamBOversFaced) - (teamBRunsConceded / teamAOversBowled)
+        : 0;
+
+      displayModal('Match Result', message);
       setGameFinished(true);
+
+      // Store winner, loser, and NRR for navigation
+      setModalContent(prev => ({
+        ...prev,
+        winnerTeamName,
+        loserTeamName,
+        teamANRR: teamANRR.toFixed(3),
+        teamBNRR: teamBNRR.toFixed(3)
+      }));
       return;
     }
 
@@ -389,7 +472,7 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
         setShowBowlerDropdown(true);
       }, 1000);
     }
-  }, [validBalls, currentOverBalls, nonStriker, overNumber, isChasing, targetScore, playerScore, gameFinished, outCount, maxOvers, teamA, teamB]);
+  }, [validBalls, currentOverBalls, nonStriker, overNumber, isChasing, targetScore, playerScore, gameFinished, outCount, maxOvers, teamA, teamB, firstInningsScore, firstInningsOvers, secondInningsScore, secondInningsOvers]);
 
   const resetInnings = () => {
     setCurrentOverBalls([]);
@@ -421,6 +504,12 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
     resetInnings();
     setIsChasing(false);
     setTargetScore(0);
+    setFirstInningsScore(0);
+    setFirstInningsOvers(0);
+    setFirstInningsWickets(0);
+    setSecondInningsScore(0);
+    setSecondInningsOvers(0);
+    setSecondInningsWickets(0);
   };
 
   const getStrikeRate = (batsmanIndex) => {
@@ -499,16 +588,7 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
     setShowModal(false);
 
     if (gameFinished && modalContent.title === 'Match Result') {
-      let winnerTeamName = '';
-      if (playerScore < targetScore - 1) {
-        winnerTeamName = teamA.name; // Team A (first batting) wins
-      } else if (playerScore === targetScore - 1) {
-        winnerTeamName = 'Tie';
-      } else {
-        winnerTeamName = teamB.name; // Team B (chasing) wins
-      }
-
-      // Navigate to /start-match to play the next match
+      // Navigate to /start-match to play the next match with NRR and winner/loser
       navigate('/match-start', {
         state: {
           teams,
@@ -516,8 +596,11 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
           matches,
           currentPhase,
           currentGroupIndex,
-          winner: winnerTeamName,
-          origin: '/tournament-bracket', // Preserve origin for potential further navigation
+          winner: modalContent.winnerTeamName,
+          loser: modalContent.loserTeamName,
+          teamANRR: parseFloat(modalContent.teamANRR),
+          teamBNRR: parseFloat(modalContent.teamBNRR),
+          origin: '/tournament-bracket', // Preserve origin for potential further navigation,
           activeTab: 'Start Match'
         }
       });
