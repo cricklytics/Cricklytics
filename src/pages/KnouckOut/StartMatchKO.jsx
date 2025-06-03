@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { db } from '../firebase';
+import { db } from '../../firebase';
 import { collection, getDocs } from 'firebase/firestore';
-import bgImg from '../assets/sophita/HomePage/advertisement5.jpeg';
+import bgImg from '../../assets/sophita/HomePage/advertisement5.jpeg';
 
 // PlayerSelector component (no changes needed here for this specific issue)
 const PlayerSelector = ({

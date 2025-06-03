@@ -1,26 +1,26 @@
 import React, { useState, useEffect, useRef  } from 'react';
 import { motion } from 'framer-motion';
-import FireworksCanvas from '../components/sophita/HomePage/FireworksCanvas';
+import FireworksCanvas from '../../components/sophita/HomePage/FireworksCanvas';
 import { FaChevronDown, FaChevronUp, FaTrophy, FaHeart, FaCommentDots, FaShareAlt } from 'react-icons/fa';
 import { ResponsiveContainer, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Line } from 'recharts';
 import { ScatterChart, Scatter, ZAxis, BarChart, Bar } from 'recharts';
-import logo from '../assets/sophita/HomePage/Picture3_2.png';
-import netherland from '../assets/sophita/HomePage/Netherland.jpeg';
-import southAfrica from '../assets/sophita/HomePage/Southafrica.png';
-import trophy from '../assets/sophita/HomePage/trophy.png';
-import ipl2 from '../assets/sophita/HomePage/ipl2.jpeg';
-import ipl2022 from '../assets/sophita/HomePage/2022.jpeg';
-import ipl2025 from '../assets/sophita/HomePage/2025.jpeg';
-import ipl2019 from '../assets/sophita/HomePage/2019.jpeg';
-import ipl2019_3 from '../assets/sophita/HomePage/2019-3.jpeg';
-import ipl2021 from '../assets/sophita/HomePage/2021.jpeg';
-import ipl2020 from '../assets/sophita/HomePage/2020.jpeg';
-import ipl2018 from '../assets/sophita/HomePage/2018.jpeg';
-import advertisement1 from '../assets/sophita/HomePage/Advertisement1.webp'
+import logo from '../../assets/sophita/HomePage/Picture3_2.png';
+import netherland from '../../assets/sophita/HomePage/Netherland.jpeg';
+import southAfrica from '../../assets/sophita/HomePage/Southafrica.png';
+import trophy from '../../assets/sophita/HomePage/trophy.png';
+import ipl2 from '../../assets/sophita/HomePage/ipl2.jpeg';
+import ipl2022 from '../../assets/sophita/HomePage/2022.jpeg';
+import ipl2025 from '../../assets/sophita/HomePage/2025.jpeg';
+import ipl2019 from '../../assets/sophita/HomePage/2019.jpeg';
+import ipl2019_3 from '../../assets/sophita/HomePage/2019-3.jpeg';
+import ipl2021 from '../../assets/sophita/HomePage/2021.jpeg';
+import ipl2020 from '../../assets/sophita/HomePage/2020.jpeg';
+import ipl2018 from '../../assets/sophita/HomePage/2018.jpeg';
+import advertisement1 from '../../assets/sophita/HomePage/Advertisement1.webp'
 import { useNavigate, useLocation } from 'react-router-dom'; // Import useLocation
 import Startmatch from './StartmatchRR'; // Assuming this is StartmatchPlayers
-import nav from '../assets/kumar/right-chevron.png';
-import placeholderFlag from '../assets/sophita/HomePage/Netherland.jpeg'; // ADD a placeholder image (ensure this path is correct)
+import nav from '../../assets/kumar/right-chevron.png';
+import placeholderFlag from '../../assets/sophita/HomePage/Netherland.jpeg'; // ADD a placeholder image (ensure this path is correct)
 
 const IPLCards = ({ setActiveTab }) => {
   const cards = [

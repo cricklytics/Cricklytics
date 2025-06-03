@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { db } from '../firebase';
+import { db } from '../../firebase';
 import { collection, getDocs } from 'firebase/firestore';
-import logo from '../assets/pawan/PlayerProfile/picture-312.png';
-import bgImg from '../assets/sophita/HomePage/advertisement5.jpeg';
+import logo from '../../assets/pawan/PlayerProfile/picture-312.png';
+import bgImg from '../../assets/sophita/HomePage/advertisement5.jpeg';
 
 const generateUUID = () => {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {

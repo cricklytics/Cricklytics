@@ -1,10 +1,10 @@
 import React, { useState, useEffect, Component } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import HeaderComponent from '../components/kumar/startMatchHeader';
-import flag1 from '../assets/kumar/Netherland.png'; // Fallback flags, used only if team.flagUrl is unavailable
-import flag2 from '../assets/kumar/ukraine.png';
-import btnbg from '../assets/kumar/button.png';
-import backButton from '../assets/kumar/right-chevron.png';
+import HeaderComponent from '../../components/kumar/startMatchHeader';
+import flag1 from '../../assets/kumar/Netherland.png'; // Fallback flags, used only if team.flagUrl is unavailable
+import flag2 from '../../assets/kumar/ukraine.png';
+import btnbg from '../../assets/kumar/button.png';
+import backButton from '../../assets/kumar/right-chevron.png';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 
 // Error Boundary Component

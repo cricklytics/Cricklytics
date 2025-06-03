@@ -35,15 +35,16 @@ import Tabletoppers from './pages/Tabletoppers';
 
 
 import Startmatch from './pages/Startmatch';
-import StartmatchRR from './pages/StartmatchRR';
-import StartMatchKO from './pages/StartMatchKO';
+import StartmatchSB from './pages/StartmatchSB';
+import StartmatchRR from './pages/RoundRobin/StartmatchRR';
+import StartMatchKO from './pages/KnouckOut/StartMatchKO';
 import Tournaments from './pages/Tournaments';
 import TeamDetails from './pages/TeamDetails';
 import Highlights from './pages/Highlights'
-import MatchStartRR from './pages/MatchStartRR';
+import MatchStartRR from './pages/RoundRobin/MatchStartRR';
 import MatchStartSB from './pages/MatchStartSB';
 import MatchStart from './pages/MatchStart';
-import MatchStartKO from './pages/MatchStartKO';
+import MatchStartKO from './pages/KnouckOut/MatchStartKO';
 
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -71,8 +72,9 @@ import TeamProfile from './components/kumar/team_profile';
 import Tournament_nextpg from './components/kumar/tournament_nextpg';
 import Greeting from './pages/greeting';
 import StartMatchPlayers from './pages/StartMatchPlayers';
-import StartMatchPlayersRR from './pages/StartMatchPlayersRR';
-import StartMatchPlayersKO from './pages/StartMatchPlayersKO';
+import StartMatchPlayersSB from './pages/StartMatchPlayersSB';
+import StartMatchPlayersRR from './pages/RoundRobin/StartMatchPlayersRR';
+import StartMatchPlayersKO from './pages/KnouckOut/StartMatchPlayersKO';
 import Selection from './components/kumar/selection';
 import Selection1 from './components/kumar/Selection1';
 import Flowchart from './components/kumar/flowchart';
@@ -186,6 +188,7 @@ function App() {
           <Route path="/landingpage" element={userProfile ? <Landingpage menuOpen={isSidebarOpen} setMenuOpen={setIsSidebarOpen} userProfile={userProfile} /> : <Login />} /> {/* Protect route */}
           <Route path="/go-live" element={<Golive />} />
           <Route path="/start-match" element={<Startmatch />} />
+          <Route path="/start-match-sb" element={<StartmatchSB />} />
           <Route path="/start-match-rr" element={<StartmatchRR />} />
           <Route path="/start-match-ko" element={<StartMatchKO />} />
           <Route path="/club" element={<Club />} />
@@ -240,6 +243,7 @@ function App() {
           <Route path="/TournamentPage" element={<TournamentPage />} />
           <Route path="/welcome" element={<Greeting/>} />
           <Route path="/StartMatchPlayers" element={<StartMatchPlayers />} />
+          <Route path="/StartMatchPlayersSB" element={<StartMatchPlayersSB />} />
           <Route path="/StartMatchPlayersKO" element={<StartMatchPlayersKO />} />
           <Route path="/StartMatchPlayersRR" element={<StartMatchPlayersRR />} />
           <Route path='/selection' element={<Selection />} />
