@@ -271,6 +271,7 @@ const FallOfWicketsDetails = () => {
 };
 
 const FixtureGenerator = () => {
+
   const [selectedTeamA, setSelectedTeamA] = useState('');
   const [selectedTeamB, setSelectedTeamB] = useState('');
 
@@ -289,6 +290,7 @@ const FixtureGenerator = () => {
   const [showFixtures, setShowFixtures] = useState(false);
   const navigate = useNavigate();
   const [matchResultWinner, setMatchResultWinner] = useState(null); // State to store the winner
+  
 
   const location = useLocation();
   const teamsFromTournament = location.state?.selectedTeams || [];
@@ -305,6 +307,11 @@ const FixtureGenerator = () => {
                 setMatchResultWinner(location.state.winner);
                 setWinningCaption(location.state.winningDifference); // Set the winning difference here
             }
+            // If we have a completed match, mark the fixture as completed
+        if (location.state.completedFixtureId) {
+          markFixtureAsCompleted(location.state.completedFixtureId);
+        }
+
             // If navigating with team data for live score (e.g. from Startmatch after game ends)
             if (location.state.teamA && location.state.teamB) {
                 setLiveTeamA({
@@ -387,6 +394,9 @@ const FixtureGenerator = () => {
     { x: 3, y: 2, intensity: 40 },
   ];
 
+const [completedFixtures, setCompletedFixtures] = useState([]);
+
+
   const generateFixtures = () => {
     if (!selectedTeamA || !selectedTeamB) {
       alert('Please select both teams');
@@ -395,6 +405,17 @@ const FixtureGenerator = () => {
     // Check if selected teams are the same
     if (selectedTeamA === selectedTeamB) {
       alert('Please select different teams for the fixture');
+      return;
+    }
+
+    const fixtureExists = generatedFixtures.some(
+      fixture => 
+        (fixture.teamA === selectedTeamA && fixture.teamB === selectedTeamB) ||
+        (fixture.teamA === selectedTeamB && fixture.teamB === selectedTeamA)
+    );
+
+    if (fixtureExists) {
+      alert('This fixture already exists!');
       return;
     }
 
@@ -407,6 +428,13 @@ const FixtureGenerator = () => {
 
     setGeneratedFixtures([...generatedFixtures, newFixture]);
     setShowFixtures(true);
+  };
+
+  const markFixtureAsCompleted = (fixtureId) => {
+    const fixture = generatedFixtures.find(f => f.id === fixtureId);
+    if (fixture) {
+      setCompletedFixtures([...completedFixtures, fixtureId]);
+    }
   };
 
   const handleFixtureNextClick = () => { // Renamed to be specific
@@ -534,113 +562,130 @@ const FixtureGenerator = () => {
       </header>
 
       {/* Main Content */}
-      {activeTab === 'Start Match' ? (
-            // Render Startmatch, passing the selected teams
-            <Startmatch
-                    initialTeamA={selectedTeamA}
-                    initialTeamB={selectedTeamB}
-                    origin="/match-start"
-                    onTeamsSelectedForLiveScore={handleTeamsSelected} // Pass the handler
-                    setActiveTab={setActiveTab} // Pass setActiveTab so Startmatch can switch tabs
-                    
-                />
-       ) : (
+    {activeTab === 'Start Match' ? (
+  <Startmatch
+    initialTeamA={selectedTeamA}
+    initialTeamB={selectedTeamB}
+    origin="/match-start"
+    onTeamsSelectedForLiveScore={handleTeamsSelected}
+    setActiveTab={setActiveTab}
+    fixtures={generatedFixtures}
+    completedFixtures={completedFixtures} // Pass completed fixtures
+    markFixtureAsCompleted={markFixtureAsCompleted} // Pass the completion function
+  />
+) : (
       <main className="w-full max-w-7xl px-4 sm:px-8 py-8 mx-auto">
         {activeTab === 'Fixture Generator' && (
+  <motion.div
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    transition={{ duration: 0.5 }}
+    className="w-full"
+  >
+    <h2 className="text-2xl sm:text-3xl font-bold mb-6 text-gray-800">Fixture Generator</h2>
+
+    <div className="w-full flex flex-col md:flex-row gap-4 sm:gap-6 mb-8 sm:mb-10">
+      <div className="flex-1 min-w-0">
+        <label className="block text-gray-700 mb-2 font-medium">Select Team</label>
+        <select
+          className="w-full p-3 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 bg-white"
+          value={selectedTeamA}
+          onChange={(e) => setSelectedTeamA(e.target.value)}
+        >
+          <option value="">Select Team</option>
+          {availableTeams.map(teamName => (
+            <option key={`teamA-${teamName}`} value={teamName}>{teamName}</option>
+          ))}
+        </select>
+      </div>
+
+      <div className="flex-1 min-w-0">
+        <label className="block text-gray-700 mb-2 font-medium">Opponent Team</label>
+        <select
+          className="w-full p-3 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 bg-white"
+          value={selectedTeamB}
+          onChange={(e) => setSelectedTeamB(e.target.value)}
+        >
+          <option value="">Select Team</option>
+          {availableTeams.filter(t => t !== selectedTeamA).map(teamName => (
+            <option key={`teamB-${teamName}`} value={teamName}>{teamName}</option>
+          ))}
+        </select>
+      </div>
+
+      <div className="flex items-end">
+        <motion.button
+          className="w-full sm:w-auto px-4 sm:px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg shadow-md hover:from-blue-700 hover:to-purple-700 transition-all"
+          onClick={generateFixtures}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          disabled={!selectedTeamA || !selectedTeamB || selectedTeamA === selectedTeamB}
+        >
+          Add Fixture
+        </motion.button>
+      </div>
+    </div>
+ {generatedFixtures.length > 0 && (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="w-full bg-white rounded-xl shadow-lg p-4 sm:p-6 overflow-x-auto"
+    >
+      <h3 className="text-xl font-semibold mb-6 text-gray-800 border-b pb-2">Tournament Fixtures</h3>
+      
+      <div className="space-y-4">
+        {generatedFixtures.map((fixture, index) => (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5 }}
-            className="w-full"
+            key={fixture.id}
+            className={`flex items-center justify-between rounded-lg p-4 shadow-sm ${
+              completedFixtures.includes(fixture.id) 
+                ? 'bg-green-50 border border-green-200' 
+                : 'bg-gradient-to-br from-blue-50 to-purple-50 border border-blue-200'
+            }`}
+            whileHover={{ scale: 1.01 }}
           >
-            <h2 className="text-2xl sm:text-3xl font-bold mb-6 text-gray-800">Fixture Generator</h2>
-
-            <div className="w-full flex flex-col md:flex-row gap-4 sm:gap-6 mb-8 sm:mb-10">
-              <div className="flex-1 min-w-0">
-                <label className="block text-gray-700 mb-2 font-medium">Select Team</label>
-                <select
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 bg-white"
-                  value={selectedTeamA}
-                  onChange={(e) => setSelectedTeamA(e.target.value)}
-                >
-                  <option value="">Select Team</option>
-                  {/* MODIFIED: Use availableTeams here */}
-                  {availableTeams.map(teamName => (
-                    <option key={`teamA-${teamName}`} value={teamName}>{teamName}</option>
-                  ))}
-                </select>
+            <div className="flex items-center">
+              <span className="font-medium text-gray-800 mr-2">{index + 1}.</span>
+              <div className="flex items-center">
+                <span className="font-medium text-gray-800">{fixture.teamA}</span>
+                <span className="mx-2 text-gray-500">vs</span>
+                <span className="font-medium text-gray-800">{fixture.teamB}</span>
               </div>
-
-              <div className="flex-1 min-w-0">
-                <label className="block text-gray-700 mb-2 font-medium">Opponent Team</label>
-                <select
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 bg-white"
-                  value={selectedTeamB}
-                  onChange={(e) => setSelectedTeamB(e.target.value)}
-                >
-                  <option value="">Select Team</option>
-                  {availableTeams.filter(t => t !== selectedTeamA).map(teamName => (
-                    <option key={`teamB-${teamName}`} value={teamName}>{teamName}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="flex items-end">
-                <motion.button
-                  className="w-full sm:w-auto px-4 sm:px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg shadow-md hover:from-blue-700 hover:to-purple-700 transition-all"
-                  onClick={generateFixtures}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                >
-                  Generate Fixtures
-                </motion.button>
-              </div>
+              {completedFixtures.includes(fixture.id) && (
+                <span className="ml-2 text-green-600">✓ Completed</span>
+              )}
             </div>
-
-            {showFixtures && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-                className="w-full bg-white rounded-xl shadow-lg p-4 sm:p-6 overflow-x-auto"
+            {!completedFixtures.includes(fixture.id) && (
+              <button
+                className="text-red-500 hover:text-red-700"
+                onClick={() => {
+                  setGeneratedFixtures(generatedFixtures.filter((f) => f.id !== fixture.id));
+                }}
               >
-                <h3 className="text-xl font-semibold mb-6 text-gray-800 border-b pb-2">Tournament Fixtures</h3>
-                
-                <div className="space-y-8">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {generatedFixtures.map((fixture) => (
-                      <motion.div
-                        key={fixture.id}
-                        className="bg-gradient-to-br from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-4 shadow-sm"
-                        whileHover={{ scale: 1.02 }}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="font-medium text-gray-800">{fixture.teamA}</span>
-                          <span className="mx-2 text-gray-500">vs</span>
-                          <span className="font-medium text-gray-800">{fixture.teamB}</span>
-                        </div>
-                        <div className="mt-2 flex justify-between text-sm text-gray-500">
-                          <span>Date: TBD</span>
-                          <span>Venue: TBD</span>
-                        </div>
-                      </motion.div>
-                    ))}
-                  </div>
-                </div>
-                <div className="w-full flex justify-end mt-8">
-                  <motion.button
-                    className="px-6 py-3 bg-gradient-to-r from-green-500 to-teal-500 text-white font-semibold rounded-lg shadow-md hover:from-green-600 hover:to-teal-600 transition-all"
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={handleFixtureNextClick}
-                  >
-                    Next
-                  </motion.button>
-                </div>
-              </motion.div>
+                Remove
+              </button>
             )}
           </motion.div>
-        )}
+        ))}
+      </div>
+      
+      <div className="w-full flex justify-end mt-8">
+        <motion.button
+          className="px-6 py-3 bg-gradient-to-r from-green-500 to-teal-500 text-white font-semibold rounded-lg shadow-md hover:from-green-600 hover:to-teal-600 transition-all"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={handleFixtureNextClick}
+          disabled={generatedFixtures.length === 0}
+        >
+
+            Next
+          </motion.button>
+        </div>
+      </motion.div>
+    )}
+  </motion.div>
+)}
 
         {activeTab === 'Live Score' && (
             <div className="w-full">

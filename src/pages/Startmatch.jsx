@@ -251,22 +251,33 @@ const PlayerSelector = ({ teamA, teamB, overs, origin }) => {
 // =====================================================================
 // Startmatch Component
 // =====================================================================
-const Startmatch = ({ initialTeamA = '', initialTeamB = '', origin }) => {
+
+const Startmatch = ({ 
+  initialTeamA = '', 
+  initialTeamB = '', 
+  origin, 
+  fixtures = [], 
+  completedFixtures = [],
+  markFixtureAsCompleted 
+}) => {
   console.log('Startmatch received origin prop:', origin);
+  console.log('Received fixtures:', fixtures);
 
-  const [allTeams, setAllTeams] = useState([]); // New state to store fetched teams
-  const [loadingTeams, setLoadingTeams] = useState(true); // Loading state for teams
-  const [teamFetchError, setTeamFetchError] = useState(null); // Error state for teams
+  const [allTeams, setAllTeams] = useState([]);
+  const [loadingTeams, setLoadingTeams] = useState(true);
+  const [teamFetchError, setTeamFetchError] = useState(null);
 
-  const [selectedTeamA, setSelectedTeamA] = useState('');
-  const [selectedTeamB, setSelectedTeamB] = useState('');
+  const [selectedTeamA, setSelectedTeamA] = useState(initialTeamA);
+  const [selectedTeamB, setSelectedTeamB] = useState(initialTeamB);
   const [tossWinner, setTossWinner] = useState('');
   const [tossDecision, setTossDecision] = useState('Batting');
   const [overs, setOvers] = useState('');
   const [scorer, setScorer] = useState('');
   const [showPlayerSelector, setShowPlayerSelector] = useState(false);
+  const [selectedFixture, setSelectedFixture] = useState(null);
+  const [showFixtureSelector, setShowFixtureSelector] = useState(fixtures.length > 0);
 
-  const scorers = ['John Doe', 'Jane Smith', 'Mike Johnson']; // Still hardcoded for now
+  const scorers = ['John Doe', 'Jane Smith', 'Mike Johnson'];
 
   // Effect to fetch teams from Firebase
   useEffect(() => {
@@ -276,10 +287,10 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '', origin }) => {
         const teamsCollectionRef = collection(db, 'teams');
         const teamSnapshot = await getDocs(teamsCollectionRef);
         const fetchedTeams = teamSnapshot.docs.map(doc => ({
-          id: doc.id, // The document ID is the team name, used as key
-          name: doc.data().name, // Actual team name field
+          id: doc.id,
+          name: doc.data().name,
           flagUrl: doc.data().flagUrl,
-          players: doc.data().players || [] // Ensure players array exists
+          players: doc.data().players || []
         }));
         setAllTeams(fetchedTeams);
       } catch (err) {
@@ -292,52 +303,56 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '', origin }) => {
     fetchAllTeams();
   }, []);
 
-  // Effect to update state if props change after initial render (optional but good practice)
+  // Effect to update state if props change after initial render
   useEffect(() => {
     if (initialTeamA && allTeams.length > 0) {
       setSelectedTeamA(initialTeamA);
     }
-  }, [initialTeamA, allTeams]); // Depend on allTeams to ensure it's loaded
-
-  useEffect(() => {
     if (initialTeamB && allTeams.length > 0) {
       setSelectedTeamB(initialTeamB);
     }
-  }, [initialTeamB, allTeams]); // Depend on allTeams to ensure it's loaded
+  }, [initialTeamA, initialTeamB, allTeams]);
 
-
-  // --- NEW LOGIC FOR TEAM B SELECTION FILTER ---
-  // This useEffect ensures that if Team A is changed AFTER Team B is selected,
-  // and the new Team A value is the same as Team B, Team B is reset.
   useEffect(() => {
     if (selectedTeamA && selectedTeamB === selectedTeamA) {
-      setSelectedTeamB(''); // Reset Team B if it clashes with Team A
+      setSelectedTeamB('');
     }
   }, [selectedTeamA, selectedTeamB]);
-  // --- END NEW LOGIC ---
 
+  const handleFixtureSelect = (fixture) => {
+    setSelectedFixture(fixture);
+    setSelectedTeamA(fixture.teamA);
+    setSelectedTeamB(fixture.teamB);
+    setShowFixtureSelector(false);
+  };
+
+  const handleManualTeamSelect = () => {
+    setSelectedFixture(null);
+    setSelectedTeamA('');
+    setSelectedTeamB('');
+    setShowFixtureSelector(false);
+  };
 
   const handleNext = () => {
     if (!selectedTeamA || !selectedTeamB || !overs) {
       alert('Please select both teams and enter overs.');
       return;
     }
-    if (selectedTeamA === selectedTeamB) { // Double check for direct selection
-        alert('Teams A and B cannot be the same. Please select different teams.');
-        return;
+    if (selectedTeamA === selectedTeamB) {
+      alert('Teams A and B cannot be the same. Please select different teams.');
+      return;
     }
 
-    // Ensure the selected teams exist and have players
     const teamAData = allTeams.find(team => team.name === selectedTeamA);
     const teamBData = allTeams.find(team => team.name === selectedTeamB);
 
     if (!teamAData) {
-        alert(`Team "${selectedTeamA}" not found in database.`);
-        return;
+      alert(`Team "${selectedTeamA}" not found in database.`);
+      return;
     }
     if (!teamBData) {
-        alert(`Team "${selectedTeamB}" not found in database.`);
-        return;
+      alert(`Team "${selectedTeamB}" not found in database.`);
+      return;
     }
     if (!teamAData.players || teamAData.players.length === 0) {
       alert(`Team "${selectedTeamA}" has no players registered. Please add players via Admin Panel.`);
@@ -351,40 +366,44 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '', origin }) => {
     setShowPlayerSelector(true);
   };
 
-  // If showing player selector, render it
   if (showPlayerSelector) {
-    // Pass the full team objects (including players array) to PlayerSelector
     const teamAObject = allTeams.find(team => team.name === selectedTeamA);
     const teamBObject = allTeams.find(team => team.name === selectedTeamB);
+    const currentFixture = selectedFixture || {
+      id: Date.now(),
+      teamA: selectedTeamA,
+      teamB: selectedTeamB,
+      date: new Date().toISOString()
+    };
 
+    
     return (
       <PlayerSelector
         teamA={teamAObject}
         teamB={teamBObject}
         overs={overs}
         origin={origin}
+        currentFixture={currentFixture} // Pass the current fixture
       />
     );
   }
 
-  const hasValue = (value) => value !== '' && value !== null && value !== undefined;
-
   if (loadingTeams) {
     return (
-        <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
-            <p className="text-xl">Loading Teams...</p>
-        </div>
+      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
+        <p className="text-xl">Loading Teams...</p>
+      </div>
     );
   }
 
   if (teamFetchError) {
-      return (
-          <div className="min-h-screen bg-gray-900 text-red-500 flex items-center justify-center">
-              <p className="text-xl">Error: {teamFetchError}</p>
-          </div>
-      );
+    return (
+      <div className="min-h-screen bg-gray-900 text-red-500 flex items-center justify-center">
+        <p className="text-xl">Error: {teamFetchError}</p>
+      </div>
+    );
   }
-  // Check if there are at least two teams to select from
+
   if (allTeams.length < 2) {
     return (
       <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
@@ -395,6 +414,7 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '', origin }) => {
     );
   }
 
+  const hasValue = (value) => value !== '' && value !== null && value !== undefined;
 
   return (
     <div
@@ -424,6 +444,56 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '', origin }) => {
             Start a Match
           </motion.h1>
 
+          {showFixtureSelector && fixtures.length > 0 && (
+            <motion.div
+              className="bg-white bg-opacity-90 rounded-xl shadow-xl p-6 mb-8 border border-blue-100"
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <h2 className="text-xl font-semibold mb-4 text-blue-800">Select a Fixture</h2>
+              <div className="space-y-3 max-h-60 overflow-y-auto">
+                 {fixtures.map((fixture, index) => (
+    <motion.div
+      key={fixture.id}
+      className={`p-4 rounded-lg cursor-pointer ${
+        selectedFixture?.id === fixture.id ? 'bg-blue-100 border-2 border-blue-300' : 
+        completedFixtures.includes(fixture.id) ? 'bg-green-50 border border-green-200' : 
+        'bg-gray-50 hover:bg-gray-100 border border-gray-200'
+      }`}
+      onClick={() => !completedFixtures.includes(fixture.id) && handleFixtureSelect(fixture)}
+      whileHover={{ scale: completedFixtures.includes(fixture.id) ? 1 : 1.01 }}
+    >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-4">
+                        <span className="font-medium text-gray-700">{index + 1}.</span>
+                        <div>
+                          <span className="font-medium">{fixture.teamA}</span>
+                          <span className="mx-2 text-gray-500">vs</span>
+                          <span className="font-medium">{fixture.teamB}</span>
+                        </div>
+                      </div>
+                      {selectedFixture?.id === fixture.id && (
+                        <span className="text-green-500">✓ Selected</span>
+                      )}
+                    </div>
+                    {completedFixtures.includes(fixture.id) && (
+        <span className="text-green-600">✓ Completed</span>
+      )}
+                  </motion.div>
+                ))}
+              </div>
+              <div className="mt-4">
+                <button
+                  className="text-blue-600 hover:text-blue-800 font-medium"
+                  onClick={handleManualTeamSelect}
+                >
+                  Or select teams manually
+                </button>
+              </div>
+            </motion.div>
+          )}
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full">
             {/* Left Column */}
             <motion.div
@@ -437,7 +507,17 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '', origin }) => {
                 className="min-h-[300px] bg-gradient-to-br from-blue-50 to-indigo-50 bg-opacity-90 rounded-xl shadow-xl p-6 w-full border border-blue-100 flex flex-col"
                 whileHover={{ scale: 1.01 }}
               >
-                <h2 className="text-xl font-semibold mb-4 text-blue-800">Select Teams</h2>
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-semibold text-blue-800">Selected Teams</h2>
+                  {fixtures.length > 0 && (
+                    <button
+                      className="text-sm text-blue-600 hover:text-blue-800"
+                      onClick={() => setShowFixtureSelector(true)}
+                    >
+                      {selectedFixture ? 'Change fixture' : 'Select from fixtures'}
+                    </button>
+                  )}
+                </div>
                 <div className="space-y-4 w-full flex-1">
                   {/* Team A */}
                   <div className="w-full">
@@ -446,6 +526,7 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '', origin }) => {
                       className={`w-full p-3 border-2 border-blue-200 rounded-lg text-gray-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 ${hasValue(selectedTeamA) ? 'bg-gray-200 text-gray-700' : 'bg-white'}`}
                       value={selectedTeamA}
                       onChange={(e) => setSelectedTeamA(e.target.value)}
+                      disabled={selectedFixture}
                     >
                       <option value="">Select Team</option>
                       {allTeams.map(team => (
@@ -460,13 +541,12 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '', origin }) => {
                       className={`w-full p-3 border-2 border-blue-200 rounded-lg text-gray-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 ${hasValue(selectedTeamB) ? 'bg-gray-200 text-gray-700' : 'bg-white'}`}
                       value={selectedTeamB}
                       onChange={(e) => setSelectedTeamB(e.target.value)}
+                      disabled={selectedFixture}
                     >
                       <option value="">Select Team</option>
-                      {/* --- MODIFIED LINE HERE --- */}
                       {allTeams.filter(t => t.name !== selectedTeamA).map(team => (
                         <option key={`teamB-${team.id}`} value={team.name}>{team.name}</option>
                       ))}
-                      {/* --- END MODIFIED LINE --- */}
                     </select>
                   </div>
                 </div>
@@ -573,7 +653,7 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '', origin }) => {
           </div>
 
 
-          {/* Next Button */}
+         {/* Next Button */}
           <motion.div
             className="mt-8 text-center w-full"
             initial={{ opacity: 0, y: 20 }}

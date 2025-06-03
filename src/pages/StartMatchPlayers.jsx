@@ -33,7 +33,7 @@ class ErrorBoundary extends Component {
   }
 }
 
-function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd }) {
+function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd, currentFixture }) {
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -539,13 +539,45 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd }) {
         winnerTeamName = teamB.name;
       }
 
+       if (currentFixture?.id) {
+      markFixtureAsCompleted(currentFixture.id);
+    }
+
       const originPage = location.state?.origin;
       console.log(originPage);
       if (originPage) {
-        navigate(originPage, { state: { activeTab: 'Match Results', winner: winnerTeamName } });
-      } else {
-        navigate('/');
+  navigate(originPage, { 
+      state: { 
+        activeTab: 'Match Results', 
+        winner: winnerTeamName,
+        completedFixtureId: currentFixture?.id,
+        teamA: {
+          name: teamA.name,
+          flagUrl: teamA.flagUrl,
+          score: isChasing ? targetScore - 1 : playerScore,
+          wickets: isChasing ? 0 : outCount,
+          balls: isChasing ? 0 : (overNumber - 1) * 6 + validBalls
+        },
+        teamB: {
+          name: teamB.name,
+          flagUrl: teamB.flagUrl,
+          score: isChasing ? playerScore : targetScore - 1,
+          wickets: isChasing ? outCount : 0,
+          balls: isChasing ? (overNumber - 1) * 6 + validBalls : 0
+        },
+        winningDifference: gameFinished ? 
+          (playerScore < targetScore - 1 ? 
+            `${targetScore - 1 - playerScore} runs` : 
+            (playerScore > targetScore - 1 ? 
+              `${10 - outCount} wickets` : 
+              'Tie'))
+          : ''
       }
+    });
+} else {
+  navigate('/');
+}
+
     } else if (modalContent.title === 'Innings Break') {
       resetInnings();
       setIsChasing(true);
