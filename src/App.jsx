@@ -35,12 +35,14 @@ import Tabletoppers from './pages/Tabletoppers';
 
 
 import Startmatch from './pages/Startmatch';
+import StartmatchRR from './pages/StartmatchRR';
 import StartMatchKO from './pages/StartMatchKO';
 import Tournaments from './pages/Tournaments';
 import TeamDetails from './pages/TeamDetails';
 import Highlights from './pages/Highlights'
-import MatchStart from './pages/MatchStart';
+import MatchStartRR from './pages/MatchStartRR';
 import MatchStartSB from './pages/MatchStartSB';
+import MatchStart from './pages/MatchStart';
 import MatchStartKO from './pages/MatchStartKO';
 
 import { ToastContainer } from "react-toastify";
@@ -69,6 +71,7 @@ import TeamProfile from './components/kumar/team_profile';
 import Tournament_nextpg from './components/kumar/tournament_nextpg';
 import Greeting from './pages/greeting';
 import StartMatchPlayers from './pages/StartMatchPlayers';
+import StartMatchPlayersRR from './pages/StartMatchPlayersRR';
 import StartMatchPlayersKO from './pages/StartMatchPlayersKO';
 import Selection from './components/kumar/selection';
 import Selection1 from './components/kumar/Selection1';
@@ -183,6 +186,7 @@ function App() {
           <Route path="/landingpage" element={userProfile ? <Landingpage menuOpen={isSidebarOpen} setMenuOpen={setIsSidebarOpen} userProfile={userProfile} /> : <Login />} /> {/* Protect route */}
           <Route path="/go-live" element={<Golive />} />
           <Route path="/start-match" element={<Startmatch />} />
+          <Route path="/start-match-rr" element={<StartmatchRR />} />
           <Route path="/start-match-ko" element={<StartMatchKO />} />
           <Route path="/club" element={<Club />} />
           <Route path="/message" element={<Message/>} />
@@ -211,6 +215,7 @@ function App() {
           <Route path="/team" element={<TeamDetails/>} />
           <Route path="/highlights" element={<Highlights/>} />
           <Route path="/match-start" element={<MatchStart/>} />
+          <Route path="/match-start-rr" element={<MatchStartRR/>} />
           <Route path="/match-start-sb" element={<MatchStartSB/>} />
           <Route path="/match-start-ko" element={<MatchStartKO/>} />
 
@@ -236,6 +241,7 @@ function App() {
           <Route path="/welcome" element={<Greeting/>} />
           <Route path="/StartMatchPlayers" element={<StartMatchPlayers />} />
           <Route path="/StartMatchPlayersKO" element={<StartMatchPlayersKO />} />
+          <Route path="/StartMatchPlayersRR" element={<StartMatchPlayersRR />} />
           <Route path='/selection' element={<Selection />} />
           <Route path='/selection1' element={<Selection1 />} />
           <Route path='/flowchart' element={<Flowchart />} />

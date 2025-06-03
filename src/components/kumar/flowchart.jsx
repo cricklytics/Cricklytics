@@ -271,7 +271,7 @@ const Flowchart = ({ teams, groups, currentPhase, matches, groupResults, tournam
   }));
 
   const handleStartMatch = () => {
-    navigate('/match-start', {
+    navigate('/match-start-rr', {
       state: {
         teams,
         groups,
@@ -851,7 +851,7 @@ const TournamentBracket = () => {
           </div>
         )}
         <button
-          onClick={() => navigate('/match-start', {
+          onClick={() => navigate('/match-start-rr', {
             state: {
               teams,
               groups,

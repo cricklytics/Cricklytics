@@ -18,7 +18,7 @@ import ipl2020 from '../assets/sophita/HomePage/2020.jpeg';
 import ipl2018 from '../assets/sophita/HomePage/2018.jpeg';
 import advertisement1 from '../assets/sophita/HomePage/Advertisement1.webp'
 import { useNavigate, useLocation } from 'react-router-dom'; // Import useLocation
-import Startmatch from '../pages/Startmatch'; // Assuming this is StartmatchPlayers
+import Startmatch from './Startmatch'; // Assuming this is StartmatchPlayers
 import nav from '../assets/kumar/right-chevron.png';
 import placeholderFlag from '../assets/sophita/HomePage/Netherland.jpeg'; // ADD a placeholder image (ensure this path is correct)
 
