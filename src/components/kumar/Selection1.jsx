@@ -534,7 +534,7 @@ useEffect(() => {
       alert('No live matches available.');
       return;
     }
-    navigate('/start-match', {
+    navigate('/match-start-ko', {
       state: {
         teams,
         matches,
@@ -548,6 +548,7 @@ useEffect(() => {
         liveMatchIndex,
         tournamentWinner,
         origin: '/selection',
+        activeTab: 'Start Match'
       },
     });
   };
