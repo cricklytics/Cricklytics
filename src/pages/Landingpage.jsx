@@ -524,15 +524,6 @@ useEffect(() => {
       onClick={handleOpenMessagesPage}
     />
   </div>
-
-  {/* Admin Panel Icon */}
-  <div className="relative">
-    <FaUserShield
-      className="cursor-pointer text-white transition-transform duration-200 hover:scale-110"
-      size={24}
-      onClick={() => navigate("/admin")}
-    />
-  </div>
 </div>
 
         </nav>
