@@ -1,23 +1,69 @@
-import React, { useState } from 'react';
+// src/components/LeaderboardContent.jsx (updated)
+import React, { useState, useEffect } from 'react';
+import { db } from '../../../firebase'; // Adjust path based on your file structure
+import { collection, query, orderBy, getDocs, onSnapshot } from 'firebase/firestore';
 
 const LeaderboardContent = () => {
   const [showMore, setShowMore] = useState(false);
+  const [battingStats, setBattingStats] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Batting stats data
-  const battingStats = [
-    { num: 1, name: 'Sanjay Singh', mat: 6, inn: 6, runs: 286, hs: 108, no: 1, avg: 98.20, sr: 177.25, gs: 17, as: 25, sos: 2, centuries: 1 },
-    { num: 2, name: 'Amour Sheikh', mat: 7, inn: 7, runs: 285, hs: 84, no: 0, avg: 37.96, sr: 148.04, gs: 12, as: 27, sos: 3, centuries: 0 },
-    { num: 3, name: 'Mukeshringhshakhavat', mat: 6, inn: 6, runs: 266, hs: 96, no: 1, avg: 91.30, sr: 181.56, gs: 20, as: 17, sos: 3, centuries: 0 },
-    { num: 4, name: 'Sankaja Pareek', mat: 7, inn: 7, runs: 208, hs: 78, no: 1, avg: 34.67, sr: 150.72, gs: 8, as: 25, sos: 1, centuries: 0 },
-    { num: 5, name: 'Ajay S Shekhawat', mat: 4, inn: 4, runs: 178, hs: 109, no: 1, avg: 93.33, sr: 160.36, gs: 8, as: 19, sos: 0, centuries: 1 },
-    { num: 6, name: 'Aniruth Sharma', mat: 7, inn: 7, runs: 178, hs: 64, no: 1, avg: 29.97, sr: 141.27, gs: 3, as: 23, sos: 2, centuries: 0 },
-    { num: 7, name: 'Rohit Bhatt', mat: 7, inn: 7, runs: 177, hs: 87, no: 0, avg: 25.39, sr: 160.48, gs: 3, as: 28, sos: 1, centuries: 0 },
-    { num: 8, name: 'Pushpendra Indoria', mat: 3, inn: 3, runs: 176, hs: 95, no: 0, avg: 58.97, sr: 167.62, gs: 8, as: 17, sos: 2, centuries: 0 },
-    { num: 9, name: 'Surya', mat: 4, inn: 4, runs: 172, hs: 96, no: 1, avg: 97.33, sr: 147.01, gs: 11, as: 13, sos: 1, centuries: 0 },
-    { num: 10, name: 'Ashish Sharma', mat: 6, inn: 6, runs: 171, hs: 94, no: 1, avg: 34.20, sr: 113.58, gs: 7, as: 24, sos: 1, centuries: 0 },
-    { num: 11, name: 'Haveen Kumawat', mat: 5, inn: 5, runs: 170, hs: 67, no: 0, avg: 34.00, sr: 134.92, gs: 7, as: 17, sos: 2, centuries: 0 },
-    { num: 12, name: 'Neeraj Singh Blake', mat: 7, inn: 6, runs: 166, hs: 42, no: 2, avg: 41.50, sr: 182.42, gs: 12, as: 8, sos: 0, centuries: 0 },
-  ];
+  useEffect(() => {
+    const fetchPlayers = async () => {
+      try {
+        const q = query(collection(db, "clubPlayers"), orderBy("runs", "desc")); // Order by runs for batting leaderboard
+
+        // Use onSnapshot for real-time updates
+        const unsubscribe = onSnapshot(q, (querySnapshot) => {
+          const players = [];
+          querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            players.push({
+              id: doc.id, // Good to have the doc ID
+              name: data.name,
+              matches: data.careerStats?.batting?.matches,
+              innings: data.careerStats?.batting?.innings || 0,
+              runs: data.careerStats?.batting?.runs || 0,
+              highestScore: data.careerStats?.batting?.highest || 0,
+              notOuts: data.careerStats?.batting?.notOuts || 0,
+              average: data.careerStats?.batting?.average || 0,
+              strikeRate: data.careerStats?.batting?.strikeRate || 0,
+              centuries: data.careerStats?.batting?.centuries || 0,
+              fifties: data.careerStats?.batting?.fifties || 0,
+              fours: data.careerStats?.batting?.fours || 0,
+              sixes: data.careerStats?.batting?.sixes || 0,
+              // Add other fields you want to display, e.g., team, image, role
+            });
+          });
+          // Sort players by runs again, in case Firestore's default order isn't perfect or for client-side refinement
+          setBattingStats(players.sort((a, b) => b.runs - a.runs));
+          setLoading(false);
+        }, (err) => {
+          console.error("Error fetching club players:", err);
+          setError("Failed to load players: " + err.message);
+          setLoading(false);
+        });
+
+        // Cleanup subscription on component unmount
+        return () => unsubscribe();
+      } catch (err) {
+        console.error("Failed to fetch club players:", err);
+        setError("Failed to load players: " + err.message);
+        setLoading(false);
+      }
+    };
+
+    fetchPlayers();
+  }, []);
+
+  if (loading) {
+    return <div className="text-white text-center p-4">Loading leaderboard...</div>;
+  }
+
+  if (error) {
+    return <div className="text-red-500 text-center p-4">Error: {error}</div>;
+  }
 
   return (
     <div className="p-4 max-w-6xl mx-auto bg-gray-900 min-h-screen">
@@ -39,28 +85,28 @@ const LeaderboardContent = () => {
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase">N/O</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase">AVG</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase">SR</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase">GS</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase">AS</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase">SOS</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase">100%</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase">100s</th> {/* Changed from 100% to 100s */}
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase">50s</th> {/* Added 50s */}
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase">4s</th> {/* Added 4s */}
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-300 uppercase">6s</th> {/* Added 6s */}
               </tr>
             </thead>
             <tbody className="bg-gray-800 divide-y divide-gray-700">
-              {battingStats.slice(0, showMore ? battingStats.length : 5).map((player) => (
-                <tr key={player.num} className="hover:bg-gray-700">
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-300">{player.num}</td>
+              {battingStats.slice(0, showMore ? battingStats.length : 5).map((player, index) => (
+                <tr key={player.id} className="hover:bg-gray-700">
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-300">{index + 1}</td> {/* Use index + 1 for numbering */}
                   <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-white">{player.name}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-300">{player.mat}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-300">{player.inn}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-300">{player.matches}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-300">{player.innings}</td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-300">{player.runs}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-300">{player.hs}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-300">{player.no}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-300">{player.avg}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-300">{player.sr}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-300">{player.gs}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-300">{player.as}</td>
-                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-300">{player.sos}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-300">{player.highestScore}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-300">{player.notOuts}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-300">{player.average.toFixed(2)}</td> {/* Format to 2 decimal places */}
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-300">{player.strikeRate.toFixed(2)}</td> {/* Format to 2 decimal places */}
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-300">{player.centuries}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-300">{player.fifties}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-300">{player.fours}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-300">{player.sixes}</td>
                 </tr>
               ))}
             </tbody>
@@ -69,14 +115,16 @@ const LeaderboardContent = () => {
       </div>
 
       {/* Load More Button */}
-      <div className="mt-4 text-center">
-        <button
-          onClick={() => setShowMore(!showMore)}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm transition-colors"
-        >
-          {showMore ? 'SHOW LESS' : 'LOAD MORE'}
-        </button>
-      </div>
+      {battingStats.length > 5 && ( // Only show button if there are more than 5 players
+        <div className="mt-4 text-center">
+          <button
+            onClick={() => setShowMore(!showMore)}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm transition-colors"
+          >
+            {showMore ? 'SHOW LESS' : 'LOAD MORE'}
+          </button>
+        </div>
+      )}
     </div>
   );
 };

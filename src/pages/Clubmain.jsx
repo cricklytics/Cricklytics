@@ -1,108 +1,17 @@
 import { useState, useEffect } from 'react';
-import { FiSearch, FiFilter, FiStar, FiMapPin, FiUsers, FiChevronDown } from 'react-icons/fi';
-import { Link } from 'react-router-dom';
+import { FiSearch, FiFilter, FiStar, FiMapPin, FiUsers, FiChevronDown, FiPlusCircle } from 'react-icons/fi';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
-import { useNavigate } from "react-router-dom";
-import colomb from '../assets/yogesh/clubimg/Colomb.png';
-import royals from '../assets/yogesh/clubimg/royals.jpeg';
-import EasternEaglesCC from '../assets/yogesh/clubimg/EasternEaglesCC.jpeg';
-import HambantotaHawks from "../assets/yogesh/clubimg/HambantotaHawks.jpeg";
-import NorthernKnights from "../assets/yogesh/clubimg/NorthernKnightsCC.png"
-import KandyKingsCricket from "../assets/yogesh/clubimg/KandyKings.jpeg"
-import GalleGladiators from "../assets/yogesh/clubimg/GalleGladiators.png"
 import backButton from '../assets/kumar/right-chevron.png';
 
-// Mock data remains the same
-const mockClubs = [
-  {
-    id: 1,
-    name: 'Royal Cricket Club',
-    location: 'Colombo',
-    established: 1985,
-    members: 120,
-    category: 'Premier',
-    logo: royals,
-    description: 'One of the oldest and most prestigious cricket clubs in the country with multiple championship wins.',
-    upcomingMatches: ['vs. Lions CC (May 15)', 'vs. Titans CC (May 22)'],
-    facilities: ['2 turf pitches', 'Indoor nets', 'Gym', 'Swimming pool']
-  },
-  {
-    id: 2,
-    name: 'Colombo Lions CC',
-    location: 'Colombo',
-    established: 1992,
-    members: 85,
-    category: 'First Class',
-    logo: colomb,
-    description: 'Competitive club with strong youth development programs.',
-    upcomingMatches: ['vs. Royal CC (May 15)', 'vs. Kandy Kings (May 29)'],
-    facilities: ['Turf pitch', 'Practice nets', 'Clubhouse']
-  },
-  {
-    id: 3,
-    name: 'Kandy Kings Cricket Club',
-    location: 'Kandy',
-    established: 1978,
-    members: 95,
-    category: 'Premier',
-    logo: KandyKingsCricket,
-    description: 'Traditional club known for producing national team players.',
-    upcomingMatches: ['vs. Galle Gladiators (May 18)', 'vs. Colombo Lions (May 29)'],
-    facilities: ['3 turf pitches', 'Indoor academy', 'Gym', 'Sauna']
-  },
-  {
-    id: 4,
-    name: 'Galle Gladiators',
-    location: 'Galle',
-    established: 2005,
-    members: 65,
-    category: 'First Class',
-    logo: GalleGladiators,
-    description: 'Community-focused club with emphasis on local talent development.',
-    upcomingMatches: ['vs. Galle Gladiators (May 25)', 'vs. Hambantota Hawks (Jun 2)'],
-    facilities: ['Practice nets', 'Clubhouse']
-  },
-  {
-    id: 6,
-    name: 'Hambantota Hawks',
-    location: 'Hambantota',
-    established: 2015,
-    members: 45,
-    category: 'Division II',
-    logo: HambantotaHawks,
-    description: 'New club with state-of-the-art facilities in the southern region.',
-    upcomingMatches: ['vs. Southern Strikers (Jun 2)', 'vs. Eastern Eagles (Jun 9)'],
-    facilities: ['Turf pitch', 'Indoor nets', 'Gym']
-  },
-  {
-    id: 7,
-    name: 'Eastern Eagles CC',
-    location: 'Trincomalee',
-    established: 2008,
-    members: 55,
-    category: 'Division I',
-    logo: EasternEaglesCC,
-    description: 'Promoting cricket in the eastern province with dedicated coaching programs.',
-    upcomingMatches: ['vs. Hambantota Hawks (Jun 9)', 'vs. Northern Knights (Jun 16)'],
-    facilities: ['Practice nets', 'Clubhouse']
-  },
-  {
-    id: 8,
-    name: 'Northern Knights CC',
-    location: 'Jaffna',
-    established: 2012,
-    members: 60,
-    category: 'Division I',
-    logo: NorthernKnights,
-    description: 'Revitalizing cricket in the northern region after decades of conflict.',
-    upcomingMatches: ['vs. Eastern Eagles (Jun 16)', 'vs. Western Warriors (Jun 23)'],
-    facilities: ['Turf pitch', 'Practice nets']
-  }
-];
+// Firebase imports
+import { db, auth, storage, serverTimestamp } from '../firebase';
+import { collection, addDoc, query, where, onSnapshot } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { onAuthStateChanged } from 'firebase/auth';
 
 const Clubsmain = () => {
-  // All state declarations remain the same
   const navigate = useNavigate();
   const [clubs, setClubs] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -112,39 +21,177 @@ const Clubsmain = () => {
     category: '',
     establishedAfter: ''
   });
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [newClub, setNewClub] = useState({
+    name: '',
+    location: '',
+    established: '',
+    members: '',
+    category: '',
+    logoFile: null,
+    logoUrl: '',
+    description: '',
+    upcomingMatchesText: '', // New: single text input for upcoming matches
+    facilitiesText: '',       // New: single text input for facilities
+    email: '',
+    website: '',
+    phone: '',
+    achievementsText: '' // New: single text input for achievements
+  });
+  const [user, setUser] = useState(null);
+  const [loadingClubs, setLoadingClubs] = useState(true);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [error, setError] = useState(null);
 
-  // Filter function remains the same
+  useEffect(() => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      if (currentUser) {
+        fetchClubs(currentUser.uid);
+      } else {
+        setClubs([]);
+        setLoadingClubs(false);
+      }
+    });
+
+    return () => unsubscribeAuth();
+  }, []);
+
+  const fetchClubs = (userId) => {
+    setLoadingClubs(true);
+    const q = query(collection(db, 'clubs'), where('userId', '==', userId));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const clubsData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setClubs(clubsData);
+      setLoadingClubs(false);
+    }, (err) => {
+      console.error("Error fetching clubs:", err);
+      setError("Failed to load clubs. Please try again.");
+      setLoadingClubs(false);
+    });
+
+    return () => unsubscribe();
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setNewClub(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleFileChange = (e) => {
+    setNewClub(prev => ({ ...prev, logoFile: e.target.files[0] }));
+  };
+
+  const handleAddClub = async (e) => {
+    e.preventDefault();
+    setError(null);
+
+    if (!user) {
+      setError("You must be logged in to add a club.");
+      return;
+    }
+
+    try {
+      setUploadingLogo(true);
+      let logoDownloadURL = newClub.logoUrl; // Default to provided URL if any
+      if (newClub.logoFile) {
+        const storageRef = ref(storage, `club_logos/${user.uid}/${newClub.logoFile.name}`);
+        const uploadTask = await uploadBytes(storageRef, newClub.logoFile);
+        logoDownloadURL = await getDownloadURL(uploadTask.ref);
+      } else if (!logoDownloadURL) {
+        // If no file uploaded and no default URL, use a placeholder
+        logoDownloadURL = "https://via.placeholder.com/60";
+      }
+      setUploadingLogo(false);
+
+      // Parse upcomingMatches and facilities from comma-separated strings
+      const parseMatches = (text) => {
+        // Expected format: "opponent - date - venue, opponent - date - venue"
+        return text.split(',').map(matchStr => {
+          const parts = matchStr.trim().split('-').map(part => part.trim());
+          if (parts.length >= 3) {
+            return { opponent: parts[0], date: parts[1], venue: parts[2] };
+          }
+          return null;
+        }).filter(match => match !== null);
+      };
+
+      const parseList = (text) => {
+        return text.split(',').map(item => item.trim()).filter(item => item !== '');
+      };
+
+      const clubData = {
+        name: newClub.name,
+        location: newClub.location,
+        established: parseInt(newClub.established),
+        members: parseInt(newClub.members),
+        category: newClub.category,
+        logo: logoDownloadURL,
+        description: newClub.description,
+        upcomingMatches: parseMatches(newClub.upcomingMatchesText), // Use parsed array of objects
+        facilities: parseList(newClub.facilitiesText), // Use parsed array
+        contact: {
+          email: newClub.email,
+          website: newClub.website,
+          phone: newClub.phone
+        },
+        achievements: parseList(newClub.achievementsText), // Use parsed array
+        userId: user.uid,
+        createdAt: serverTimestamp()
+      };
+
+      await addDoc(collection(db, 'clubs'), clubData);
+      setIsModalOpen(false);
+      // Reset form fields
+      setNewClub({
+        name: '',
+        location: '',
+        established: '',
+        members: '',
+        category: '',
+        logoFile: null,
+        logoUrl: '',
+        description: '',
+        upcomingMatchesText: '',
+        facilitiesText: '',
+        email: '',
+        website: '',
+        phone: '',
+        achievementsText: ''
+      });
+    } catch (err) {
+      console.error("Error adding club:", err);
+      setError("Failed to add club. Please check your inputs and try again.");
+      setUploadingLogo(false);
+    }
+  };
+
   const filterClubs = () => {
     return clubs.filter(club => {
-      const matchesSearch = club.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         club.location.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      const matchesFilters = 
+      const matchesSearch = club.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        club.location.toLowerCase().includes(searchTerm.toLowerCase());
+
+      const matchesFilters =
         (filters.location === '' || club.location === filters.location) &&
         (filters.category === '' || club.category === filters.category) &&
         (filters.establishedAfter === '' || club.established >= parseInt(filters.establishedAfter));
-      
+
       return matchesSearch && matchesFilters;
     });
   };
 
-  // Derived data remains the same
   const locations = [...new Set(clubs.map(club => club.location))];
   const categories = [...new Set(clubs.map(club => club.category))];
   const filteredClubs = filterClubs();
 
-  useEffect(() => {
-    // Same useEffect
-    const timer = setTimeout(() => {
-      setClubs(mockClubs);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, []);
-
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100">
-      {/* Header - adjusted for mobile */}
-      <motion.header 
+      {/* Header */}
+      <motion.header
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
@@ -153,14 +200,13 @@ const Clubsmain = () => {
         <div className="container mx-auto flex justify-between items-center">
           <div className="flex items-center space-x-3">
             <button
-              onClick={()  => navigate("/landingpage")} // Navigates back
+              onClick={() => navigate("/landingpage")}
               className="px-2 py-1 rounded-md text-sm md:text-base transition-colors"
             >
-              <img 
-                src={backButton} 
+              <img
+                src={backButton}
                 alt="Back"
                 className="h-7 w-7 md:h-10 w-10 mt-2 ml-1 cursor-pointer transform rotate-180"
-                // onClick={() => window.history.back()}
               />
             </button>
             <h1 className="text-xl md:text-3xl font-bold">Cricket Association Clubs</h1>
@@ -169,29 +215,29 @@ const Clubsmain = () => {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             className="px-3 py-1 md:px-4 md:py-2 bg-green-600 hover:bg-green-700 rounded-md text-white text-sm md:text-base font-medium transition-colors"
+            onClick={() => { /* Implement Join Now logic or navigate to a join page */ }}
           >
             Join Now
           </motion.button>
         </div>
       </motion.header>
 
-      {/* Main Content - adjusted layout for mobile */}
+      {/* Main Content */}
       <div className="container mx-auto px-2 sm:px-4 py-4 flex flex-col md:flex-row gap-4 md:gap-8 items-start">
         {/* Video Column - hidden on small screens */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.2, duration: 0.5 }}
           className="hidden md:block w-full md:w-1/3 lg:w-1/4 bg-gray-800 p-4 md:p-6 rounded-lg shadow-md sticky top-20 h-fit border border-gray-700"
         >
-          {/* Keep the same content here */}
-          <motion.h2 
+          <motion.h2
             whileHover={{ scale: 1.02 }}
             className="text-xl font-bold text-blue-300 mb-4"
           >
             Cricket Clubs Network
           </motion.h2>
-          
+
           <motion.div
             whileHover={{ scale: 1.02 }}
             transition={{ type: "spring", stiffness: 400, damping: 10 }}
@@ -202,9 +248,9 @@ const Clubsmain = () => {
               autoplay
             />
           </motion.div>
-          
+
           <div className="space-y-4 mt-4">
-            <motion.div 
+            <motion.div
               whileHover={{ y: -2 }}
               className="p-3 bg-gray-750 rounded-lg border border-gray-600"
             >
@@ -213,7 +259,7 @@ const Clubsmain = () => {
                 Our top-tier clubs with international standard facilities and players.
               </p>
             </motion.div>
-            <motion.div 
+            <motion.div
               whileHover={{ y: -2 }}
               className="p-3 bg-gray-750 rounded-lg border border-gray-600"
             >
@@ -222,7 +268,7 @@ const Clubsmain = () => {
                 Clubs across all regions promoting cricket at grassroots level.
               </p>
             </motion.div>
-            <motion.div 
+            <motion.div
               whileHover={{ y: -2 }}
               className="p-3 bg-gray-750 rounded-lg border border-gray-600"
             >
@@ -234,17 +280,17 @@ const Clubsmain = () => {
           </div>
         </motion.div>
 
-        {/* Clubs List Column - adjusted for mobile */}
+        {/* Clubs List Column */}
         <div className="w-full md:w-2/3 lg:w-3/4">
-          {/* Search and Filter Section - adjusted for mobile */}
-          <motion.div 
+          {/* Search and Filter Section */}
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
             className="bg-gray-800 rounded-lg shadow-md p-3 sm:p-4 mb-4 sm:mb-6 border border-gray-700"
           >
             <div className="flex flex-col md:flex-row gap-3">
-              <motion.div 
+              <motion.div
                 whileFocus={{ scale: 1.01 }}
                 className="relative flex-grow"
               >
@@ -259,7 +305,7 @@ const Clubsmain = () => {
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </motion.div>
-              <motion.button 
+              <motion.button
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => setFilterOpen(!filterOpen)}
@@ -269,12 +315,22 @@ const Clubsmain = () => {
                 <span className="text-gray-300">Filters</span>
                 {filterOpen ? <FiChevronDown className="transform rotate-180 text-gray-300" /> : <FiChevronDown className="text-gray-300" />}
               </motion.button>
+              {user && (
+                <motion.button
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setIsModalOpen(true)}
+                  className="flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors text-white text-sm sm:text-base"
+                >
+                  <FiPlusCircle /> Add Club
+                </motion.button>
+              )}
             </div>
 
-            {/* Filter Dropdown - adjusted grid for mobile */}
+            {/* Filter Dropdown */}
             <AnimatePresence>
               {filterOpen && (
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }}
@@ -290,7 +346,7 @@ const Clubsmain = () => {
                         <select
                           className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white text-sm"
                           value={filters.location}
-                          onChange={(e) => setFilters({...filters, location: e.target.value})}
+                          onChange={(e) => setFilters({ ...filters, location: e.target.value })}
                         >
                           <option value="">All Locations</option>
                           {locations.map(location => (
@@ -305,7 +361,7 @@ const Clubsmain = () => {
                         <select
                           className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white text-sm"
                           value={filters.category}
-                          onChange={(e) => setFilters({...filters, category: e.target.value})}
+                          onChange={(e) => setFilters({ ...filters, category: e.target.value })}
                         >
                           <option value="">All Categories</option>
                           {categories.map(category => (
@@ -321,7 +377,7 @@ const Clubsmain = () => {
                         <select
                           className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white text-sm"
                           value={filters.establishedAfter}
-                          onChange={(e) => setFilters({...filters, establishedAfter: e.target.value})}
+                          onChange={(e) => setFilters({ ...filters, establishedAfter: e.target.value })}
                         >
                           <option value="">Any Year</option>
                           <option value="2020">2020</option>
@@ -333,7 +389,7 @@ const Clubsmain = () => {
                       </motion.div>
                     </div>
                     <div className="mt-3 flex justify-end">
-                      <motion.button 
+                      <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                         onClick={() => setFilters({ location: '', category: '', establishedAfter: '' })}
@@ -348,86 +404,321 @@ const Clubsmain = () => {
             </AnimatePresence>
           </motion.div>
 
-          {/* Clubs List - adjusted spacing for mobile */}
-          <div className="grid grid-cols-1 gap-3 sm:gap-4">
-            <AnimatePresence>
-              {filteredClubs.length > 0 ? (
-                filteredClubs.map((club, index) => (
-                  <motion.div
-                    key={club.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05 }}
-                    layout
-                  >
-                    <Link 
-                      to={`/clubs/${club.id}`} 
-                      className="block bg-gray-800 rounded-lg shadow-md overflow-hidden transition-all duration-200 hover:shadow-lg hover:transform hover:-translate-y-1 border border-gray-700"
+          {/* Loading state */}
+          {loadingClubs ? (
+            <div className="text-center py-8">
+              <DotLottieReact
+                src="https://lottie.host/dd586414-b150-482a-89a1-02685710609b/z2Dk71rYjL.lottie"
+                loop
+                autoplay
+                style={{ width: '100px', height: '100px', margin: 'auto' }}
+              />
+              <p className="text-gray-400 mt-2">Loading clubs...</p>
+            </div>
+          ) : (
+            /* Clubs List */
+            <div className="grid grid-cols-1 gap-3 sm:gap-4">
+              <AnimatePresence>
+                {filteredClubs.length > 0 ? (
+                  filteredClubs.map((club, index) => (
+                    <motion.div
+                      key={club.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      layout
                     >
-                      <motion.div 
-                        whileHover={{ scale: 1.01 }}
-                        className="p-3 sm:p-4 flex items-center"
+                      <Link
+                        to={`/clubs/${club.id}`}
+                        className="block bg-gray-800 rounded-lg shadow-md overflow-hidden transition-all duration-200 hover:shadow-lg hover:transform hover:-translate-y-1 border border-gray-700"
                       >
-                        <div className="flex-shrink-0 mr-3 sm:mr-4">
-                          <motion.img 
-                            whileHover={{ rotate: 5, scale: 1.1 }}
-                            src={club.logo} 
-                            alt={`${club.name} logo`} 
-                            className="w-12 h-12 sm:w-16 sm:h-16 object-contain rounded-full border-2 border-blue-400" 
-                          />
-                        </div>
-                        <div className="flex-grow overflow-hidden">
-                          <div className="flex items-center justify-between">
-                            <h2 className="text-sm sm:text-lg font-bold text-white truncate">{club.name}</h2>
-                            {club.category === 'Premier' && (
-                              <motion.span 
-                                animate={{ scale: [1, 1.1, 1] }}
-                                transition={{ repeat: Infinity, duration: 2 }}
-                                className="flex items-center text-yellow-400 text-xs sm:text-sm ml-2"
-                              >
-                                <FiStar className="mr-1" /> Premier
-                              </motion.span>
-                            )}
+                        <motion.div
+                          whileHover={{ scale: 1.01 }}
+                          className="p-3 sm:p-4 flex items-center"
+                        >
+                          <div className="flex-shrink-0 mr-3 sm:mr-4">
+                            <motion.img
+                              whileHover={{ rotate: 5, scale: 1.1 }}
+                              src={club.logo || 'https://via.placeholder.com/60'}
+                              alt={`${club.name} logo`}
+                              className="w-12 h-12 sm:w-16 sm:h-16 object-contain rounded-full border-2 border-blue-400"
+                            />
                           </div>
-                          <div className="flex items-center text-xs sm:text-sm text-gray-400 mt-1 truncate">
-                            <FiMapPin className="mr-1 flex-shrink-0" /> 
-                            <span className="truncate">{club.location}</span>
+                          <div className="flex-grow overflow-hidden">
+                            <div className="flex items-center justify-between">
+                              <h2 className="text-sm sm:text-lg font-bold text-white truncate">{club.name}</h2>
+                              {club.category === 'Premier' && (
+                                <motion.span
+                                  animate={{ scale: [1, 1.1, 1] }}
+                                  transition={{ repeat: Infinity, duration: 2 }}
+                                  className="flex items-center text-yellow-400 text-xs sm:text-sm ml-2"
+                                >
+                                  <FiStar className="mr-1" /> Premier
+                                </motion.span>
+                              )}
+                            </div>
+                            <div className="flex items-center text-xs sm:text-sm text-gray-400 mt-1 truncate">
+                              <FiMapPin className="mr-1 flex-shrink-0" />
+                              <span className="truncate">{club.location}</span>
+                            </div>
+                            <div className="flex items-center text-xs sm:text-sm text-gray-400 mt-1 truncate">
+                              <FiUsers className="mr-1 flex-shrink-0" />
+                              <span className="truncate">{club.members} members | Est. {club.established}</span>
+                            </div>
                           </div>
-                          <div className="flex items-center text-xs sm:text-sm text-gray-400 mt-1 truncate">
-                            <FiUsers className="mr-1 flex-shrink-0" /> 
-                            <span className="truncate">{club.members} members | Est. {club.established}</span>
-                          </div>
-                        </div>
-                      </motion.div>
-                    </Link>
-                  </motion.div>
-                ))
-              ) : (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="bg-gray-800 rounded-lg shadow-md p-6 text-center border border-gray-700"
-                >
-                  <h3 className="text-base sm:text-lg font-medium text-gray-300">No clubs found matching your criteria</h3>
-                  <p className="text-gray-500 mt-2 text-sm sm:text-base">Try adjusting your search or filters</p>
-                  <motion.button 
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => {
-                      setSearchTerm('');
-                      setFilters({ location: '', category: '', establishedAfter: '' });
-                    }}
-                    className="mt-3 px-3 py-1 sm:px-4 sm:py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm sm:text-base"
+                        </motion.div>
+                      </Link>
+                    </motion.div>
+                  ))
+                ) : (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="bg-gray-800 rounded-lg shadow-md p-6 text-center border border-gray-700"
                   >
-                    Reset Search
-                  </motion.button>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+                    <h3 className="text-base sm:text-lg font-medium text-gray-300">No clubs found matching your criteria</h3>
+                    <p className="text-gray-500 mt-2 text-sm sm:text-base">Try adjusting your search or filters</p>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => {
+                        setSearchTerm('');
+                        setFilters({ location: '', category: '', establishedAfter: '' });
+                      }}
+                      className="mt-3 px-3 py-1 sm:px-4 sm:py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm sm:text-base"
+                    >
+                      Reset Search
+                    </motion.button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Add Club Modal */}
+      <AnimatePresence>
+        {isModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 50 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 50 }}
+              className="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-lg border border-gray-700 overflow-y-auto max-h-[90vh]" // Added max-h and overflow for scroll
+            >
+              <h2 className="text-2xl font-bold text-white mb-4">Add New Club</h2>
+              {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
+              <form onSubmit={handleAddClub} className="space-y-4">
+                <div>
+                  <label htmlFor="name" className="block text-sm font-medium text-gray-300">Club Name</label>
+                  <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    value={newClub.name}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="location" className="block text-sm font-medium text-gray-300">Location</label>
+                  <input
+                    type="text"
+                    id="location"
+                    name="location"
+                    value={newClub.location}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="established" className="block text-sm font-medium text-gray-300">Established Year</label>
+                    <input
+                      type="number"
+                      id="established"
+                      name="established"
+                      value={newClub.established}
+                      onChange={handleInputChange}
+                      className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="members" className="block text-sm font-medium text-gray-300">Members</label>
+                    <input
+                      type="number"
+                      id="members"
+                      name="members"
+                      value={newClub.members}
+                      onChange={handleInputChange}
+                      className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      required
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label htmlFor="category" className="block text-sm font-medium text-gray-300">Category</label>
+                  <select
+                    id="category"
+                    name="category"
+                    value={newClub.category}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    required
+                  >
+                    <option value="">Select Category</option>
+                    <option value="Premier">Premier</option>
+                    <option value="First Class">First Class</option>
+                    <option value="Division I">Division I</option>
+                    <option value="Division II">Division II</option>
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="logoFile" className="block text-sm font-medium text-gray-300">Club Logo (Upload File)</label>
+                  <input
+                    type="file"
+                    id="logoFile"
+                    name="logoFile"
+                    onChange={handleFileChange}
+                    className="mt-1 block w-full text-white file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                  />
+                  <label htmlFor="logoUrl" className="block text-sm font-medium text-gray-300 mt-2">Or paste Logo URL</label>
+                  <input
+                    type="text"
+                    id="logoUrl"
+                    name="logoUrl"
+                    value={newClub.logoUrl}
+                    onChange={handleInputChange}
+                    placeholder="https://example.com/logo.png"
+                    className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  {uploadingLogo && <p className="text-blue-300 text-sm mt-1">Uploading logo...</p>}
+                </div>
+                <div>
+                  <label htmlFor="description" className="block text-sm font-medium text-gray-300">Description</label>
+                  <textarea
+                    id="description"
+                    name="description"
+                    value={newClub.description}
+                    onChange={handleInputChange}
+                    rows="3"
+                    className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  ></textarea>
+                </div>
+
+                {/* New Contact Fields */}
+                <div className="border-t border-gray-700 pt-4 mt-4">
+                  <h3 className="text-lg font-semibold text-white mb-2">Contact Information</h3>
+                  <div>
+                    <label htmlFor="email" className="block text-sm font-medium text-gray-300">Email</label>
+                    <input
+                      type="email"
+                      id="email"
+                      name="email"
+                      value={newClub.email}
+                      onChange={handleInputChange}
+                      className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="website" className="block text-sm font-medium text-gray-300">Website</label>
+                    <input
+                      type="text"
+                      id="website"
+                      name="website"
+                      value={newClub.website}
+                      onChange={handleInputChange}
+                      placeholder="https://www.example.com"
+                      className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="phone" className="block text-sm font-medium text-gray-300">Phone</label>
+                    <input
+                      type="tel"
+                      id="phone"
+                      name="phone"
+                      value={newClub.phone}
+                      onChange={handleInputChange}
+                      placeholder="+94 11 2345678"
+                      className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+
+                {/* Upcoming Matches Input (Textarea for ease of input) */}
+                <div>
+                  <label htmlFor="upcomingMatchesText" className="block text-sm font-medium text-gray-300">Upcoming Matches (e.g., Lions CC - May 15 - R. Premadasa Stadium, Titans CC - May 22 - SSC Ground)</label>
+                  <textarea
+                    id="upcomingMatchesText"
+                    name="upcomingMatchesText"
+                    value={newClub.upcomingMatchesText}
+                    onChange={handleInputChange}
+                    rows="3"
+                    className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  ></textarea>
+                </div>
+
+                {/* Achievements Input (Textarea for ease of input) */}
+                <div>
+                  <label htmlFor="achievementsText" className="block text-sm font-medium text-gray-300">Achievements (comma-separated)</label>
+                  <textarea
+                    id="achievementsText"
+                    name="achievementsText"
+                    value={newClub.achievementsText}
+                    onChange={handleInputChange}
+                    rows="2"
+                    className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  ></textarea>
+                </div>
+                
+                <div>
+                  <label htmlFor="facilitiesText" className="block text-sm font-medium text-gray-300">Facilities (comma-separated)</label>
+                  <input
+                    type="text"
+                    id="facilitiesText"
+                    name="facilitiesText"
+                    value={newClub.facilitiesText}
+                    onChange={handleInputChange}
+                    className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+
+                <div className="flex justify-end space-x-3">
+                  <motion.button
+                    type="button"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setIsModalOpen(false)}
+                    className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+                  >
+                    Cancel
+                  </motion.button>
+                  <motion.button
+                    type="submit"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                    disabled={uploadingLogo}
+                  >
+                    {uploadingLogo ? 'Adding...' : 'Add Club'}
+                  </motion.button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
