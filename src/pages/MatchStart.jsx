@@ -280,6 +280,8 @@ const FixtureGenerator = () => {
   const [liveTeamA, setLiveTeamA] = useState({ name: 'Team A', flag: placeholderFlag, score: '0/0', overs: '(0.0)' });
   const [liveTeamB, setLiveTeamB] = useState({ name: 'Team B', flag: placeholderFlag, score: '0/0', overs: '(0.0)' });
   const [winningCaption, setWinningCaption] = useState(''); // To store the winning difference caption
+  const [firstInningsOutCount, setFirstInningsOutCount] = useState('');
+  
 
   // --- End of UPDATED NEW STATES ---
 
@@ -702,21 +704,21 @@ const [completedFixtures, setCompletedFixtures] = useState([]);
 
                     <div className="p-6 bg-gray-50">
                         <div className="flex justify-around items-center mb-6">
-                            <motion.div
+                             <motion.div
                                 className="text-center"
                                 whileHover={{ scale: 1.05 }}
                                 transition={{ type: "spring", stiffness: 300 }}
                             >
                                 <div className="w-20 h-20 mx-auto mb-2 bg-gray-200 rounded-full overflow-hidden shadow-md">
                                     <img
-                                        src={liveTeamA.flag || placeholderFlag} // Use liveTeamA.flag
+                                        src={liveTeamA.flag || placeholderFlag} // Use liveTeamB.flag
                                         alt={`${liveTeamA.name || 'Team A'} Flag`}
-                                        className="w-full h-full object-contain "
+                                        className="w-full h-full object-contain"
                                     />
                                 </div>
                                 <h4 className="font-bold text-xl text-gray-800">{liveTeamA.name || 'Team A'}</h4>
-                                <p className="text-3xl font-extrabold text-blue-700 mt-1">{liveTeamA.score || '198/6'}</p>
-                                <p className="text-sm text-gray-600">{liveTeamA.overs || '(42.0 overs)'}</p>
+                                <p className="text-3xl font-extrabold text-green-700 mt-1">{liveTeamA.score || '178/3'}</p>
+                                <p className="text-sm text-gray-600">{liveTeamA.overs || '(15.2 overs)'}</p>
                             </motion.div>
 
                             <div className="text-3xl font-bold text-gray-600 px-6">vs</div>
@@ -746,7 +748,7 @@ const [completedFixtures, setCompletedFixtures] = useState([]);
                             transition={{ delay: 0.5 }}
                         >
                             <div className="flex justify-between items-center mb-3">
-                                <span className="text-gray-700 font-medium">Match Status:</span>
+                                <span className="text-gray-700 font-medium">Match Status: {matchResultWinner} won by </span>
                                 {winningCaption ? (
                                     <motion.span
                                         className="bg-yellow-400 text-black px-4 py-1 rounded-full text-sm font-semibold"

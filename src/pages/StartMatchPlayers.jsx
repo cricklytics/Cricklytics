@@ -44,6 +44,9 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd, curr
   const teamB = location.state?.teamB;
   const selectedPlayersFromProps = location.state?.selectedPlayers || { left: [], right: [] };
 
+  const [playedOvers, setplayedOvers] = useState(0);
+  const [playedWickets, setplayedWickets] = useState(0);
+
   const [currentView, setCurrentView] = useState('toss');
   const [showThirdButtonOnly, setShowThirdButtonOnly] = useState(false);
   const [topPlays, setTopPlays] = useState([]);
@@ -223,7 +226,7 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd, curr
     const playValue = typeof value === 'string' ? value.charAt(0) : value;
 
     if (isLabel) {
-      if (value === 'Wide' || value === 'No-ball' || value === 'Leg By') {
+      if (value === 'Wide' || value === 'No-ball' || value === 'Leg By'|| value === 'OUT') {
         setShowRunInfo(true);
       } else {
         setShowRunInfo(false);
@@ -373,55 +376,54 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd, curr
     };
   }, [modalContent.title]);
 
-  useEffect(() => {
-    if (gameFinished) return;
+ useEffect(() => {
+  if (gameFinished) return;
 
-    if (outCount >= 10 || (validBalls === 6 && overNumber > maxOvers -1)) {
-      if (!isChasing) {
-        setTargetScore(playerScore + 1);
-        setIsChasing(true);
-        resetInnings();
-        displayModal('Innings Break', `You need to chase ${playerScore + 1} runs`);
+  if (outCount >= 10 || (validBalls === 6 && overNumber > maxOvers -1)) {
+    if (!isChasing) {
+      setTargetScore(playerScore + 1);
+      setIsChasing(true);
+      resetInnings();
+      displayModal('Innings Break', `You need to chase ${playerScore + 1} runs`);
+    } else {
+      let winnerTeamName = '';
+      if (playerScore < targetScore - 1) {
+        winnerTeamName = teamA.name;
+        displayModal('Match Result', `${teamA.name} wins by ${targetScore - 1 - playerScore} runs!`);
+        setGameFinished(true);
+      } else if (playerScore === targetScore - 1) {
+        winnerTeamName = 'Tie';
+        displayModal('Match Result', 'Match tied!');
+        setGameFinished(true);
       } else {
-        let winnerTeamName = '';
-        if (playerScore < targetScore - 1) {
-          winnerTeamName = teamA.name;
-          displayModal('Match Result', `${teamA.name} wins by ${targetScore - 1 - playerScore} runs!`);
-          setGameFinished(true);
-        } else if (playerScore === targetScore - 1) {
-          winnerTeamName = 'Tie';
-          displayModal('Match Result', 'Match tied!');
-          setGameFinished(true);
-        } else {
-          winnerTeamName = teamB.name;
-          displayModal('Match Result', `${teamB.name} wins!`);
-          setGameFinished(true);
-        }
+        winnerTeamName = teamB.name;
+        displayModal('Match Result', `${teamB.name} wins by ${10 - outCount} wickets!`);
+        setGameFinished(true);
       }
-      return;
     }
+    return;
+  }
 
-    if (isChasing && playerScore >= targetScore && targetScore > 0) {
-      displayModal('Match Result', `${teamB.name} wins!`);
-      setGameFinished(true);
-      return;
-    }
+  if (isChasing && playerScore >= targetScore && targetScore > 0) {
+    displayModal('Match Result', `${teamB.name} wins by ${10 - outCount} wickets!`);
+    setGameFinished(true);
+    return;
+  }
 
-    if (validBalls === 6) {
-      setPastOvers(prev => [...prev, currentOverBalls]);
-      setCurrentOverBalls([]);
-      setOverNumber(prev => prev + 1);
-      setValidBalls(0);
-      const temp = striker;
-      setStriker(nonStriker);
-      setNonStriker(temp);
-      displayModal('Over Finished', `Over ${overNumber} completed!`);
-      setTimeout(() => {
-        setShowBowlerDropdown(true);
-      }, 1000);
-    }
-  }, [validBalls, currentOverBalls, nonStriker, overNumber, isChasing, targetScore, playerScore, gameFinished, outCount, maxOvers, teamA, teamB]);
-
+  if (validBalls === 6) {
+    setPastOvers(prev => [...prev, currentOverBalls]);
+    setCurrentOverBalls([]);
+    setOverNumber(prev => prev + 1);
+    setValidBalls(0);
+    const temp = striker;
+    setStriker(nonStriker);
+    setNonStriker(temp);
+    displayModal('Over Finished', `Over ${overNumber} completed!`);
+    setTimeout(() => {
+      setShowBowlerDropdown(true);
+    }, 1000);
+  }
+}, [validBalls, currentOverBalls, nonStriker, overNumber, isChasing, targetScore, playerScore, gameFinished, outCount, maxOvers, teamA, teamB, playedOvers, playedWickets]);
   const resetInnings = () => {
     setCurrentOverBalls([]);
     setPastOvers([]);
@@ -527,65 +529,62 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd, curr
   };
 
   const handleModalOkClick = () => {
-    setShowModal(false);
+  setShowModal(false);
 
-    if (gameFinished && modalContent.title === 'Match Result') {
-      let winnerTeamName = '';
-      if (playerScore < targetScore - 1) {
-        winnerTeamName = teamA.name;
-      } else if (playerScore === targetScore - 1) {
-        winnerTeamName = 'Tie';
-      } else {
-        winnerTeamName = teamB.name;
-      }
+  if (gameFinished && modalContent.title === 'Match Result') {
+    let winnerTeamName = '';
+    let winningDifference = '';
+    
+    if (playerScore < targetScore - 1) {
+      winnerTeamName = teamA.name;
+      winningDifference = `${targetScore - 1 - playerScore} runs`;
+    } else if (playerScore === targetScore - 1) {
+      winnerTeamName = 'Tie';
+      winningDifference = 'Tie';
+    } else {
+      winnerTeamName = teamB.name;
+      winningDifference = `${10 - outCount} wickets`;
+    }
 
-       if (currentFixture?.id) {
+    if (currentFixture?.id) {
       markFixtureAsCompleted(currentFixture.id);
     }
 
-      const originPage = location.state?.origin;
-      console.log(originPage);
-      if (originPage) {
-  navigate(originPage, { 
-      state: { 
-        activeTab: 'Match Results', 
-        winner: winnerTeamName,
-        completedFixtureId: currentFixture?.id,
-        teamA: {
-          name: teamA.name,
-          flagUrl: teamA.flagUrl,
-          score: isChasing ? targetScore - 1 : playerScore,
-          wickets: isChasing ? 0 : outCount,
-          balls: isChasing ? 0 : (overNumber - 1) * 6 + validBalls
-        },
-        teamB: {
-          name: teamB.name,
-          flagUrl: teamB.flagUrl,
-          score: isChasing ? playerScore : targetScore - 1,
-          wickets: isChasing ? outCount : 0,
-          balls: isChasing ? (overNumber - 1) * 6 + validBalls : 0
-        },
-        winningDifference: gameFinished ? 
-          (playerScore < targetScore - 1 ? 
-            `${targetScore - 1 - playerScore} runs` : 
-            (playerScore > targetScore - 1 ? 
-              `${10 - outCount} wickets` : 
-              'Tie'))
-          : ''
-      }
-    });
-} else {
-  navigate('/');
-}
-
-    } else if (modalContent.title === 'Innings Break') {
-      resetInnings();
-      setIsChasing(true);
-      setBowlerVisible(false);
-      setCurrentView('toss');
-      setShowThirdButtonOnly(false);
+    const originPage = location.state?.origin;
+    if (originPage) {
+      navigate(originPage, { 
+        state: { 
+          activeTab: 'Match Results', 
+          winner: winnerTeamName,
+          winningDifference: winningDifference,
+          completedFixtureId: currentFixture?.id,
+          teamA: {
+            name: teamA.name,
+            flagUrl: teamA.flagUrl,
+            score: isChasing ? targetScore - 1 : playerScore,
+            wickets: isChasing ? playedWickets : outCount,
+            balls: isChasing ? playedOvers : (overNumber - 1) * 6 + validBalls
+          },
+          teamB: {
+            name: teamB.name,
+            flagUrl: teamB.flagUrl,
+            score: isChasing ? playerScore : targetScore - 1,
+            wickets: isChasing ? outCount : 0,
+            balls: isChasing ? (overNumber - 1) * 6 + validBalls : 0
+          }
+        }
+      });
+    } else {
+      navigate('/');
     }
-  };
+  } else if (modalContent.title === 'Innings Break') {
+    resetInnings();
+    setIsChasing(true);
+    setBowlerVisible(false);
+    setCurrentView('toss');
+    setShowThirdButtonOnly(false);
+  }
+};
 
   if (!currentView && !showThirdButtonOnly) {
     return (
@@ -950,28 +949,48 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd, curr
                     {showPastOvers ? 'Hide Overs' : 'Show Overs'}
                   </button>
                 </div>
-                {showPastOvers && (
-                  <div className="mt-2 md:mt-4 text-white w-full">
-                    <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-4 text-center">Overs History</h3>
-                    <div className="flex flex-wrap gap-2 md:gap-4 justify-center">
-                      {pastOvers.map((over, index) => (
-                        <div key={index} className="bg-[#4C0025] p-2 md:p-3 rounded-lg">
-                          <h4 className="text-sm md:text-base">Over {index + 1}:</h4>
-                          <div className="flex gap-1 md:gap-2">
-                            {over.map((ball, ballIndex) => (
-                              <span
-                                key={ballIndex}
-                                className={`w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 flex items-center justify-center rounded-full text-xs md:text-sm ${ball === 'W' || ball === 'O' ? 'bg-red-600' : 'bg-[#FF62A1]'}`}
-                              >
-                                {ball}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+        {showPastOvers && (
+  <div className="mt-2 md:mt-4 text-white w-full">
+    <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-4 text-center">Overs History</h3>
+    <div className="bg-[#4C0025] p-3 rounded-lg w-full overflow-auto max-w-full" style={{ minHeight: '100px' }}>
+      <div className="flex items-center gap-3 min-w-[768px] overflow-x-auto">
+        {[...pastOvers, currentOverBalls.length > 0 ? currentOverBalls : null]
+          .filter(Boolean)
+          .map((over, index) => (
+            <div key={`over-${index}`} className="flex items-center gap-1">
+              {over.map((ball, ballIndex) => {
+                let displayBall = ball;
+                if (typeof ball === 'string' && ball.includes('+')) {
+                  const [type, runs] = ball.split('+');
+                  if (type.toLowerCase() === 'wd') displayBall = `Wd+${runs}`;
+                  else if (type.toLowerCase() === 'nb') displayBall = `Nb+${runs}`;
+                  else if (type.toLowerCase() === 'w') displayBall = `W+${runs}`;
+                  else displayBall = `${type}+${runs}`;
+                }
+
+                const isWicket = typeof ball === 'string' && (ball.includes('W') || ball.includes('O'));
+                return (
+                  <span
+                    key={`ball-${index}-${ballIndex}`}
+                    className={`w-6 h-6 flex items-center justify-center rounded-full px-1 text-xs md:text-sm whitespace-nowrap ${
+                      isWicket ? 'bg-red-600' : 'bg-[#FF62A1]'
+                    }`}
+                  >
+                    {displayBall}
+                  </span>
+                );
+              })}
+              {/* Add | only if not the last over */}
+              {index !== pastOvers.length + (currentOverBalls.length > 0 ? 0 : -1) && (
+                <span className="text-white font-bold text-lg px-1">|</span>
+              )}
+            </div>
+          ))}
+      </div>
+    </div>
+  </div>
+)}
+
               </div>
               <div className="hidden sm:block w-20 text-white text-center">
                 <h3 className="text-lg md:text-xl font-bold">Bowler</h3>
@@ -1102,6 +1121,8 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd, curr
               onClick={() => {
                 setIsChasing(true);
                 setTargetScore(playerScore + 1); // Target is one run more than the score
+                setplayedOvers(overNumber);
+                setplayedWickets(outCount);
                 resetInnings();
                 handleButtonClick('toss');
               }}
