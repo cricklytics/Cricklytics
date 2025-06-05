@@ -1,8 +1,6 @@
-// src/components/players/AddPlayerModal.jsx (updated)
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { db } from '../firebase'; // Adjust path based on your file structure
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, getDocs, collection } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -15,12 +13,27 @@ const uploadFile = async (file, filePath) => {
     return getDownloadURL(storageRef);
 };
 
+// Function to generate a unique 6-digit numerical player ID
+const generateUniquePlayerId = async () => {
+    const playersCollectionRef = collection(db, 'clubPlayers');
+    const snapshot = await getDocs(playersCollectionRef);
+    const existingIds = snapshot.docs.map(doc => doc.data().playerId).filter(id => id);
+
+    let newId;
+    do {
+        newId = Math.floor(100000 + Math.random() * 900000); // Generate a 6-digit number
+    } while (existingIds.includes(newId));
+
+    return newId;
+};
+
 const AddPlayerModal = ({ onClose, onPlayerAdded }) => {
     const [clubPlayerFormData, setClubPlayerFormData] = useState({
+        playerId: '', // Add playerId to form data
         name: '',
         image: '',
         team: '',
-        role: 'player', // Default role for new players
+        role: 'player',
         age: '',
         battingStyle: '',
         bowlingStyle: '',
@@ -60,6 +73,15 @@ const AddPlayerModal = ({ onClose, onPlayerAdded }) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(false);
+
+    // Generate playerId when the modal mounts
+    useEffect(() => {
+        const setPlayerId = async () => {
+            const newId = await generateUniquePlayerId();
+            setClubPlayerFormData(prev => ({ ...prev, playerId: newId.toString() }));
+        };
+        setPlayerId();
+    }, []);
 
     const handleClubPlayerChange = (e) => {
         const { name, value } = e.target;
@@ -116,10 +138,11 @@ const AddPlayerModal = ({ onClose, onPlayerAdded }) => {
                 .filter(item => item !== null);
 
             const clubPlayerData = {
+                playerId: parseInt(clubPlayerFormData.playerId), // Save playerId as number
                 name: playerName,
                 image: uploadedImageUrl,
                 team: clubPlayerFormData.team,
-                role: clubPlayerFormData.role, // This will be 'player' by default
+                role: clubPlayerFormData.role,
                 age: parseInt(clubPlayerFormData.age) || 0,
                 battingStyle: clubPlayerFormData.battingStyle,
                 bowlingStyle: clubPlayerFormData.bowlingStyle,
@@ -171,17 +194,47 @@ const AddPlayerModal = ({ onClose, onPlayerAdded }) => {
             onPlayerAdded();
             
             // Reset form
+            const newId = await generateUniquePlayerId(); // Generate new ID for next player
             setClubPlayerFormData({
-                name: '', image: '', team: '', role: 'player', age: '', battingStyle: '', bowlingStyle: '', // Reset role to 'player'
-                matches: '', runs: '', highestScore: '', average: '', strikeRate: '',
-                centuries: '', fifties: '', wickets: '', bestBowling: '', bio: '', recentMatches: '',
-                careerStatsBattingMatches: '', careerStatsBattingInnings: '', careerStatsBattingNotOuts: '',
-                careerStatsBattingRuns: '', careerStatsBattingHighest: '', careerStatsBattingAverage: '',
-                careerStatsBattingStrikeRate: '', careerStatsBattingCenturies: '', careerStatsBattingFifties: '',
-                careerStatsBattingFours: '', careerStatsBattingSixes: '',
-                careerStatsBowlingInnings: '', careerStatsBowlingWickets: '', careerStatsBowlingBest: '',
-                careerStatsBowlingAverage: '', careerStatsBowlingEconomy: '', careerStatsBowlingStrikeRate: '',
-                careerStatsFieldingCatches: '', careerStatsFieldingStumpings: '', careerStatsFieldingRunOuts: '',
+                playerId: newId.toString(), // Reset with new ID
+                name: '',
+                image: '',
+                team: '',
+                role: 'player',
+                age: '',
+                battingStyle: '',
+                bowlingStyle: '',
+                matches: '',
+                runs: '',
+                highestScore: '',
+                average: '',
+                strikeRate: '',
+                centuries: '',
+                fifties: '',
+                wickets: '',
+                bestBowling: '',
+                bio: '',
+                recentMatches: '',
+                careerStatsBattingMatches: '',
+                careerStatsBattingInnings: '',
+                careerStatsBattingNotOuts: '',
+                careerStatsBattingRuns: '',
+                careerStatsBattingHighest: '',
+                careerStatsBattingAverage: '',
+                careerStatsBattingStrikeRate: '',
+                careerStatsBattingCenturies: '',
+                careerStatsBattingFifties: '',
+                careerStatsBattingFours: '',
+                careerStatsBattingSixes: '',
+                careerStatsBowlingInnings: '',
+                careerStatsBowlingWickets: '',
+                careerStatsBowlingBest: '',
+                careerStatsBowlingAverage: '',
+                careerStatsBowlingEconomy: '',
+                careerStatsBowlingStrikeRate: '',
+                careerStatsFieldingCatches: '',
+                careerStatsFieldingStumpings: '',
+                careerStatsFieldingRunOuts: '',
             });
             setClubPlayerImageFile(null);
             
@@ -216,6 +269,16 @@ const AddPlayerModal = ({ onClose, onPlayerAdded }) => {
                     <form onSubmit={handleClubPlayerSubmit} className="space-y-4">
                         {/* Basic Details */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block mb-1 text-gray-300">Player ID</label>
+                                <input
+                                    type="text"
+                                    name="playerId"
+                                    value={clubPlayerFormData.playerId}
+                                    readOnly
+                                    className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 opacity-75"
+                                />
+                            </div>
                             <div>
                                 <label className="block mb-1 text-gray-300">Name</label>
                                 <input type="text" name="name" value={clubPlayerFormData.name} onChange={handleClubPlayerChange} className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500" required />
