@@ -5,7 +5,8 @@ import {
   RecaptchaVerifier,
   signInWithPhoneNumber
 } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { getFirestore, serverTimestamp } from "firebase/firestore";
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { getVertexAI, getGenerativeModel } from "firebase/vertexai";
 
 // ✅ Firebase Configuration
@@ -29,5 +30,7 @@ const geminiModel = getGenerativeModel(vertexAI, { model: "gemini-2.0-flash" });
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+const storage = getStorage(app);
+
 // ✅ Export everything needed
-export { auth, db, RecaptchaVerifier, signInWithPhoneNumber ,geminiModel };
+export { auth, db, RecaptchaVerifier, signInWithPhoneNumber ,geminiModel, serverTimestamp, storage };
