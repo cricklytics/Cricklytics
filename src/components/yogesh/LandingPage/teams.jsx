@@ -1,12 +1,13 @@
-// src/pages/Teams.jsx
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import RoleSelectionModal from '../LandingPage/RoleSelectionModal'; // Adjust path if needed
 import AddTeamModal from '../LandingPage/AddTeamModal'; // Import the new modal
-import TeamSquadModal from '../LandingPage/TeamSquadModal'; // Import the new TeamSquadModal
+import AddPlayerModal from '../../../pages/AddClubPlayer'; // Import AddPlayerModal
+import TeamSquadModal from '../LandingPage/TeamSquadModal'; // Import the TeamSquadModal
 import { db, auth } from '../../../firebase'; // Adjust path to firebase.js
 import { collection, onSnapshot, query } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
+import { FiPlusCircle } from 'react-icons/fi';
 
 const Teams = () => {
   // State for role selection modal
@@ -23,7 +24,10 @@ const Teams = () => {
   // State for Add Team Modal
   const [showAddTeamModal, setShowAddTeamModal] = useState(false);
 
-  // --- NEW STATE FOR TEAM SQUAD MODAL ---
+  // State for Add Player Modal
+  const [isAddPlayerModalOpen, setIsAddPlayerModalOpen] = useState(false);
+
+  // State for Team Squad Modal
   const [showTeamSquadModal, setShowTeamSquadModal] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState(null); // To store the team object for the modal
 
@@ -39,10 +43,15 @@ const Teams = () => {
     setShowRoleModal(false);
   };
 
-  // --- NEW FUNCTION TO OPEN SQUAD MODAL ---
+  // Function to open squad modal
   const handleViewSquad = (team) => {
     setSelectedTeam(team);
     setShowTeamSquadModal(true);
+  };
+
+  // Function to handle player added
+  const handlePlayerAdded = () => {
+    setIsAddPlayerModalOpen(false);
   };
 
   // Effect to listen for auth state changes
@@ -62,7 +71,7 @@ const Teams = () => {
   // Effect to fetch teams from Firestore
   useEffect(() => {
     const teamsCollectionRef = collection(db, 'clubTeams');
-    const q = query(teamsCollectionRef); // Removed orderBy clause as per your request
+    const q = query(teamsCollectionRef);
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setLoadingTeams(true);
@@ -115,7 +124,7 @@ const Teams = () => {
         )}
       </AnimatePresence>
 
-      {userRole && ( // Only render content if a role is selected
+      {userRole && (
         <>
           {/* Page Header */}
           <div className="mb-8 flex justify-between items-center">
@@ -124,12 +133,24 @@ const Teams = () => {
               <p className="text-gray-400 mt-2">SAYAR CUP 2023-24 • Ranveer Singh Cricket Stadium, Jaipur</p>
             </div>
             {userRole === 'admin' && currentUserId && (
-              <button
-                onClick={() => setShowAddTeamModal(true)}
-                className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
-              >
-                Add Team
-              </button>
+              <div className="flex gap-4">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setIsAddPlayerModalOpen(true)}
+                  className="flex items-center justify-center gap-2 px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                >
+                  <FiPlusCircle /> Add Player
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setShowAddTeamModal(true)}
+                  className="flex items-center justify-center gap-2 px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                >
+                  <FiPlusCircle /> Add Team
+                </motion.button>
+              </div>
             )}
           </div>
 
@@ -170,7 +191,7 @@ const Teams = () => {
                     {/* Last Match */}
                     <div className="mb-4">
                       <p className="text-sm font-medium text-gray-400">Last Match</p>
-                      <p className={`text-sm ${team.lastMatch && team.lastMatch.startsWith('Won') ? 'text-green-400' : 'text-red-400'}`}>
+                      <p className={`text-sm ${team.lastMatch && team.lastMatch.toLowerCase().startsWith('won') ? 'text-green-400' : 'text-red-400'}`}>
                         {team.lastMatch}
                       </p>
                     </div>
@@ -202,10 +223,10 @@ const Teams = () => {
                     </div>
                   </div>
 
-                  {/* View Team Button - UPDATED */}
+                  {/* View Team Button */}
                   <div className="px-4 pb-4">
                     <button
-                      onClick={() => handleViewSquad(team)} // Call the new handler
+                      onClick={() => handleViewSquad(team)}
                       className="w-full py-2 bg-purple-900 text-purple-300 rounded-md hover:bg-purple-700 transition font-medium"
                     >
                       View Full Squad
@@ -216,7 +237,7 @@ const Teams = () => {
             </div>
           )}
 
-          {/* Team Comparison Section (Table remains the same but uses fetched 'teams') */}
+          {/* Team Comparison Section */}
           <div className="mt-12 bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-700">
             <h2 className="text-2xl font-bold text-gray-200 mb-6">Team Standings</h2>
 
@@ -243,7 +264,7 @@ const Teams = () => {
                   </thead>
                   <tbody className="bg-gray-800 divide-y divide-gray-700">
                     {teams
-                      .sort((a, b) => b.points - a.points) // Ensure sorting by points
+                      .sort((a, b) => b.points - a.points)
                       .map((team, index) => (
                         <tr key={team.id} className="hover:bg-gray-700">
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-200">{index + 1}</td>
@@ -253,13 +274,11 @@ const Teams = () => {
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{team.losses}</td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-200">{team.points}</td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                            {/* Placeholder NRR, you might want to calculate this or fetch from DB */}
                             {team.nrr || 'N/A'}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex gap-1">
-                              {/* Placeholder Form, ideally fetched from DB or dynamically generated */}
-                              {['W', 'L', 'W', 'W', 'L'].map((result, i) => ( // Static example, replace with dynamic data
+                              {['W', 'L', 'W', 'W', 'L'].map((result, i) => (
                                 <span
                                   key={i}
                                   className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${
@@ -279,7 +298,7 @@ const Teams = () => {
             )}
           </div>
 
-          {/* Tournament Stats - (These sections are static in your original code, keep them as is or update as needed) */}
+          {/* Tournament Stats */}
           <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-700">
               <h3 className="text-lg font-bold text-gray-200 mb-4">Highest Team Totals</h3>
@@ -350,14 +369,24 @@ const Teams = () => {
         )}
       </AnimatePresence>
 
-      {/* --- NEW TEAM SQUAD MODAL RENDERING --- */}
+      {/* Add Player Modal */}
+      <AnimatePresence>
+        {isAddPlayerModalOpen && currentUserId && userRole === 'admin' && (
+          <AddPlayerModal
+            onClose={() => setIsAddPlayerModalOpen(false)}
+            onPlayerAdded={handlePlayerAdded}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Team Squad Modal */}
       <AnimatePresence>
         {showTeamSquadModal && selectedTeam && (
           <TeamSquadModal
             team={selectedTeam}
             onClose={() => {
               setShowTeamSquadModal(false);
-              setSelectedTeam(null); // Clear selected team when closing
+              setSelectedTeam(null);
             }}
           />
         )}
