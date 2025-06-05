@@ -16,13 +16,24 @@ const generateUUID = () => {
 
 const TournamentSplitter = {
   getOptimalGroups(teamCount) {
+    if ([7, 11, 13, 17, 19].includes(teamCount)) {
+      const remainingTeams = teamCount - 1;
+      const groupCount = 2;
+      const size = Math.ceil(remainingTeams / groupCount);
+      return { groupCount, size, removed: 1 };
+    }
+
+    if (teamCount === 8) {
+      return { groupCount: 2, size: 4 };
+    }
+
     if (teamCount === 4) return { groupCount: 1, size: 4 };
-    if (teamCount === 7) return { groupCount: 2, size: 3, removed: 1 };
+    if (teamCount === 5) return { groupCount: 1, size: 5 };
     if (teamCount === 9) return { groupCount: 3, size: 3 };
     if (teamCount === 10) return { groupCount: 2, size: 5 };
-    if (teamCount === 15) return { groupCount: 3, size: 5 };
-    if (teamCount === 8) return { groupCount: 2, size: 4 };
     if (teamCount === 12) return { groupCount: 3, size: 4 };
+    if (teamCount === 15) return { groupCount: 3, size: 5 };
+
     if (teamCount < 10) {
       const groupCount = teamCount <= 6 ? 2 : 3;
       const size = Math.ceil(teamCount / groupCount);
@@ -53,16 +64,6 @@ const TournamentSplitter = {
       const size = teamCount / count;
       if (Number.isInteger(size) && size >= 4 && size <= 15) {
         return { groupCount: count, size };
-      }
-    }
-
-    if (((teamCount - 1) % 2 === 0 || (teamCount - 1) % 3 === 0)) {
-      const remainingTeams = teamCount - 1;
-      for (const count of [2, 3]) {
-        const size = remainingTeams / count;
-        if (Number.isInteger(size) && size >= 3 && size <= 15) {
-          return { groupCount: count, size, removed: 1 };
-        }
       }
     }
 
@@ -133,25 +134,20 @@ const Flowchart = ({ teams, groups, currentPhase, matches, groupResults, tournam
   };
 
   const getExpectedTeamCount = (phase) => {
+    const teamCount = teams.length;
     if (phase === 'league') {
-      return teams.length;
+      return teamCount;
+    } else if (phase === 'pre-quarter') {
+      return teamCount >= 10 ? Math.floor(teamCount / 2) : 0;
     } else if (phase === 'quarter') {
-      if (teams.length === 7) {
-        const splitResult = TournamentSplitter.getOptimalGroups(teams.length);
-        const groupCount = splitResult.groups ? splitResult.groups.length : splitResult.groupCount;
-        return groupCount * 2 + (splitResult.removed ? 1 : 0);
-      }
-      const splitResult = TournamentSplitter.getOptimalGroups(teams.length);
-      const groupCount = splitResult.groups ? splitResult.groups.length : splitResult.groupCount;
-      const teamsPerGroup = teams.length === 9 ? 2 : 3;
-      return groupCount * teamsPerGroup + (splitResult.removed ? 1 : 0);
-    } else if (phase === 'super') {
-      const splitResult = TournamentSplitter.getOptimalGroups(teams.length);
-      const groupCount = splitResult.groups ? splitResult.groups.length : splitResult.groupCount;
-      const teamsPerGroup = teams.length === 9 ? 2 : 3;
-      return groupCount * teamsPerGroup + (splitResult.removed ? 1 : 0);
+      if (teamCount === 7) return 5;
+      if (teamCount === 9 || teamCount === 15) return 6;
+      return teamCount >= 8 ? Math.floor(teamCount / 2) : 0;
     } else if (phase === 'semi') {
-      return teams.length === 7 ? 4 : getExpectedTeamCount('quarter') > 4 ? 4 : 0;
+      if (teamCount === 7) return 5;
+      if (teamCount === 4 || teamCount === 5) return 4;
+      if (teamCount === 9 || teamCount === 15) return 4;
+      return teamCount >= 8 ? 4 : 0;
     } else if (phase === 'final') {
       return 2;
     } else if (phase === 'winner') {
@@ -163,57 +159,74 @@ const Flowchart = ({ teams, groups, currentPhase, matches, groupResults, tournam
   const getQualifiedTeams = (phase) => {
     if (phase === 'league') {
       return teams.map(team => ({ ...team, name: team.name }));
-    } else if (phase === 'quarter' && teams.length === 7) {
-      if (currentPhase !== 'league') {
+    } else if (phase === 'pre-quarter') {
+      if (currentPhase !== 'league' && teams.length >= 10) {
         return groups[0]?.map(team => ({ ...team, name: team.name })) || [];
+      }
+      const preQuarterTeamCount = getExpectedTeamCount('pre-quarter');
+      return preQuarterTeamCount > 0
+        ? Array(preQuarterTeamCount).fill().map((_, i) => ({
+            id: `placeholder-pre-quarter-${i}`,
+            name: 'TBD'
+          }))
+        : [];
+    } else if (phase === 'quarter') {
+      if (currentPhase !== 'league' && (teams.length === 7 || teams.length === 9 || teams.length === 15)) {
+        const topTeams = groups.flatMap((_, i) => getGroupStandings(i, 'league').slice(0, teams.length === 7 ? 1 : 2));
+        return oddTeam && teams.length === 7 ? [...topTeams, oddTeam].map(team => ({ ...team, name: team.name })) : topTeams.map(team => ({ ...team, name: team.name }));
       }
       const quarterTeamCount = getExpectedTeamCount('quarter');
-      return Array(quarterTeamCount).fill().map((_, i) => ({
-        id: `placeholder-quarter-${i}`,
-        name: oddTeam && i === quarterTeamCount - 1 ? oddTeam.name : 'Team'
-      }));
-    } else if (phase === 'super') {
-      if (currentPhase !== 'league') {
-        return groups[0]?.map(team => ({ ...team, name: team.name })) || [];
-      }
-      const superTeamCount = getExpectedTeamCount('super');
-      return Array(superTeamCount).fill().map((_, i) => ({
-        id: `placeholder-super-${i}`,
-        name: oddTeam && i === superTeamCount - 1 ? oddTeam.name : 'Team'
-      }));
+      return quarterTeamCount > 0
+        ? Array(quarterTeamCount).fill().map((_, i) => ({
+            id: `placeholder-quarter-${i}`,
+            name: teams.length === 7 && i === quarterTeamCount - 1 && oddTeam ? oddTeam.name : 'TBD'
+          }))
+        : [];
     } else if (phase === 'semi') {
-      if (currentPhase === 'semi' || currentPhase === 'final') {
-        return getGroupStandings(0, teams.length === 7 ? 'quarter' : 'super').slice(0, 4).map(team => ({ ...team, name: team.name }));
+      if (currentPhase === 'semi' || currentPhase === 'final' || currentPhase === 'winner') {
+        if (teams.length === 7) {
+          const topTeams = groups.flatMap((_, i) => getGroupStandings(i, 'league').slice(0, 1));
+          return oddTeam ? [...topTeams, oddTeam].map(team => ({ ...team, name: team.name })) : topTeams.map(team => ({ ...team, name: team.name }));
+        } else if (teams.length === 9 || teams.length === 15) {
+          return getGroupStandings(0, 'quarter').slice(0, 4).map(team => ({ ...team, name: team.name }));
+        } else if (teams.length >= 8) {
+          return getGroupStandings(0, 'pre-quarter').slice(0, 4).map(team => ({ ...team, name: team.name }));
+        }
+        return getGroupStandings(0, 'league').slice(0, 4).map(team => ({ ...team, name: team.name }));
       }
-      return getExpectedTeamCount('semi') > 0
-        ? Array(4).fill().map((_, i) => ({ id: `placeholder-semi-${i}`, name: 'Team' }))
+      const semiTeamCount = getExpectedTeamCount('semi');
+      return semiTeamCount > 0
+        ? Array(semiTeamCount).fill().map((_, i) => ({
+            id: `placeholder-semi-${i}`,
+            name: teams.length === 7 && i === semiTeamCount - 1 && oddTeam ? oddTeam.name : 'TBD'
+          }))
         : [];
     } else if (phase === 'final') {
-      if (currentPhase === 'final') {
+      if (currentPhase === 'final' || currentPhase === 'winner') {
         if (phaseHistory.includes('semi')) {
           return matches
             .filter(m => m.phase === 'semi' && m.winner)
             .map(m => teams.find(t => t.id === m.winner))
-            .map(team => ({ ...team, name: team.name }));
-        } else {
-          return getGroupStandings(0, phaseHistory.includes('super') ? 'super' : 'league')
-            .slice(0, 2)
+            .filter(team => team)
             .map(team => ({ ...team, name: team.name }));
         }
+        return getGroupStandings(0, teams.length >= 8 ? 'quarter' : 'league')
+          .slice(0, 2)
+          .map(team => ({ ...team, name: team.name }));
       }
-      return Array(2).fill().map((_, i) => ({ id: `placeholder-final-${i}`, name: 'Team' }));
+      return Array(2).fill().map((_, i) => ({ id: `placeholder-final-${i}`, name: 'TBD' }));
     } else if (phase === 'winner') {
       if (tournamentWinner) {
         return [{ ...teams.find(t => t.id === tournamentWinner), name: teams.find(t => t.id === tournamentWinner).name }];
       }
-      return [{ id: 'placeholder-winner', name: 'Team' }];
+      return [{ id: 'placeholder-winner', name: 'TBD' }];
     }
     return [];
   };
 
   const getPhaseName = (phase) => {
     if (phase === 'league') return 'Group Stage';
-    if (phase === 'super') return `Super ${getExpectedTeamCount('super') || 'X'}`;
+    if (phase === 'pre-quarter') return 'Pre-Quarter-Final';
     if (phase === 'quarter') return 'Quarter-Final';
     if (phase === 'semi') return 'Semi-Final';
     if (phase === 'final') return 'Final';
@@ -227,8 +240,8 @@ const Flowchart = ({ teams, groups, currentPhase, matches, groupResults, tournam
       className={`p-3 m-2 rounded-lg text-center text-white ${
         isOddTeam ? 'bg-gradient-to-r from-yellow-600 to-yellow-400' :
         level === 'league' ? 'bg-gradient-to-r from-blue-700 to-blue-500' :
-        level === 'super' ? 'bg-gradient-to-r from-green-700 to-green-500' :
-        level === 'quarter' ? 'bg-gradient-to-r from-teal-700 to-teal-500' :
+        level === 'pre-quarter' ? 'bg-gradient-to-r from-teal-700 to-teal-500' :
+        level === 'quarter' ? 'bg-gradient-to-r from-green-700 to-green-500' :
         level === 'semi' ? 'bg-gradient-to-r from-orange-700 to-orange-500' :
         level === 'final' ? 'bg-gradient-to-r from-purple-700 to-purple-500' :
         level === 'winner' ? 'bg-gradient-to-r from-red-700 to-red-500' :
@@ -262,40 +275,40 @@ const Flowchart = ({ teams, groups, currentPhase, matches, groupResults, tournam
   const renderGroupDetails = (groupIndex, phase = 'league') => {
     const standings = getGroupStandings(groupIndex, phase);
     const groupMatches = matches.filter(m => m.group === groupIndex && m.phase === phase);
-    const teamsToAdvance = phase === 'league' ? (teams.length === 7 || teams.length === 9 ? 2 : 3) : phase === 'quarter' && teams.length === 7 ? 4 : phase === 'super' && standings.length > 4 ? 4 : 2;
+    const teamsToAdvance = phase === 'league' ? (teams.length === 7 ? 1 : teams.length <= 4 ? 2 : 3) : phase === 'pre-quarter' ? 5 : phase === 'quarter' ? 4 : 2;
 
     return (
       <div className="bg-gray-800 p-6 rounded-xl mt-4">
         <button
           onClick={() => setSelectedGroup(null)}
-          className="mb-4 px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg"
+          className="mb-4 px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-white"
         >
           Back to Standings
         </button>
-        <h3 className="text-xl font-bold text-purple-400 mb-4">{phase === 'league' ? `Group ${groupIndex + 1}` : phase === 'quarter' ? 'Quarter-Final' : 'Super Stage'} Details ({phase.charAt(0).toUpperCase() + phase.slice(1)})</h3>
-        <h4 className="text-lg font-semibold text-gray-200 mb-2">Teams ({standings.length})</h4>
+        <h3 className="text-xl font-bold text-purple-400 mb-4">{phase === 'league' ? `Group ${groupIndex + 1}` : phase === 'pre-quarter' ? 'Pre-Quarter-Final' : phase === 'quarter' ? 'Quarter-Final' : 'Semi-Final'} Details ({phase.charAt(0).toUpperCase() + phase.slice(1)})</h3>
+        <h4 className="text-lg font-semibold text-white mb-2">Teams ({standings.length})</h4>
         <div className="mb-4">
           {standings.map((team, i) => (
             <div
               key={team.id}
               className={`p-2 rounded ${i < teamsToAdvance ? 'bg-purple-900' : 'bg-gray-700'} mb-2 ${team.id === oddTeam?.id ? 'border-2 border-yellow-400' : ''}`}
             >
-              {team.name} (Points: {team.points || 0}, Wins: {team.wins || 0}, Losses: {team.losses || 0}, Matches Played: {team.matchesPlayed || 0}, NRR: {(team.netRunRate || 0).toFixed(3)})
+              <span className="text-white">{team.name} (Points: {team.points || 0}, Wins: {team.wins || 0}, Losses: {team.losses || 0}, Matches Played: {team.matchesPlayed || 0}, NRR: {(team.netRunRate || 0).toFixed(3)})</span>
               {i < teamsToAdvance && <span className="ml-2 text-green-400">✓ Advances</span>}
-              {team.id === oddTeam?.id && phase === 'league' && <span className="ml-2 text-yellow-400">✓ Advances to Quarter-Final</span>}
+              {team.id === oddTeam?.id && phase === 'league' && teams.length === 7 && <span className="ml-2 text-yellow-400">✓ Advances to Semi-Final</span>}
             </div>
           ))}
         </div>
-        <h4 className="text-lg font-semibold text-gray-200 mb-2">Matches</h4>
+        <h4 className="text-lg font-semibold text-white mb-2">Matches</h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {groupMatches.map(match => (
-            <div key={match.id} className="bg-gray-700 p-4 rounded-lg">
+            <div key = {match.id} className="bg-gray-700 p-4 rounded-lg">
               <div className="flex justify-between items-center">
-                <span className={match.winner === match.team1?.id ? 'text-green-400 font-bold' : 'text-gray-300'}>
+                <span className={match.winner === match.team1?.id ? 'text-green-400 font-bold' : 'text-white'}>
                   {match.team1?.name || 'TBD'}
                 </span>
                 <span className="mx-2 text-purple-400">vs</span>
-                <span className={match.winner === match.team2?.id ? 'text-green-400 font-bold' : 'text-gray-300'}>
+                <span className={match.winner === match.team2?.id ? 'text-green-400 font-bold' : 'text-white'}>
                   {match.team2?.name || 'TBD'}
                 </span>
               </div>
@@ -307,8 +320,8 @@ const Flowchart = ({ teams, groups, currentPhase, matches, groupResults, tournam
             </div>
           ))}
         </div>
-        <p className="mt-4 text-gray-200">
-          Advancing: Top {teamsToAdvance} team{teamsToAdvance > 1 ? 's' : ''} from this {phase === 'league' ? 'group' : 'stage'}${oddTeam && phase === 'league' ? ' + Odd Team to Quarter-Final' : ''}
+        <p className="mt-4 text-white">
+          Advancing: Top {teamsToAdvance} team{teamsToAdvance > 1 ? 's' : ''} from this {phase === 'league' ? 'group' : 'stage'}${oddTeam && phase === 'league' && teams.length === 7 ? ' + Odd Team to Semi-Final' : ''}
         </p>
       </div>
     );
@@ -324,11 +337,11 @@ const Flowchart = ({ teams, groups, currentPhase, matches, groupResults, tournam
             {phaseMatches.map(match => (
               <div key={match.id} className="bg-gray-700 p-4 rounded-lg">
                 <div className="flex justify-between items-center">
-                  <span className={match.winner === match.team1?.id ? 'text-green-400 font-bold' : 'text-gray-300'}>
+                  <span className={match.winner === match.team1?.id ? 'text-green-400 font-bold' : 'text-white'}>
                     {match.team1?.name || 'TBD'}
                   </span>
                   <span className="mx-2 text-purple-400">vs</span>
-                  <span className={match.winner === match.team2?.id ? 'text-green-400 font-bold' : 'text-gray-300'}>
+                  <span className={match.winner === match.team2?.id ? 'text-green-400 font-bold' : 'text-white'}>
                     {match.team2?.name || 'TBD'}
                   </span>
                 </div>
@@ -350,21 +363,21 @@ const Flowchart = ({ teams, groups, currentPhase, matches, groupResults, tournam
         <table className="w-full bg-gray-800 rounded-xl shadow-xl mb-4">
           <thead>
             <tr className="text-left border-b border-purple-600">
-              <th className="p-4">Team</th>
-              <th className="p-4">Matches Played</th>
-              <th className="p-4">Wins</th>
-              <th className="p-4">Losses</th>
-              <th className="p-4">NRR</th>
+              <th className="p-4 text-white">Team</th>
+              <th className="p-4 text-white">Matches Played</th>
+              <th className="p-4 text-white">Wins</th>
+              <th className="p-4 text-white">Losses</th>
+              <th className="p-4 text-white">NRR</th>
             </tr>
           </thead>
           <tbody>
             {(phase === 'league' && oddTeam ? teams.filter(t => t.id !== oddTeam.id) : teams).map(team => (
               <tr key={`${phase}-${team.id}`} className="border-b border-gray-700">
-                <td className="p-4">{team.name}{team.id === oddTeam?.id ? ' (Odd Team)' : ''}</td>
-                <td className="p-4">{team.matchesPlayed || 0}</td>
-                <td className="p-4">{team.wins || 0}</td>
-                <td className="p-4">{team.losses || 0}</td>
-                <td className="p-4">{(team.netRunRate || 0).toFixed(3)}</td>
+                <td className="p-4 text-white">{team.name}{team.id === oddTeam?.id ? ' (Odd Team)' : ''}</td>
+                <td className="p-4 text-white">{team.matchesPlayed || 0}</td>
+                <td className="p-4 text-white">{team.wins || 0}</td>
+                <td className="p-4 text-white">{team.losses || 0}</td>
+                <td className="p-4 text-white">{(team.netRunRate || 0).toFixed(3)}</td>
               </tr>
             ))}
           </tbody>
@@ -375,14 +388,14 @@ const Flowchart = ({ teams, groups, currentPhase, matches, groupResults, tournam
               <button
                 key={i}
                 onClick={() => setSelectedGroup(i)}
-                className={`p-4 font-bold rounded-lg ${i === currentGroupIndex ? 'bg-purple-800' : 'bg-purple-600 hover:bg-purple-700'}`}
+                className={`p-4 font-bold rounded-lg text-white ${i === currentGroupIndex ? 'bg-purple-800' : 'bg-purple-600 hover:bg-purple-700'}`}
               >
                 Group {i + 1} ({groups[i].length} Teams)
               </button>
             ))}
             {oddTeam && (
               <div className="p-4 bg-yellow-600 rounded-lg text-white font-bold text-center">
-                Odd Team: {oddTeam.name} (Advances to Quarter-Final)
+                Odd Team: {oddTeam.name} (Advances to {teams.length === 7 ? 'Semi-Final' : 'Quarter-Final'})
               </div>
             )}
           </div>
@@ -390,9 +403,9 @@ const Flowchart = ({ teams, groups, currentPhase, matches, groupResults, tournam
           <div className="grid grid-cols-1 gap-4">
             <button
               onClick={() => setSelectedGroup(0)}
-              className={`p-4 font-bold rounded-lg ${currentGroupIndex === 0 ? 'bg-purple-800' : 'bg-purple-600 hover:bg-purple-700'}`}
+              className={`p-4 font-bold rounded-lg text-white ${currentGroupIndex === 0 ? 'bg-purple-800' : 'bg-purple-600 hover:bg-purple-700'}`}
             >
-              {phase === 'quarter' ? 'Quarter-Final' : 'Super Stage'} ({groups[0]?.length} Teams)
+              {phase === 'pre-quarter' ? 'Pre-Quarter-Final' : phase === 'quarter' ? 'Quarter-Final' : phase}
             </button>
           </div>
         )}
@@ -400,18 +413,23 @@ const Flowchart = ({ teams, groups, currentPhase, matches, groupResults, tournam
     );
   };
 
-  const phases = (teams.length === 7 || teams.length === 4 ? ['league', 'quarter', 'semi', 'final', 'winner'] : ['league', 'super', 'quarter', 'semi', 'final', 'winner']).filter(phase => 
-    phase !== 'semi' || getExpectedTeamCount(teams.length === 7 ? 'quarter' : 'super') > 4 || teams.length === 4
-  );
+  const phases = teams.length === 7
+    ? ['league', 'semi', 'final', 'winner']
+    : teams.length === 9 || teams.length === 15
+    ? ['league', 'quarter', 'semi', 'final', 'winner']
+    : teams.length >= 10
+    ? ['league', 'pre-quarter', 'quarter', 'semi', 'final', 'winner']
+    : ['league', 'semi', 'final', 'winner'];
+
   const levels = phases.map(phase => ({
     teams: getQualifiedTeams(phase),
     name: getPhaseName(phase),
     key: phase,
-    matchesInfo: phase === 'league' ? `Groups: ${groups.map((_, i) => `Group ${i + 1} (${getGroupStandings(i).length} teams)`).join(', ')}${oddTeam ? ', Odd Team advances to Quarter-Final' : ''}` :
-                 phase === 'super' ? `${getExpectedTeamCount('super')} teams${oddTeam ? ' (including Odd Team)' : ''}` :
-                 phase === 'quarter' ? teams.length === 7 ? 'Top 4 teams from League + Odd Team' : 'Top 4 teams from Super stage' :
-                 phase === 'semi' ? teams.length === 7 ? 'Top 4 teams from Quarter-Final' : 'Top 4 teams from Super stage' :
-                 phase === 'final' ? getExpectedTeamCount(teams.length === 7 ? 'quarter' : 'super') > 4 ? 'Winners from Semi-Final' : 'Top 2 teams from Super stage' :
+    matchesInfo: phase === 'league' ? `Groups: ${groups.map((_, i) => `Group ${i + 1} (${getGroupStandings(i).length} teams)`).join(', ')}${oddTeam ? `, Odd Team (${oddTeam.name}) advances to ${teams.length === 7 ? 'Semi-Final' : 'Quarter-Final'}` : ''}` :
+                 phase === 'pre-quarter' ? `Top ${getExpectedTeamCount('pre-quarter')} teams from League` :
+                 phase === 'quarter' ? `Top ${getExpectedTeamCount('quarter')} teams from ${teams.length >= 10 ? 'Pre-Quarter-Final' : 'League'}${oddTeam && teams.length === 7 ? ' + Odd Team' : ''}` :
+                 phase === 'semi' ? teams.length === 7 ? 'Top 4 teams from League + Odd Team' : teams.length >= 10 ? 'Top 4 teams from Quarter-Final' : 'Top 4 teams from League' :
+                 phase === 'final' ? 'Top 2 teams from Semi-Final' :
                  phase === 'winner' ? 'Tournament Champion' : ''
   }));
 
@@ -425,13 +443,13 @@ const Flowchart = ({ teams, groups, currentPhase, matches, groupResults, tournam
       <div className="flex gap-4 mb-4">
         <button
           onClick={() => setActiveTab('standings')}
-          className={`px-4 py-2 ${activeTab === 'standings' ? 'bg-purple-600' : 'bg-gray-700'} rounded-lg`}
+          className={`px-4 py-2 ${activeTab === 'standings' ? 'bg-purple-600' : 'bg-gray-700'} rounded-lg text-white`}
         >
           Standings
         </button>
         <button
           onClick={() => setActiveTab('flowchart')}
-          className={`px-4 py-2 ${activeTab === 'flowchart' ? 'bg-purple-600' : 'bg-gray-700'} rounded-lg`}
+          className={`px-4 py-2 ${activeTab === 'flowchart' ? 'bg-purple-600' : 'bg-gray-700'} rounded-lg text-white`}
         >
           Flowchart
         </button>
@@ -446,16 +464,14 @@ const Flowchart = ({ teams, groups, currentPhase, matches, groupResults, tournam
           <div>
             <h2 className="text-2xl font-bold text-purple-400 mb-4">Tournament Standings</h2>
             <div className="flex gap-4 mb-4">
-              {['league', 'super', 'quarter', 'semi', 'final'].map(phase => (
-                phaseHistory.includes(phase) && (
-                  <button
-                    key={phase}
-                    onClick={() => setSelectedStandingsPhase(phase)}
-                    className={`px-4 py-2 ${selectedStandingsPhase === phase ? 'bg-purple-600' : 'bg-gray-700'} hover:bg-purple-700 rounded-lg`}
-                  >
-                    {phase === 'league' ? 'League' : phase === 'super' ? 'Super Stage' : phase === 'quarter' ? 'Quarter-Final' : phase === 'semi' ? 'Semi-Final' : 'Final'}
-                  </button>
-                )
+              {phases.filter(p => p !== 'winner' && phaseHistory.includes(p)).map(phase => (
+                <button
+                  key={phase}
+                  onClick={() => setSelectedStandingsPhase(phase)}
+                  className={`px-4 py-2 ${selectedStandingsPhase === phase ? 'bg-purple-600' : 'bg-gray-700'} hover:bg-purple-700 rounded-lg text-white`}
+                >
+                  {phase === 'league' ? 'Group Stage' : phase === 'pre-quarter' ? 'Pre-Quarter-Final' : phase === 'quarter' ? 'Quarter-Final' : phase === 'semi' ? 'Semi-Final' : 'Final'}
+                </button>
               ))}
             </div>
             {renderPhaseStandings(selectedStandingsPhase)}
@@ -749,12 +765,13 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '', onMatchSetupComplete
         }));
         setAllTeams(fetchedTeams);
         if (!teams && fetchedTeams.length >= 2) {
-          setTournamentTeams(fetchedTeams.map((t, i) => ({
+          const initialTeams = fetchedTeams.map((t, i) => ({
             ...t,
             id: t.id || generateUUID(),
             seed: i + 1
-          })));
-          initializeTournament(fetchedTeams);
+          }));
+          setTournamentTeams(initialTeams);
+          initializeTournament(initialTeams);
         }
       } catch (err) {
         console.error("Error fetching all teams:", err);
@@ -971,13 +988,22 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '', onMatchSetupComplete
         } else {
           advanceToNextPhase();
         }
+      } else if (tournamentPhase === 'pre-quarter') {
+        if (updatedMatches.filter(m => m.phase === 'pre-quarter').every(m => m.played)) {
+          advanceToQuarterFinal();
+        }
+      } else if (tournamentPhase === 'quarter') {
+        if (updatedMatches.filter(m => m.phase === 'quarter').every(m => m.played)) {
+          initializeSemiFinals();
+        }
       } else if (tournamentPhase === 'semi') {
         if (updatedMatches.filter(m => m.phase === 'semi').every(m => m.played)) {
           initializeFinal();
         }
       } else if (tournamentPhase === 'final') {
         if (updatedMatches.filter(m => m.phase === 'final').every(m => m.played)) {
-          setTournamentWinner(winnerId);
+          const finalMatch = updatedMatches.find(m => m.phase === 'final');
+          setTournamentWinner(finalMatch.winner);
         }
       }
       return updatedMatches;
@@ -986,37 +1012,56 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '', onMatchSetupComplete
 
   const advanceToNextPhase = () => {
     if (tournamentPhase === 'league') {
-      if (tournamentTeams.length === 7) {
-        const qualifiedTeams = tournamentGroups.flatMap((group, groupIndex) => {
+      const teamCount = tournamentTeams.length;
+      let qualifiedTeams = [];
+      let nextPhase = '';
+
+      if (teamCount === 7) {
+        qualifiedTeams = tournamentGroups.flatMap((group, groupIndex) => {
+          const sorted = getGroupStandings(groupIndex);
+          return sorted.slice(0, 1);
+        });
+        qualifiedTeams = oddTeam ? [...qualifiedTeams, oddTeam] : qualifiedTeams;
+        nextPhase = 'semi';
+      } else if (teamCount === 9 || teamCount === 15) {
+        qualifiedTeams = tournamentGroups.flatMap((group, groupIndex) => {
           const sorted = getGroupStandings(groupIndex);
           return sorted.slice(0, 2);
         });
-        const quarterTeams = oddTeam ? [...qualifiedTeams, oddTeam] : qualifiedTeams;
-        advanceToQuarterFinal([quarterTeams], 'quarter');
-      } else if (tournamentTeams.length === 4) {
-        const qualifiedTeams = tournamentGroups.flatMap((group, groupIndex) => {
+        nextPhase = 'quarter';
+      } else if (teamCount <= 4) {
+        qualifiedTeams = tournamentGroups.flatMap((group, groupIndex) => {
           const sorted = getGroupStandings(groupIndex);
           return sorted.slice(0, 2);
         });
+        nextPhase = 'semi';
+      } else if (teamCount >= 10) {
+        qualifiedTeams = tournamentGroups.flatMap((group, groupIndex) => {
+          const sorted = getGroupStandings(groupIndex);
+          return sorted.slice(0, 3);
+        });
+        nextPhase = 'pre-quarter';
+      } else {
+        qualifiedTeams = tournamentGroups.flatMap((group, groupIndex) => {
+          const sorted = getGroupStandings(groupIndex);
+          return sorted.slice(0, 3);
+        });
+        nextPhase = 'quarter';
+      }
+
+      if (nextPhase === 'pre-quarter') {
+        advanceToPreQuarterFinal(qualifiedTeams, 'pre-quarter');
+      } else if (nextPhase === 'quarter') {
+        advanceToQuarterFinal(qualifiedTeams, 'quarter');
+      } else if (nextPhase === 'semi') {
         advanceToSemiFinal(qualifiedTeams, 'semi');
-      } else {
-        const teamsPerGroup = tournamentTeams.length === 9 ? 2 : 3;
-        const qualifiedTeams = tournamentGroups.flatMap((group, groupIndex) => {
-          const sorted = getGroupStandings(groupIndex);
-          return sorted.slice(0, teamsPerGroup);
-        });
-        const superTeams = oddTeam ? [...qualifiedTeams, oddTeam] : qualifiedTeams;
-        advanceToSuperStage([superTeams], 'super');
       }
-    } else if (tournamentPhase === 'super') {
-      const superTeams = tournamentGroups[0];
-      if (superTeams.length <= 4) {
-        initializeFinal();
-      } else {
-        initializeSemiFinals();
-      }
-    } else if (tournamentPhase === 'quarter' && tournamentTeams.length === 7) {
+    } else if (tournamentPhase === 'pre-quarter') {
+      advanceToQuarterFinal();
+    } else if (tournamentPhase === 'quarter') {
       initializeSemiFinals();
+    } else if (tournamentPhase === 'semi') {
+      initializeFinal();
     }
   };
 
@@ -1027,90 +1072,71 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '', onMatchSetupComplete
         ...team,
         ...historicalGroupResults[phase]?.[team.id] || groupResults[team.id] || {}
       }))
-      .sort((a, b) => (b.points || 0) - (a.points || 0) || (b.netRunRate || 0) - (a.netRunRate || 0) || (b.wins || 0) - (a.wins || 0));
+      .sort((a, b) => {
+        const pointsDiff = (b.points || 0) - (a.points || 0);
+        if (pointsDiff !== 0) return pointsDiff;
+        const nrrDiff = (b.netRunRate || 0) - (a.netRunRate || 0);
+        if (nrrDiff !== 0) return nrrDiff;
+        return Math.random() - 0.5; // Random tiebreaker if points and NRR are equal
+      });
   };
 
-  const advanceToSuperStage = (superGroups, phase) => {
-    const superMatches = superGroups.flatMap((group, index) =>
-      generateGroupMatches(group, index, phase)
-    );
+  const advanceToPreQuarterFinal = (preQuarterTeams, phase) => {
+    const preQuarterMatches = generateGroupMatches(preQuarterTeams, 0, phase);
     
-    setTournamentGroups(superGroups);
-    setTournamentMatches(superMatches);
+    setTournamentGroups([preQuarterTeams]);
+    setTournamentMatches(preQuarterMatches);
     setTournamentPhase(phase);
     setPhaseHistory(prev => [...prev, 'league']);
     setTournamentGroupIndex(0);
     setSelectedGroupIndex(0);
   };
 
-  const advanceToQuarterFinal = (quarterGroups, phase) => {
-    const quarterMatches = quarterGroups.flatMap((group, index) =>
-      generateGroupMatches(group, index, phase)
-    );
+  const advanceToQuarterFinal = (quarterTeams = null, phase = 'quarter') => {
+    let qualifiedTeams = quarterTeams;
+    if (!qualifiedTeams) {
+      qualifiedTeams = getGroupStandings(0, 'pre-quarter').slice(0, 6);
+    }
+    qualifiedTeams = oddTeam && tournamentTeams.length === 7 ? [...qualifiedTeams, oddTeam] : qualifiedTeams;
+    const quarterMatches = generateGroupMatches(qualifiedTeams, 0, phase);
     
-    setTournamentGroups(quarterGroups);
+    setTournamentGroups([qualifiedTeams]);
     setTournamentMatches(quarterMatches);
     setTournamentPhase(phase);
-    setPhaseHistory(prev => [...prev, 'league']);
+    setPhaseHistory(prev => [...prev, tournamentTeams.length >= 10 ? 'pre-quarter' : 'league']);
     setTournamentGroupIndex(0);
     setSelectedGroupIndex(0);
   };
 
   const advanceToSemiFinal = (semiTeams, phase) => {
-    const semiMatches = [];
-    for (let i = 0; i < semiTeams.length / 2; i++) {
-      semiMatches.push({
-        id: `semi-${i + 1}`,
-        team1: semiTeams[i],
-        team2: semiTeams[semiTeams.length - 1 - i],
-        round: 0,
-        phase: 'semi',
-        winner: null,
-        played: false
-      });
-    }
+    const semiMatches = generateGroupMatches(semiTeams, 0, phase);
     
     setTournamentGroups([semiTeams]);
     setTournamentMatches(semiMatches);
     setTournamentPhase(phase);
-    setPhaseHistory(prev => [...prev, 'league']);
+    setPhaseHistory(prev => [...prev, tournamentTeams.length === 7 ? 'league' : tournamentTeams.length >= 10 ? 'quarter' : 'league']);
     setTournamentGroupIndex(0);
     setSelectedGroupIndex(0);
   };
 
   const initializeSemiFinals = () => {
-    const qualifiedTeams = getGroupStandings(0, tournamentTeams.length === 7 ? 'quarter' : 'super').slice(0, 4);
+    const prevPhase = tournamentTeams.length >= 10 ? 'quarter' : tournamentTeams.length === 7 ? 'league' : 'quarter';
+    let qualifiedTeams = getGroupStandings(0, prevPhase).slice(0, tournamentTeams.length === 7 ? 5 : 4);
+    qualifiedTeams = oddTeam && tournamentTeams.length === 7 ? [...qualifiedTeams, oddTeam] : qualifiedTeams;
     
-    const semiMatches = [];
-    for (let i = 0; i < qualifiedTeams.length / 2; i++) {
-      semiMatches.push({
-        id: `semi-${i + 1}`,
-        team1: qualifiedTeams[i],
-        team2: qualifiedTeams[qualifiedTeams.length - 1 - i],
-        round: 0,
-        phase: 'semi',
-        winner: null,
-        played: false
-      });
-    }
+    const semiMatches = generateGroupMatches(qualifiedTeams, 0, 'semi');
     
     setTournamentGroups([qualifiedTeams]);
     setTournamentMatches(semiMatches);
     setTournamentPhase('semi');
-    setPhaseHistory(prev => [...prev, tournamentTeams.length === 7 ? 'quarter' : 'super']);
+    setPhaseHistory(prev => [...prev, prevPhase]);
     setTournamentGroupIndex(0);
     setSelectedGroupIndex(0);
   };
 
   const initializeFinal = () => {
-    let finalTeams;
-    if (phaseHistory.includes('semi')) {
-      finalTeams = tournamentMatches
-        .filter(m => m.phase === 'semi' && m.winner)
-        .map(m => tournamentTeams.find(t => t.id === m.winner));
-    } else {
-      finalTeams = getGroupStandings(0, tournamentPhase === 'league' ? 'league' : 'super').slice(0, 2);
-    }
+    const prevPhase = phaseHistory.includes('semi') ? 'semi' : tournamentTeams.length >= 10 ? 'quarter' : 'league';
+    const finalTeams = getGroupStandings(0, prevPhase).slice(0, 2);
     
     const finalMatch = [{
       id: 'final',
@@ -1125,7 +1151,7 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '', onMatchSetupComplete
     setTournamentGroups([finalTeams]);
     setTournamentMatches(finalMatch);
     setTournamentPhase('final');
-    setPhaseHistory(prev => [...prev, phaseHistory.includes('semi') ? 'semi' : tournamentTeams.length === 7 ? 'quarter' : 'super']);
+    setPhaseHistory(prev => [...prev, 'semi']);
     setTournamentGroupIndex(0);
     setSelectedGroupIndex(0);
   };
@@ -1289,7 +1315,7 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '', onMatchSetupComplete
                         <option value="">Select a group</option>
                         {tournamentGroups.map((_, index) => (
                           <option key={index} value={index}>
-                            {tournamentPhase === 'league' ? `Group ${index + 1}` : tournamentPhase === 'super' ? 'Super Stage' : tournamentPhase === 'quarter' ? 'Quarter-Final' : tournamentPhase}
+                            {tournamentPhase === 'league' ? `Group ${index + 1}` : tournamentPhase === 'pre-quarter' ? 'Pre-Quarter-Final' : tournamentPhase === 'quarter' ? 'Quarter-Final' : tournamentPhase === 'semi' ? 'Semi-Final' : tournamentPhase}
                           </option>
                         ))}
                       </select>

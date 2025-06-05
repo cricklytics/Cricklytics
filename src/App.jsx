@@ -45,6 +45,7 @@ import MatchStartRR from './pages/RoundRobin/MatchStartRR';
 import MatchStartSB from './pages/MatchStartSB';
 import MatchStart from './pages/MatchStart';
 import MatchStartKO from './pages/KnouckOut/MatchStartKO';
+import TournamentBracket from './components/kumar/flowchart';
 
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -221,6 +222,7 @@ function App() {
           <Route path="/match-start-rr" element={<MatchStartRR/>} />
           <Route path="/match-start-sb" element={<MatchStartSB/>} />
           <Route path="/match-start-ko" element={<MatchStartKO/>} />
+          <Route path="/TournamentBracket" element={<TournamentBracket/>} />
 
           <Route path="/playerpages" element={<PlayerPages />} />
           <Route path="/awards" element={<Awards />} />

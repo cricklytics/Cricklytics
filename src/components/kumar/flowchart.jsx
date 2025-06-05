@@ -262,7 +262,7 @@ const Flowchart = ({ teams, groups, currentPhase, matches, groupResults, tournam
     teams: getQualifiedTeams(phase),
     name: getPhaseName(phase),
     key: phase,
-    matchesInfo: phase === 'league' ? `Groups: ${groups.map((_, i) => `Group ${i + 1} (${getGroupStandings(i).length} teams)`).join(', ')}${oddTeam ? ', Odd Team advances to Quarter-Final' : ''}` :
+    matchesInfo: phase === 'league' ? `Groups: ${(groups || []).map((_, i) => `Group ${i + 1} (${getGroupStandings(i).length} teams)`).join(', ')}${oddTeam ? ', Odd Team advances to Quarter-Final' : ''}` :
                  phase === 'super' ? `${getExpectedTeamCount('super')} teams${oddTeam ? ' (including Odd Team)' : ''}` :
                  phase === 'quarter' ? teams.length === 7 ? 'Top 4 teams from League + Odd Team' : 'Top 4 teams from Super stage' :
                  phase === 'semi' ? teams.length === 7 ? 'Top 4 teams from Quarter-Final' : 'Top 4 teams from Super stage' :
@@ -422,33 +422,15 @@ const TournamentBracket = () => {
       setCurrentPhase('league');
       setCurrentGroupIndex(0);
     } else if (formatType === 'knockout') {
-      // if (teamCount >= 9) {
-      //   const seeded = [...teams].sort((a, b) => a.seed - b.seed);
-      //   newMatches = [{
-      //     id: 'pre-quarter',
-      //     team1: seeded[7],
-      //     team2: seeded[8],
-      //     round: 0,
-      //     phase: 'pre-quarter',
-      //     winner: null,
-      //     played: false
-      //   }];
-      //   setCurrentPhase('pre-quarter');
-      // } else {
-      //   initializeSemiFinals();
-      // }
-      navigate('/Selection1',{
+      // Pass the entire location.state to match-start-ko
+      navigate('/match-start-ko', {
         state: {
-          teams,
+          ...location.state,
           format: 'knockout',
-          matches: [],
-          currentPhase: null,
-          tournamentWinner: null,
-          phaseHistory: [],
-          groups: [],
-          oddTeam: null
+          origin: 'flowchart',
+          activeTab: 'Knockout Brackets'
         }
-      })
+      });
     } else if (formatType === 'test') {
       if (teamCount === 2) {
         newMatches = Array.from({ length: 5 }, (_, i) => ({
@@ -782,7 +764,7 @@ const TournamentBracket = () => {
                     {match.team1?.name || 'TBD'}
                   </span>
                   <span className="mx-2 text-purple-400">vs</span>
-                  <span className={match.winner === match.team2?.id ? 'text-green-400 font-bold' : 'text-gray-300'}>
+                  <span className={match.winner === mock.test2?.id ? 'text-green-400 font-bold' : 'text-gray-300'}>
                     {match.team2?.name || 'TBD'}
                   </span>
                 </div>
@@ -831,7 +813,7 @@ const TournamentBracket = () => {
                 onClick={() => setSelectedGroup(i)}
                 className={`p-4 font-bold rounded-lg ${i === currentGroupIndex ? 'bg-purple-800' : 'bg-purple-600 hover:bg-purple-700'}`}
               >
-                Group {i + 1} ({groups[i].length} Teams)
+                Group {i + 1} ({groups[i]?.length || 0} Teams)
               </button>
             ))}
             {oddTeam && (
@@ -846,7 +828,7 @@ const TournamentBracket = () => {
               onClick={() => setSelectedGroup(0)}
               className={`p-4 font-bold rounded-lg ${currentGroupIndex === 0 ? 'bg-purple-800' : 'bg-purple-600 hover:bg-purple-700'}`}
             >
-              {phase === 'quarter' ? 'Quarter-Final' : 'Super Stage'} ({groups[0]?.length} Teams)
+              {phase === 'quarter' ? 'Quarter-Final' : 'Super Stage'} ({groups[0]?.length || 0} Teams)
             </button>
           </div>
         )}
@@ -860,7 +842,6 @@ const TournamentBracket = () => {
               currentGroupIndex,
               origin: '/tournament-bracket',
               activeTab: 'Start Match'
-
             }
           })}
           className="mt-4 px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg"
