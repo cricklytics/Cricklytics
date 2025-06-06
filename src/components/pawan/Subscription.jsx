@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import '../../index.css';
+import backButton from '../../assets/kumar/right-chevron.png';
+import { useNavigate } from 'react-router-dom';
+
 
 const plans = [
   {
@@ -143,9 +146,21 @@ const faqs = [
 const Subscription = () => {
   const [billingCycle, setBillingCycle] = useState('yearly');
   const [activeFaq, setActiveFaq] = useState(null);
+  const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-green-900 to-gray-800 py-12 px-4 sm:px-6 lg:px-8 text-gray-100">
+   <div className="min-h-screen bg-gradient-to-br from-gray-900 via-green-900 to-gray-800 py-12 px-4 sm:px-6 lg:px-8 text-gray-100 relative">
+      
+      {/* Back Button */}
+      <div className="absolute top-6 left-6 z-50">
+        <img 
+          src={backButton}
+          alt="Back"
+          className="h-10 w-10 cursor-pointer -scale-x-100"
+          onClick={() => navigate('/landingpage')}
+        />
+      </div>
+
       <div className="max-w-7xl mx-auto">
         {/* Header Section */}
         <motion.div
