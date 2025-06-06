@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { db } from '../../../firebase'; // Adjust path as needed
+import { db } from '../../../firebase';
 import { collection, addDoc, serverTimestamp, doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
-const AddDetailsModal = ({ onClose, onDetailsAdded, currentDetails, currentUserId }) => {
+const AddDetailsModal = ({ onClose, onDetailsAdded, currentDetails, currentUserId, clubId, clubName }) => {
   const [details, setDetails] = useState({
-    heroTitle: currentDetails?.heroTitle || '',
+    heroTitle: currentDetails?.heroTitle || clubName || '',
     heroSubtitle: currentDetails?.heroSubtitle || '',
     storyText1: currentDetails?.storyText1 || '',
     storyText2: currentDetails?.storyText2 || '',
@@ -29,6 +29,7 @@ const AddDetailsModal = ({ onClose, onDetailsAdded, currentDetails, currentUserI
     trophyImageFile: null,
     teamMembers: currentDetails?.teamMembers || [],
     newTeamMember: { name: '', role: '', bio: '', img: '', imgFile: null },
+    clubId: currentDetails?.clubId || clubId || '',
   });
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -86,7 +87,6 @@ const AddDetailsModal = ({ onClose, onDetailsAdded, currentDetails, currentUserI
     }
 
     try {
-      // Upload images if files are selected
       const storyImageUrl = details.storyImageFile 
         ? await uploadImage(details.storyImageFile) 
         : details.storyImage;
@@ -95,7 +95,6 @@ const AddDetailsModal = ({ onClose, onDetailsAdded, currentDetails, currentUserI
         ? await uploadImage(details.trophyImageFile) 
         : details.trophyImage;
 
-      // Upload team member images
       const updatedTeamMembers = await Promise.all(
         details.teamMembers.map(async (member) => {
           const imgUrl = member.imgFile 
@@ -110,7 +109,6 @@ const AddDetailsModal = ({ onClose, onDetailsAdded, currentDetails, currentUserI
         })
       );
 
-      // Prepare data for Firestore
       const detailsData = {
         heroTitle: details.heroTitle,
         heroSubtitle: details.heroSubtitle,
@@ -132,19 +130,17 @@ const AddDetailsModal = ({ onClose, onDetailsAdded, currentDetails, currentUserI
         seasonsCompleted: details.seasonsCompleted,
         trophyImage: trophyImageUrl,
         teamMembers: updatedTeamMembers.filter(m => m.name.trim() !== ''),
+        clubId: details.clubId,
         updatedAt: serverTimestamp(),
         updatedBy: currentUserId,
       };
 
       const docRef = doc(db, "aboutPage", "content");
 
-      // Check if document exists
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
-        // Update existing document
         await updateDoc(docRef, detailsData);
       } else {
-        // Create new document
         await setDoc(docRef, {
           ...detailsData,
           createdAt: serverTimestamp(),
@@ -152,7 +148,7 @@ const AddDetailsModal = ({ onClose, onDetailsAdded, currentDetails, currentUserI
         });
       }
 
-      onDetailsAdded(detailsData); // Notify parent component with updated data
+      onDetailsAdded(detailsData);
     } catch (err) {
       console.error("Error saving details:", err);
       setError('Failed to save details: ' + err.message);
@@ -185,6 +181,17 @@ const AddDetailsModal = ({ onClose, onDetailsAdded, currentDetails, currentUserI
           {currentDetails?.id ? 'Edit Page Details' : 'Add Page Details'}
         </h2>
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Club ID */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300">Club ID</label>
+            <input
+              type="text"
+              name="clubId"
+              value={details.clubId}
+              readOnly
+              className="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-white p-2"
+            />
+          </div>
           {/* Hero Section */}
           <div>
             <label className="block text-sm font-medium text-gray-300">Hero Title</label>

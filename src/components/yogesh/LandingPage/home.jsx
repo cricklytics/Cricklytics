@@ -1,9 +1,9 @@
-// src/components/ClubDetail.jsx
-import { useState, useEffect } from 'react'; // Import useState and useEffect
+import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { FiArrowLeft, FiMapPin, FiUsers, FiCalendar, FiStar, FiMail, FiGlobe } from 'react-icons/fi';
-import { db } from '../../../firebase'; // Import your Firebase db instance
-import { doc, getDoc } from 'firebase/firestore'; // Import Firestore functions
+import { db } from '../../../firebase';
+import { doc, getDoc } from 'firebase/firestore';
+import AddDetailsModal from './AddDetailsModal'; // Import AddDetailsModal
 
 const ClubDetail = () => {
   const { id } = useParams();
@@ -11,41 +11,43 @@ const ClubDetail = () => {
   const [club, setClub] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false); // State for modal
 
   useEffect(() => {
     const fetchClubDetails = async () => {
       setLoading(true);
       setError(null);
       try {
-        // Create a reference to the specific club document
         const clubDocRef = doc(db, 'clubs', id);
-        // Fetch the document snapshot
         const docSnap = await getDoc(clubDocRef);
 
         if (docSnap.exists()) {
-          // If the document exists, set the club data
           setClub({ id: docSnap.id, ...docSnap.data() });
         } else {
-          // Document does not exist
           setError("Club not found.");
-          setClub(null); // Ensure club is null if not found
+          setClub(null);
         }
       } catch (err) {
         console.error("Error fetching club details:", err);
         setError("Failed to load club details. Please try again.");
-        setClub(null); // Ensure club is null on error
+        setClub(null);
       } finally {
         setLoading(false);
       }
     };
 
-    if (id) { // Only fetch if an ID is present
+    if (id) {
       fetchClubDetails();
     } else {
       setLoading(false);
       setError("No club ID provided.");
     }
-  }, [id]); // Re-run effect if the ID changes
+  }, [id]);
+
+  const handleDetailsAdded = (detailsData) => {
+    setIsModalOpen(false); // Close modal after saving
+    // Optionally, you can update the UI or state if needed
+  };
 
   if (loading) {
     return (
@@ -70,8 +72,6 @@ const ClubDetail = () => {
     );
   }
 
-  // If club is null here, it means it wasn't found and error was already set
-  // This check is mainly for clarity, as the error state should catch it first.
   if (!club) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
@@ -88,7 +88,7 @@ const ClubDetail = () => {
   }
 
   return (
-    <div className="min-h-screen  bg-gradient-to-r from-gray-800 to-gray-700">
+    <div className="min-h-screen bg-gradient-to-r from-gray-800 to-gray-700">
       <header className="bg-gradient-to-r from-gray-800 to-gray-700 text-white py-4 px-4">
         <div className="container mx-auto flex items-center">
           <button
@@ -112,7 +112,7 @@ const ClubDetail = () => {
             <div className="md:col-span-1">
               <div className="flex flex-col items-center mb-4 md:mb-6">
                 <img
-                  src={club.logo || 'https://via.placeholder.com/150'} // Fallback for logo
+                  src={club.logo || 'https://via.placeholder.com/150'}
                   alt={`${club.name} logo`}
                   className="w-32 h-32 md:w-48 md:h-48 object-cover rounded-full border-4 border-blue-100 mb-3 md:mb-4"
                 />
@@ -175,6 +175,15 @@ const ClubDetail = () => {
                     </div>
                   </div>
                 )}
+                {/* Add Details Button */}
+                <div className="p-3 md:p-4 bg-gray-50 rounded-lg">
+                  <button
+                    onClick={() => setIsModalOpen(true)}
+                    className="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+                  >
+                    Add About Details
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -184,6 +193,10 @@ const ClubDetail = () => {
                 <div className="bg-gray-50 p-3 md:p-4 rounded-lg">
                   <h2 className="text-lg font-bold text-gray-800 mb-2">About</h2>
                   <p className="text-gray-700 text-sm md:text-base">{club.description}</p>
+                  <div className="mt-2 text-sm md:text-base">
+                    <span className="font-medium text-gray-800">Club ID: </span>
+                    <span className="text-gray-500">{club.clubId}</span>
+                  </div>
                 </div>
               )}
 
@@ -235,6 +248,18 @@ const ClubDetail = () => {
           </div>
         </div>
       </main>
+
+      {/* Add Details Modal */}
+      {isModalOpen && (
+        <AddDetailsModal
+          onClose={() => setIsModalOpen(false)}
+          onDetailsAdded={handleDetailsAdded}
+          currentDetails={null} // Pass null or existing details if needed
+          currentUserId={club.userId || ''} // Assuming userId is stored in club
+          clubId={club.clubId}
+          clubName={club.name}
+        />
+      )}
     </div>
   );
 };

@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import backButton from '../assets/kumar/right-chevron.png';
+import { v4 as uuidv4 } from 'uuid'; // Import uuid for generating tournament ID
 
 // Firebase imports
 import { db, auth, storage, serverTimestamp } from '../firebase';
@@ -31,12 +32,13 @@ const Clubsmain = () => {
     logoFile: null,
     logoUrl: '',
     description: '',
-    upcomingMatchesText: '', // New: single text input for upcoming matches
-    facilitiesText: '',       // New: single text input for facilities
+    upcomingMatchesText: '',
+    facilitiesText: '',
     email: '',
     website: '',
     phone: '',
-    achievementsText: '' // New: single text input for achievements
+    achievementsText: '',
+    tournamentId: uuidv4() // Initialize with a random UUID
   });
   const [user, setUser] = useState(null);
   const [loadingClubs, setLoadingClubs] = useState(true);
@@ -97,20 +99,17 @@ const Clubsmain = () => {
 
     try {
       setUploadingLogo(true);
-      let logoDownloadURL = newClub.logoUrl; // Default to provided URL if any
+      let logoDownloadURL = newClub.logoUrl;
       if (newClub.logoFile) {
         const storageRef = ref(storage, `club_logos/${user.uid}/${newClub.logoFile.name}`);
         const uploadTask = await uploadBytes(storageRef, newClub.logoFile);
         logoDownloadURL = await getDownloadURL(uploadTask.ref);
       } else if (!logoDownloadURL) {
-        // If no file uploaded and no default URL, use a placeholder
         logoDownloadURL = "https://via.placeholder.com/60";
       }
       setUploadingLogo(false);
 
-      // Parse upcomingMatches and facilities from comma-separated strings
       const parseMatches = (text) => {
-        // Expected format: "opponent - date - venue, opponent - date - venue"
         return text.split(',').map(matchStr => {
           const parts = matchStr.trim().split('-').map(part => part.trim());
           if (parts.length >= 3) {
@@ -132,21 +131,21 @@ const Clubsmain = () => {
         category: newClub.category,
         logo: logoDownloadURL,
         description: newClub.description,
-        upcomingMatches: parseMatches(newClub.upcomingMatchesText), // Use parsed array of objects
-        facilities: parseList(newClub.facilitiesText), // Use parsed array
+        upcomingMatches: parseMatches(newClub.upcomingMatchesText),
+        facilities: parseList(newClub.facilitiesText),
         contact: {
           email: newClub.email,
           website: newClub.website,
           phone: newClub.phone
         },
-        achievements: parseList(newClub.achievementsText), // Use parsed array
+        achievements: parseList(newClub.achievementsText),
         userId: user.uid,
-        createdAt: serverTimestamp()
+        createdAt: serverTimestamp(),
+        tournamentId: newClub.tournamentId // Add tournamentId to club data
       };
 
       await addDoc(collection(db, 'clubs'), clubData);
       setIsModalOpen(false);
-      // Reset form fields
       setNewClub({
         name: '',
         location: '',
@@ -161,7 +160,8 @@ const Clubsmain = () => {
         email: '',
         website: '',
         phone: '',
-        achievementsText: ''
+        achievementsText: '',
+        tournamentId: uuidv4() // Reset with a new UUID for the next club
       });
     } catch (err) {
       console.error("Error adding club:", err);
@@ -259,15 +259,15 @@ const Clubsmain = () => {
                 Our top-tier clubs with international standard facilities and players.
               </p>
             </motion.div>
-            <motion.div
-              whileHover={{ y: -2 }}
-              className="p-3 bg-gray-750 rounded-lg border border-gray-600"
-            >
-              <h3 className="font-medium text-green-400">Regional Development</h3>
-              <p className="text-sm text-gray-300 mt-1">
-                Clubs across all regions promoting cricket at grassroots level.
-              </p>
-            </motion.div>
+           <motion.div
+      whileHover={{ y: -2 }}
+      className="p-3 bg-gray-700 rounded-lg border border-gray-600"
+    >
+      <h3 className="font-medium text-green-400">Regional Development</h3>
+      <p className="text-sm text-gray-300 mt-1">
+        Clubs across all regions promoting cricket at grassroots level.
+      </p>
+    </motion.div>
             <motion.div
               whileHover={{ y: -2 }}
               className="p-3 bg-gray-750 rounded-lg border border-gray-600"
@@ -465,6 +465,9 @@ const Clubsmain = () => {
                               <FiUsers className="mr-1 flex-shrink-0" />
                               <span className="truncate">{club.members} members | Est. {club.established}</span>
                             </div>
+                            <div className="flex items-center text-xs sm:text-sm text-gray-400 mt-1 truncate">
+                              <span className="truncate">Tournament ID: {club.tournamentId}</span>
+                            </div>
                           </div>
                         </motion.div>
                       </Link>
@@ -511,11 +514,22 @@ const Clubsmain = () => {
               initial={{ scale: 0.9, y: 50 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 50 }}
-              className="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-lg border border-gray-700 overflow-y-auto max-h-[90vh]" // Added max-h and overflow for scroll
+              className="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-lg border border-gray-700 overflow-y-auto max-h-[90vh]"
             >
               <h2 className="text-2xl font-bold text-white mb-4">Add New Club</h2>
               {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
               <form onSubmit={handleAddClub} className="space-y-4">
+                <div>
+                  <label htmlFor="tournamentId" className="block text-sm font-medium text-gray-300">Tournament ID</label>
+                  <input
+                    type="text"
+                    id="tournamentId"
+                    name="tournamentId"
+                    value={newClub.tournamentId}
+                    readOnly
+                    className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none"
+                  />
+                </div>
                 <div>
                   <label htmlFor="name" className="block text-sm font-medium text-gray-300">Club Name</label>
                   <input
