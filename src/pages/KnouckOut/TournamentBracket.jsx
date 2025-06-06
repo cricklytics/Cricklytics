@@ -26,6 +26,7 @@ const TournamentBracket = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [canAdvanceToNextRound, setCanAdvanceToNextRound] = useState(false);
+  const [finalRankings, setFinalRankings] = useState(null);
 
   useEffect(() => {
     console.log('TournamentBracket received state:', location.state);
@@ -37,7 +38,9 @@ const TournamentBracket = () => {
         const initialTeams = stateTeams.map((t, i) => ({
           ...t,
           id: t.id || generateUUID(),
+          name: t.name || `Team ${i + 1}`,
           seed: t.seed || i + 1,
+          flagUrl: t.flagUrl || '',
         }));
         setTeams(initialTeams);
         setTournamentId(null);
@@ -47,6 +50,7 @@ const TournamentBracket = () => {
         setPhaseHistory([]);
         setMatchHistory([]);
         setFormat(null);
+        setFinalRankings(null);
       } else if (stateTournamentId) {
         try {
           const tournamentDocRef = doc(db, 'KnockoutTournamentMatches', stateTournamentId);
@@ -59,6 +63,7 @@ const TournamentBracket = () => {
             setCurrentPhase(stateCurrentPhase || data.currentPhase);
             setTournamentWinner(data.tournamentWinner || null);
             setFormat(data.format || stateFormat);
+            setFinalRankings(data.finalRankings || null);
             const currentRound = data.rounds.find((r) => r.stage === (stateCurrentPhase || data.currentPhase));
             if (currentRound) {
               setMatches(currentRound.matches || []);
@@ -108,13 +113,32 @@ const TournamentBracket = () => {
       }
     }
 
+    const newTournamentId = tournamentId || generateUUID();
+    setTournamentId(newTournamentId);
+
     if (formatType === 'superKnockout') {
       let byeCount = 0;
-      if (teamCount >= 16) byeCount = 4;
-      else if (teamCount === 15) byeCount = 1;
-      else if (teamCount > 10) byeCount = teamCount - 10;
-      else if (teamCount > 8) byeCount = teamCount - 8;
-      byeCount = Math.min(byeCount, Math.floor(teamCount / 2));
+      let preQuarterNeeded = false;
+      if (teamCount >= 16) {
+        byeCount = 4;
+        preQuarterNeeded = true;
+      } else if (teamCount === 15) {
+        byeCount = 1;
+      } else if (teamCount >= 13) {
+        byeCount = teamCount - 10;
+        preQuarterNeeded = true;
+      } else if (teamCount >= 10) {
+        byeCount = teamCount - 8;
+      } else if (teamCount >= 4) {
+        byeCount = teamCount - 4;
+      } else if (teamCount === 2) {
+        byeCount = 0;
+      } else {
+        console.error(`Super Knockout requires at least 2 teams, received ${teamCount}.`);
+        alert('Super Knockout requires at least 2 teams.');
+        window.location.reload();
+        return;
+      }
 
       const competingTeams = seededTeams.slice(byeCount);
       const superKnockoutMatches = [];
@@ -122,8 +146,18 @@ const TournamentBracket = () => {
       for (let i = 0; i < competingTeams.length - 1; i += 2) {
         superKnockoutMatches.push({
           id: `super-knockout-${i / 2}`,
-          team1: competingTeams[i],
-          team2: competingTeams[i + 1],
+          team1: {
+            id: competingTeams[i].id,
+            name: competingTeams[i].name,
+            seed: competingTeams[i].seed,
+            flagUrl: competingTeams[i].flagUrl || '',
+          },
+          team2: {
+            id: competingTeams[i + 1].id,
+            name: competingTeams[i + 1].name,
+            seed: competingTeams[i + 1].seed,
+            flagUrl: competingTeams[i + 1].flagUrl || '',
+          },
           round: 0,
           phase: 'superKnockout',
           winner: null,
@@ -134,32 +168,74 @@ const TournamentBracket = () => {
       if (competingTeams.length % 2 === 1) {
         superKnockoutMatches.push({
           id: `super-knockout-${Math.floor(competingTeams.length / 2)}`,
-          team1: competingTeams[competingTeams.length - 1],
-          team2: { name: 'BYE', id: generateUUID(), isBye: true },
+          team1: {
+            id: competingTeams[competingTeams.length - 1].id,
+            name: competingTeams[competingTeams.length - 1].name,
+            seed: competingTeams[competingTeams.length - 1].seed,
+            flagUrl: competingTeams[competingTeams.length - 1].flagUrl || '',
+          },
+          team2: {
+            id: generateUUID(),
+            name: 'BYE',
+            isBye: true,
+          },
           round: 0,
           phase: 'superKnockout',
-          winner: competingTeams[competingTeams.length - 1].id,
+          winner: competingTeams[competingTeams.length - 1].name,
           played: true,
         });
       }
 
-      setMatches(superKnockoutMatches);
-      setMatchHistory(superKnockoutMatches);
-      setCurrentPhase('superKnockout');
-    } else if (formatType === 'knockout') {
-      if (teamCount !== 12) {
-        console.error(`Knockout format requires exactly 12 teams, received ${teamCount}.`);
-        alert('Knockout format requires exactly 12 teams.');
+      const rounds = [
+        { name: `Round of ${competingTeams.length}`, matches: superKnockoutMatches, roundNumber: 0, stage: 'superKnockout' },
+      ];
+      if (teamCount === 2) {
+        rounds.push({ name: 'Final', matches: [], roundNumber: 1, stage: 'final' });
+      } else if (teamCount <= 4) {
+        rounds.push({ name: 'Semifinals', matches: [], roundNumber: 1, stage: 'semi' });
+        rounds.push({ name: 'Final', matches: [], roundNumber: 2, stage: 'final' });
+      } else {
+        if (preQuarterNeeded) {
+          rounds.push({ name: 'Pre-Quarterfinals', matches: [], roundNumber: 1, stage: 'preQuarter' });
+        }
+        rounds.push({ name: 'Quarterfinals', matches: [], roundNumber: preQuarterNeeded ? 2 : 1, stage: 'quarter' });
+        rounds.push({ name: 'Semifinals', matches: [], roundNumber: preQuarterNeeded ? 3 : 2, stage: 'semi' });
+        rounds.push({ name: 'Final', matches: [], roundNumber: preQuarterNeeded ? 4 : 3, stage: 'final' });
+      }
+
+      try {
+        await setDoc(doc(db, 'KnockoutTournamentMatches', newTournamentId), {
+          format: 'superKnockout',
+          teams: seededTeams,
+          rounds,
+          currentPhase: teamCount === 2 ? 'final' : 'superKnockout',
+          tournamentWinner: null,
+          finalRankings: null,
+        });
+        console.log('Super Knockout tournament initialized in Firebase');
+      } catch (error) {
+        console.error('Error initializing Super Knockout in Firebase:', error);
+        alert('Failed to initialize tournament. Please try again.');
         window.location.reload();
         return;
       }
-      const newTournamentId = tournamentId || generateUUID();
-      setTournamentId(newTournamentId);
+
+      setMatches(teamCount === 2 ? superKnockoutMatches.slice(0, 1) : superKnockoutMatches);
+      setMatchHistory(teamCount === 2 ? superKnockoutMatches.slice(0, 1) : superKnockoutMatches);
+      setCurrentPhase(teamCount === 2 ? 'final' : 'superKnockout');
+      setPhaseHistory(teamCount <= 2 ? ['final'] : ['superKnockout']);
+    } else if (formatType === 'knockout') {
+      if (teamCount !== 12) {
+        console.error(`Knockout format requires exactly 12 teams, received ${teamCount}.`);
+        alert('Knockout requires exactly 12 teams.');
+        window.location.reload();
+        return;
+      }
       const preQuarterMatches = [
         {
           id: 'pre-quarter-1',
-          team1: seededTeams[8], // Seed 9
-          team2: seededTeams[11], // Seed 12
+          team1: seededTeams[8],
+          team2: seededTeams[11],
           round: 0,
           phase: 'preQuarter',
           winner: null,
@@ -167,8 +243,8 @@ const TournamentBracket = () => {
         },
         {
           id: 'pre-quarter-2',
-          team1: seededTeams[9], // Seed 10
-          team2: seededTeams[10], // Seed 11
+          team1: seededTeams[9],
+          team2: seededTeams[10],
           round: 0,
           phase: 'preQuarter',
           winner: null,
@@ -183,23 +259,17 @@ const TournamentBracket = () => {
       ];
 
       try {
-        console.log('Initializing knockout tournament in Firebase:', {
-          format: 'knockout',
-          teams: seededTeams,
-          rounds,
-          currentPhase: 'preQuarter',
-          tournamentWinner: null,
-        });
         await setDoc(doc(db, 'KnockoutTournamentMatches', newTournamentId), {
           format: 'knockout',
           teams: seededTeams,
           rounds,
           currentPhase: 'preQuarter',
           tournamentWinner: null,
+          finalRankings: null,
         });
-        console.log('Knockout tournament initialized successfully in Firebase');
+        console.log('Knockout tournament initialized in Firebase');
       } catch (error) {
-        console.error('Error initializing tournament in Firebase:', error);
+        console.error('Error initializing Knockout in Firebase:', error);
         alert('Failed to initialize tournament. Please try again.');
         window.location.reload();
         return;
@@ -211,13 +281,11 @@ const TournamentBracket = () => {
       setPhaseHistory(['preQuarter']);
     } else if (formatType === 'playOff') {
       if (teamCount !== 8) {
-        console.error(`Play Off format requires exactly 8 teams, received ${teamCount}.`);
+        console.error(`PlayOff format requires exactly 8 teams, received ${teamCount}.`);
         alert('Play Off format requires exactly 8 teams.');
         window.location.reload();
         return;
       }
-      const newTournamentId = tournamentId || generateUUID();
-      setTournamentId(newTournamentId);
       const quarterMatches = [
         { id: 'r0-0', team1: seededTeams[0], team2: seededTeams[7], round: 0, phase: 'quarter', winner: null, played: false },
         { id: 'r0-1', team1: seededTeams[1], team2: seededTeams[6], round: 0, phase: 'quarter', winner: null, played: false },
@@ -231,23 +299,17 @@ const TournamentBracket = () => {
       ];
 
       try {
-        console.log('Initializing playOff tournament in Firebase:', {
-          format: 'playOff',
-          teams: seededTeams,
-          rounds,
-          currentPhase: 'quarter',
-          tournamentWinner: null,
-        });
         await setDoc(doc(db, 'KnockoutTournamentMatches', newTournamentId), {
           format: 'playOff',
           teams: seededTeams,
           rounds,
           currentPhase: 'quarter',
           tournamentWinner: null,
+          finalRankings: null,
         });
-        console.log('playOff tournament initialized successfully in Firebase');
+        console.log('PlayOff tournament initialized in Firebase');
       } catch (error) {
-        console.error('Error initializing tournament in Firebase:', error);
+        console.error('Error initializing PlayOff in Firebase:', error);
         alert('Failed to initialize tournament. Please try again.');
         window.location.reload();
         return;
@@ -260,30 +322,76 @@ const TournamentBracket = () => {
     } else if (formatType === 'eliminatorElite') {
       if (teamCount !== 4) {
         console.error(`Eliminator Elite format requires exactly 4 teams, received ${teamCount}.`);
-        alert('Eliminator Elite format requires exactly 4 teams.');
+        alert('Eliminator Elite requires 4 teams.');
         window.location.reload();
         return;
       }
-      const newMatches = [
+      const initialMatches = [
         { id: 'elite-1', team1: seededTeams[0], team2: seededTeams[3], round: 0, phase: 'eliminatorElite', winner: null, played: false },
         { id: 'elite-2', team1: seededTeams[1], team2: seededTeams[2], round: 0, phase: 'eliminatorElite', winner: null, played: false },
       ];
-      setMatches(newMatches);
-      setMatchHistory(newMatches);
-      setCurrentPhase('eliminatorElite');
-    } else if (formatType === 'championship') {
-      if (teamCount !== 2) {
-        console.error(`Championship format requires exactly 2 teams, received ${teamCount}.`);
-        alert('Championship format requires exactly 2 teams.');
+      const rounds = [
+        { name: 'Semifinals', matches: initialMatches, roundNumber: 0, stage: 'eliminatorElite' },
+        { name: 'Final', matches: [], roundNumber: 1, stage: 'final' },
+        { name: 'Third Place', matches: [], roundNumber: 1, stage: 'thirdPlace' },
+      ];
+
+      try {
+        await setDoc(doc(db, 'KnockoutTournamentMatches', newTournamentId), {
+          format: 'eliminatorElite',
+          teams: seededTeams,
+          rounds,
+          currentPhase: 'eliminatorElite',
+          tournamentWinner: null,
+          finalRankings: null,
+        });
+        console.log('Eliminator Elite tournament initialized in Firebase');
+      } catch (error) {
+        console.error('Error initializing Eliminator Elite in Firebase:', error);
+        alert('Failed to initialize tournament. Please try again.');
         window.location.reload();
         return;
       }
-      const newMatches = [
+
+      setMatches(initialMatches);
+      setMatchHistory(initialMatches);
+      setCurrentPhase('eliminatorElite');
+      setPhaseHistory(['eliminatorElite']);
+    } else if (formatType === 'championship') {
+      if (teamCount !== 2) {
+        console.error(`Championship format requires exactly 2 teams, received ${teamCount}.`);
+        alert('Championship requires 2 teams.');
+        window.location.reload();
+        return;
+      }
+      const initialMatches = [
         { id: 'championship', team1: seededTeams[0], team2: seededTeams[1], round: 0, phase: 'championship', winner: null, played: false },
       ];
-      setMatches(newMatches);
-      setMatchHistory(newMatches);
+      const rounds = [
+        { name: 'Championship', matches: initialMatches, roundNumber: 0, stage: 'championship' },
+      ];
+
+      try {
+        await setDoc(doc(db, 'KnockoutTournamentMatches', newTournamentId), {
+          format: 'championship',
+          teams: seededTeams,
+          rounds,
+          currentPhase: 'championship',
+          tournamentWinner: null,
+          finalRankings: null,
+        });
+        console.log('Championship tournament initialized in Firebase');
+      } catch (error) {
+        console.error('Error initializing Championship in Firebase:', error);
+        alert('Failed to initialize tournament. Please try again.');
+        window.location.reload();
+        return;
+      }
+
+      setMatches(initialMatches);
+      setMatchHistory(initialMatches);
       setCurrentPhase('championship');
+      setPhaseHistory(['championship']);
     } else {
       console.error(`Unknown format: ${formatType}`);
       alert('Invalid tournament format selected.');
@@ -297,37 +405,44 @@ const TournamentBracket = () => {
 
   const getRoundNumberForPhase = (phase) => {
     switch (phase) {
-      case 'preQuarter':
+      case 'superKnockout':
         return 0;
-      case 'quarter':
+      case 'preQuarter':
         return 1;
+      case 'quarter':
+        return teams.length >= 13 ? 2 : 1;
       case 'semi':
-        return 2;
+        return teams.length >= 13 ? 3 : 2;
       case 'final':
-        return 3;
+        return teams.length >= 13 ? 4 : 3;
+      case 'eliminatorElite':
+        return 0;
+      case 'thirdPlace':
+        return 1;
+      case 'championship':
+        return 0;
       default:
         return -1;
     }
   };
 
-  const fetchWinnersByRoundFromFirebase = async (tournamentId, roundNumber) => {
+  const fetchWinnersByRoundFromFirebase = async (tournamentId, roundNumber, phase) => {
     try {
       const tournamentDocRef = doc(db, 'KnockoutTournamentMatches', tournamentId);
       const tournamentDoc = await getDoc(tournamentDocRef);
       if (tournamentDoc.exists()) {
         const data = tournamentDoc.data();
-        console.log('Fetched Firebase data for winners:', data);
         const allMatches = data.rounds.flatMap((r) => r.matches);
-        console.log(`All matches from Firebase:`, allMatches);
-        const roundMatches = allMatches.filter((m) => m.round === roundNumber);
-        console.log(`Matches in round ${roundNumber} from Firebase:`, roundMatches);
+        console.log(`Fetching winners for round ${roundNumber}, phase ${phase}. All matches:`, allMatches);
+        const roundMatches = allMatches.filter((m) => m.round === roundNumber && m.phase === phase);
+        console.log(`Filtered matches for round ${roundNumber}, phase ${phase}:`, roundMatches);
         const winners = roundMatches
           .filter((m) => m.winner)
           .map((m) => {
             const winnerTeam = m.team1.name === m.winner ? m.team1 : m.team2;
             return { ...winnerTeam };
           });
-        console.log(`Winners fetched from Firebase for round ${roundNumber}:`, winners);
+        console.log(`Winners fetched from Firebase for round ${roundNumber}, phase ${phase}:`, winners);
         return winners;
       } else {
         console.error('Tournament document not found in Firebase');
@@ -340,8 +455,8 @@ const TournamentBracket = () => {
   };
 
   useEffect(() => {
-    if ((format === 'playOff' || format === 'knockout') && currentPhase && tournamentId) {
-      const unsubscribe = onSnapshot(doc(db, 'KnockoutTournamentMatches', tournamentId), (docSnapshot) => {
+    if (['superKnockout', 'playOff', 'knockout', 'eliminatorElite', 'championship'].includes(format) && currentPhase && tournamentId) {
+      const unsubscribe = onSnapshot(doc(db, 'KnockoutTournamentMatches', tournamentId), async (docSnapshot) => {
         if (docSnapshot.exists()) {
           const data = docSnapshot.data();
           console.log('onSnapshot received data:', data);
@@ -351,7 +466,6 @@ const TournamentBracket = () => {
               ...match,
               played: !!match.winner || match.played,
             }));
-            console.log('Updated matches from onSnapshot:', updatedMatches);
             setMatches((prevMatches) => {
               const matchesChanged = JSON.stringify(prevMatches) !== JSON.stringify(updatedMatches);
               if (matchesChanged) {
@@ -372,47 +486,195 @@ const TournamentBracket = () => {
             });
 
             const allMatchesPlayed = updatedMatches.every((m) => m.played);
-            console.log(`All matches played in ${currentPhase}: ${allMatchesPlayed}`);
             setCanAdvanceToNextRound(allMatchesPlayed);
 
             if (allMatchesPlayed) {
               const advanceToNextRound = async () => {
                 const roundNumber = getRoundNumberForPhase(currentPhase);
-                const winners = await fetchWinnersByRoundFromFirebase(tournamentId, roundNumber);
-                if (format === 'playOff') {
+                if (format === 'superKnockout') {
+                  const winners = await fetchWinnersByRoundFromFirebase(tournamentId, roundNumber, currentPhase);
+                  const byeCount = teams.length >= 16 ? 4 : teams.length === 15 ? 1 : teams.length >= 13 ? teams.length - 10 : teams.length >= 10 ? teams.length - 8 : teams.length >= 4 ? teams.length - 4 : 0;
+                  const byeTeamsSorted = teams.sort((a, b) => a.seed - b.seed).slice(0, byeCount);
+                  if (currentPhase === 'superKnockout') {
+                    const nextTeams = [...winners, ...byeTeamsSorted];
+                    console.log('Advancing from Super Knockout with teams:', nextTeams);
+                    if (nextTeams.length === 10) {
+                      console.log('Initializing Pre-Quarterfinals');
+                      initializePreQuarter(nextTeams, tournamentId);
+                    } else if (nextTeams.length === 8) {
+                      console.log('Initializing Quarterfinals');
+                      initializeQuarterFinals(nextTeams, tournamentId);
+                    } else if (nextTeams.length === 4) {
+                      console.log('Initializing Semifinals');
+                      initializeSemiFinals(nextTeams, tournamentId);
+                    } else if (nextTeams.length === 2) {
+                      console.log('Initializing Final');
+                      initializeFinal(nextTeams, tournamentId);
+                    }
+                  } else if (currentPhase === 'preQuarter' && winners.length === 2) {
+                    console.log('Advancing from Pre-Quarterfinals to Quarterfinals');
+                    const prevWinners = await fetchWinnersByRoundFromFirebase(tournamentId, 0, 'superKnockout');
+                    const remainingSuperKnockoutWinners = prevWinners
+                      .filter((w) => !winners.some((pw) => pw.name === w.name))
+                      .sort((a, b) => a.seed - b.seed)
+                      .slice(0, 2);
+                    const nextTeams = [...byeTeamsSorted, ...remainingSuperKnockoutWinners, ...winners];
+                    console.log('Quarterfinal teams:', nextTeams);
+                    initializeQuarterFinals(nextTeams, tournamentId);
+                  } else if (currentPhase === 'quarter' && winners.length === 4) {
+                    console.log('Advancing from Quarterfinals to Semifinals');
+                    initializeSemiFinals(winners, tournamentId);
+                  } else if (currentPhase === 'semi' && winners.length === 2) {
+                    console.log('Advancing from Semifinals to Final');
+                    initializeFinal(winners, tournamentId);
+                  } else if (currentPhase === 'final' && winners.length === 1) {
+                    console.log('Setting tournament winner:', winners[0].name);
+                    setTournamentWinner(winners[0].name);
+                    try {
+                      await setDoc(doc(db, 'KnockoutTournamentMatches', tournamentId), { tournamentWinner: winners[0].name }, { merge: true });
+                      console.log('Tournament winner updated in Firebase:', winners[0].name);
+                    } catch (error) {
+                      console.error('Error updating tournament winner in Firebase:', error);
+                      alert('Failed to save tournament winner.');
+                    }
+                    setCanAdvanceToNextRound(false);
+                  }
+                } else if (format === 'playOff') {
+                  const winners = await fetchWinnersByRoundFromFirebase(tournamentId, roundNumber, currentPhase);
                   if (currentPhase === 'quarter' && winners.length === 4) {
                     console.log('Advancing from Quarter Finals to Semi Finals');
                     initializeSemiFinals(winners, tournamentId);
                   } else if (currentPhase === 'semi' && winners.length === 2) {
-                    console.log('Advancing from Semi Finals to Final');
+                    console.log('Advancing from Semifinals to Final');
                     initializeFinal(winners, tournamentId);
                   } else if (currentPhase === 'final' && winners.length === 1) {
                     console.log('Setting tournament winner');
                     setTournamentWinner(winners[0].name);
                     await setDoc(doc(db, 'KnockoutTournamentMatches', tournamentId), { tournamentWinner: winners[0].name }, { merge: true });
-                    console.log(`Tournament winner set: ${winners[0].name}`);
                     setCanAdvanceToNextRound(false);
-                  } else {
-                    console.warn(`Cannot advance from ${currentPhase}: Expected winners not found. Winners:`, winners);
                   }
                 } else if (format === 'knockout') {
+                  const winners = await fetchWinnersByRoundFromFirebase(tournamentId, roundNumber, currentPhase);
                   if (currentPhase === 'preQuarter' && winners.length === 2) {
-                    console.log('Advancing from Pre-Quarter Finals to Quarter Finals');
+                    console.log('Advancing from Pre-Quarterfinals to Quarterfinals');
                     initializeQuarterFinals(winners, tournamentId);
                   } else if (currentPhase === 'quarter' && winners.length === 4) {
-                    console.log('Advancing from Quarter Finals to Semi Finals');
+                    console.log('Advancing from Quarterfinals to Semifinals');
                     initializeSemiFinals(winners, tournamentId);
                   } else if (currentPhase === 'semi' && winners.length === 2) {
-                    console.log('Advancing from Semi Finals to Final');
+                    console.log('Advancing from Semifinals to Final');
                     initializeFinal(winners, tournamentId);
                   } else if (currentPhase === 'final' && winners.length === 1) {
                     console.log('Setting tournament winner');
                     setTournamentWinner(winners[0].name);
                     await setDoc(doc(db, 'KnockoutTournamentMatches', tournamentId), { tournamentWinner: winners[0].name }, { merge: true });
-                    console.log(`Tournament winner set: ${winners[0].name}`);
                     setCanAdvanceToNextRound(false);
-                  } else {
-                    console.warn(`Cannot advance from ${currentPhase}: Expected winners not found. Winners:`, winners);
+                  }
+                } else if (format === 'eliminatorElite') {
+                  if (updatedMatches.length === 2) {
+                    console.log('Advancing from Eliminator Elite to Final');
+                    const winners = updatedMatches
+                      .filter((m) => m.winner)
+                      .map((m) => (m.team1.name === m.winner ? m.team1 : m.team2));
+                    const losers = updatedMatches
+                      .filter((m) => m.winner)
+                      .map((m) => (m.team1.name === m.winner ? m.team2 : m.team1));
+                    if (winners.length === 2 && losers.length === 2) {
+                      const finalMatch = [
+                        {
+                          id: 'final',
+                          team1: winners[0],
+                          team2: winners[1],
+                          round: 1,
+                          phase: 'final',
+                          winner: null,
+                          played: false,
+                        },
+                      ];
+                      const thirdPlaceMatch = [
+                        {
+                          id: 'third-place',
+                          team1: losers[0],
+                          team2: losers[1],
+                          round: 1,
+                          phase: 'thirdPlace',
+                          winner: null,
+                          played: false,
+                        },
+                      ];
+                      const tournamentDocRef = doc(db, 'KnockoutTournamentMatches', tournamentId);
+                      const tournamentDoc = await getDoc(tournamentDocRef);
+                      if (tournamentDoc.exists()) {
+                        const existingData = tournamentDoc.data();
+                        const updatedRounds = existingData.rounds.map((round) => {
+                          if (round.stage === 'final') {
+                            return { ...round, matches: finalMatch };
+                          }
+                          if (round.stage === 'thirdPlace') {
+                            return { ...round, matches: thirdPlaceMatch };
+                          }
+                          return round;
+                        });
+                        await setDoc(tournamentDocRef, {
+                          rounds: updatedRounds,
+                          currentPhase: 'final',
+                        }, { merge: true });
+                        console.log('Final and Third Place matches initialized in Firebase');
+                      }
+                      setMatches(finalMatch);
+                      setMatchHistory((prev) => [...prev, ...finalMatch, ...thirdPlaceMatch]);
+                      setCurrentPhase('final');
+                      setPhaseHistory((prev) => [...prev, 'eliminatorElite']);
+                    }
+                  } else if (currentPhase === 'final' && updatedMatches.length === 1) {
+                    console.log('Advancing from Final to Third Place');
+                    const tournamentDocRef = doc(db, 'KnockoutTournamentMatches', tournamentId);
+                    const tournamentDoc = await getDoc(tournamentDocRef);
+                    if (tournamentDoc.exists()) {
+                      const data = tournamentDoc.data();
+                      const thirdPlaceRound = data.rounds.find((r) => r.stage === 'thirdPlace');
+                      if (thirdPlaceRound && thirdPlaceRound.matches.length === 1) {
+                        await setDoc(tournamentDocRef, { currentPhase: 'thirdPlace' }, { merge: true });
+                        setMatches(thirdPlaceRound.matches);
+                        setCurrentPhase('thirdPlace');
+                        setPhaseHistory((prev) => [...prev, 'final']);
+                        setCanAdvanceToNextRound(false);
+                        console.log('Transitioned to Third Place phase');
+                      }
+                    }
+                  } else if (currentPhase === 'thirdPlace' && updatedMatches.length === 1) {
+                    console.log('Setting final rankings for Eliminator Elite');
+                    const tournamentDocRef = doc(db, 'KnockoutTournamentMatches', tournamentId);
+                    const tournamentDoc = await getDoc(tournamentDocRef);
+                    if (tournamentDoc.exists()) {
+                      const data = tournamentDoc.data();
+                      const finalMatch = data.rounds.find((r) => r.stage === 'final')?.matches[0];
+                      const thirdPlaceMatch = data.rounds.find((r) => r.stage === 'thirdPlace')?.matches[0];
+                      if (finalMatch?.played && thirdPlaceMatch?.played) {
+                        const firstPlace = finalMatch.winner;
+                        const secondPlace = finalMatch.team1.name === finalMatch.winner ? finalMatch.team2.name : finalMatch.team1.name;
+                        const thirdPlace = thirdPlaceMatch.winner;
+                        const fourthPlace = thirdPlaceMatch.team1.name === thirdPlaceMatch.winner ? thirdPlaceMatch.team2.name : thirdPlaceMatch.team1.name;
+                        const rankings = { first: firstPlace, second: secondPlace, third: thirdPlace, fourth: fourthPlace };
+                        setTournamentWinner(firstPlace);
+                        setFinalRankings(rankings);
+                        await setDoc(tournamentDocRef, {
+                          tournamentWinner: firstPlace,
+                          finalRankings: rankings,
+                          currentPhase: 'completed',
+                        }, { merge: true });
+                        console.log('Final rankings set in Firebase:', rankings);
+                        setCanAdvanceToNextRound(false);
+                      }
+                    }
+                  }
+                } else if (format === 'championship') {
+                  const winners = await fetchWinnersByRoundFromFirebase(tournamentId, roundNumber, currentPhase);
+                  if (currentPhase === 'championship' && winners.length === 1) {
+                    console.log('Setting tournament winner');
+                    setTournamentWinner(winners[0].name);
+                    await setDoc(doc(db, 'KnockoutTournamentMatches', tournamentId), { tournamentWinner: winners[0].name }, { merge: true });
+                    setCanAdvanceToNextRound(false);
                   }
                 }
               };
@@ -428,17 +690,39 @@ const TournamentBracket = () => {
     }
   }, [format, currentPhase, teams, tournamentId]);
 
-  const initializePreQuarter = (nextTeams) => {
+  const initializePreQuarter = async (nextTeams, tournamentId) => {
     if (nextTeams.length !== 10) {
       console.error(`PreQuarter expects 10 teams, received ${nextTeams.length}`);
       alert('Error: Incorrect number of teams for Pre-Quarter Finals.');
       return;
     }
+    const sortedTeams = [...nextTeams].sort((a, b) => (a.seed || 0) - (b.seed || 0));
     const preQuarterMatches = [
-      { id: 'pre-quarter-1', team1: nextTeams[4], team2: nextTeams[9], round: 1, phase: 'preQuarter', winner: null, played: false },
-      { id: 'pre-quarter-2', team1: nextTeams[5], team2: nextTeams[8], round: 1, phase: 'preQuarter', winner: null, played: false },
-      { id: 'pre-quarter-3', team1: nextTeams[6], team2: nextTeams[7], round: 1, phase: 'preQuarter', winner: null, played: false },
+      { id: 'pre-quarter-1', team1: sortedTeams[6], team2: sortedTeams[9], round: 1, phase: 'preQuarter', winner: null, played: false },
+      { id: 'pre-quarter-2', team1: sortedTeams[7], team2: sortedTeams[8], round: 1, phase: 'preQuarter', winner: null, played: false },
     ];
+    try {
+      const tournamentDocRef = doc(db, 'KnockoutTournamentMatches', tournamentId);
+      const tournamentDoc = await getDoc(tournamentDoc);
+      if (tournamentDoc.exists()) {
+        const existingData = tournamentDoc.data();
+        const updatedRounds = existingData.rounds.map((round) => {
+          if (round.stage === 'preQuarter') {
+            return { ...round, matches: preQuarterMatches };
+          }
+          return round;
+        });
+        await setDoc(tournamentDocRef, {
+          rounds: updatedRounds,
+          currentPhase: 'preQuarter',
+        }, { merge: true });
+        console.log('Pre-Quarterfinals initialized in Firebase');
+      }
+    } catch (error) {
+      console.error('Error initializing Pre-Quarterfinals in Firebase:', error);
+      alert('Failed to initialize Pre-Quarterfinals. Please try again.');
+      return;
+    }
     setMatches(preQuarterMatches);
     setMatchHistory((prev) => [...prev, ...preQuarterMatches]);
     setCurrentPhase('preQuarter');
@@ -446,142 +730,101 @@ const TournamentBracket = () => {
     setCanAdvanceToNextRound(false);
   };
 
-  const initializeQuarterFinals = async (preQuarterWinners, tournamentId) => {
-    const topSeeds = teams.sort((a, b) => a.seed - b.seed).slice(0, 6); // Seeds 1-6
-    const teamsForQuarter = [...topSeeds, ...preQuarterWinners].sort((a, b) => (a.seed || 0) - (b.seed || 0));
+  const initializeQuarterFinals = async (teamsForQuarter, tournamentId) => {
     if (teamsForQuarter.length !== 8) {
-      console.error(`Quarter Finals requires 8 teams, got ${teamsForQuarter.length}`);
+      console.error(`Quarter Finals requires exactly 8 teams, got ${teamsForQuarter.length}`);
       alert('Error: Quarter Finals need exactly 8 teams.');
       return;
     }
-
+    const sortedTeams = [...teamsForQuarter].sort((a, b) => (a.seed || 0) - (b?.seed || 0));
     const matches = [
-      { id: 'quarter-1', team1: teamsForQuarter[0], team2: teamsForQuarter[7], round: 1, phase: 'quarter', winner: null, played: false },
-      { id: 'quarter-2', team1: teamsForQuarter[1], team2: teamsForQuarter[6], round: 1, phase: 'quarter', winner: null, played: false },
-      { id: 'quarter-3', team1: teamsForQuarter[2], team2: teamsForQuarter[5], round: 1, phase: 'quarter', winner: null, played: false },
-      { id: 'quarter-4', team1: teamsForQuarter[3], team2: teamsForQuarter[4], round: 1, phase: 'quarter', winner: null, played: false },
+      { id: 'quarter-1', team1: sortedTeams[0], team2: sortedTeams[7], round: teams.length >= 13 ? 2 : 1, phase: 'quarter', winner: null, played: false },
+      { id: 'quarter-2', team1: sortedTeams[1], team2: sortedTeams[6], round: teams.length >= 13 ? 2 : 1, phase: 'quarter', winner: null, played: false },
+      { id: 'quarter-3', team1: sortedTeams[2], team2: sortedTeams[5], round: teams.length >= 13 ? 2 : 1, phase: 'quarter', winner: null, played: false },
+      { id: 'quarter-4', team1: sortedTeams[3], team2: sortedTeams[4], round: teams.length >= 13 ? 2 : 1, phase: 'quarter', winner: null, played: false },
     ];
-
     try {
       const tournamentDocRef = doc(db, 'KnockoutTournamentMatches', tournamentId);
       const tournamentDoc = await getDoc(tournamentDocRef);
       if (tournamentDoc.exists()) {
         const existingData = tournamentDoc.data();
-        console.log('Before initializing quarter-finals, existing rounds:', existingData.rounds);
         const updatedRounds = existingData.rounds.map((round) => {
           if (round.stage === 'quarter') {
             return { ...round, matches };
           }
           return round;
         });
-        console.log('After initializing quarter-finals, updated rounds:', updatedRounds);
         await setDoc(tournamentDocRef, {
           rounds: updatedRounds,
           currentPhase: 'quarter',
         }, { merge: true });
-        console.log('Quarter-finals initialized successfully in Firebase');
+        console.log('Quarter-finals initialized in Firebase');
       }
-      setMatches(matches);
-      setMatchHistory((prev) => {
-        const existingIds = new Set(prev.map((m) => m.id));
-        const newMatches = matches.filter((m) => !existingIds.has(m.id));
-        return [...prev, ...newMatches];
-      });
-      setCurrentPhase('quarter');
-      setPhaseHistory((prev) => [...prev, 'preQuarter']);
-      setCanAdvanceToNextRound(false);
     } catch (error) {
       console.error('Error initializing quarter-finals in Firebase:', error);
-      alert('Failed to initialize quarter-finals. Please try again.');
+      alert('Failed to initialize quarter-finals.');
+      return;
     }
+    setMatches(matches);
+    setMatchHistory((prev) => [...prev, ...matches]);
+    setCurrentPhase('quarter');
+    setPhaseHistory((prev) => [...prev, teams.length >= 13 ? 'preQuarter' : 'superKnockout']);
+    setCanAdvanceToNextRound(false);
   };
 
   const initializeSemiFinals = async (teamsForSemi, tournamentId) => {
     if (teamsForSemi.length !== 4) {
-      console.error(`Semi Finals requires 4 teams, got ${teamsForSemi.length}`);
+      console.error(`Semi Finals requires exactly 4 teams, got ${teamsForSemi.length}`);
       alert('Failed to update matches for semi-finals. Please try again.');
       return;
     }
-    const sortedTeams = [...teamsForSemi].sort((a, b) => (a.seed || 0) - (b.seed || 0));
+    const sortedTeams = [...teamsForSemi].sort((a, b) => (a?.seed || 0) - (b?.seed || 0));
     const matches = [
-      { id: 'semi-1', team1: sortedTeams[0], team2: sortedTeams[3], round: 2, phase: 'semi', winner: null, played: false },
-      { id: 'semi-2', team1: sortedTeams[1], team2: sortedTeams[2], round: 2, phase: 'semi', winner: null, played: false },
+      { id: 'semi-1', team1: sortedTeams[0], team2: sortedTeams[3], round: teams.length >= 13 ? 3 : 2, phase: 'semi', winner: null, played: false },
+      { id: 'semi-2', team1: sortedTeams[1], team2: sortedTeams[2], round: teams.length >= 13 ? 3 : 2, phase: 'semi', winner: null, played: false },
     ];
     try {
       const tournamentDocRef = doc(db, 'KnockoutTournamentMatches', tournamentId);
       const tournamentDoc = await getDoc(tournamentDocRef);
       if (tournamentDoc.exists()) {
         const existingData = tournamentDoc.data();
-        console.log('Before initializing semi-finals, existing rounds:', existingData.rounds);
         const updatedRounds = existingData.rounds.map((round) => {
           if (round.stage === 'semi') {
             return { ...round, matches };
           }
           return round;
         });
-        console.log('After initializing semi-finals, updated rounds:', updatedRounds);
         await setDoc(tournamentDocRef, {
           rounds: updatedRounds,
           currentPhase: 'semi',
         }, { merge: true });
-        console.log('Semi-finals initialized successfully in Firebase');
+        console.log('Semi-finals initialized in Firebase');
       }
-      setMatches(matches);
-      setMatchHistory((prev) => {
-        const existingIds = new Set(prev.map((m) => m.id));
-        const newMatches = matches.filter((m) => !existingIds.has(m.id));
-        return [...prev, ...newMatches];
-      });
-      setCurrentPhase('semi');
-      setPhaseHistory((prev) => [...prev, 'quarter']);
-      setCanAdvanceToNextRound(false);
-    } catch (error) {
-      console.error('Error initializing semi-finals in Firebase:', error);
-      alert('Failed to initialize semi-finals. Please try again.');
-    }
-  };
-
-  const initializeQualifier2 = () => {
-    const q1Match = matches.find((m) => m.phase === 'qualifier1');
-    const elimMatch = matches.find((m) => m.phase === 'eliminator');
-    if (!q1Match?.winner || !elimMatch?.winner) {
-      console.error('Qualifier 2 cannot be initialized: Missing winners from Qualifier 1 or Eliminator.');
-      alert('Error: Cannot proceed to Qualifier 2 without Qualifier 1 and Eliminator results.');
+    } catch (err) {
+      console.error('Error initializing semi-finals in Firebase:', err);
+      alert('Failed to initialize tournament semi-finals. Please try again.');
       return;
     }
-    const q1Loser = q1Match.winner === q1Match.team1.id ? q1Match.team2 : q1Match.team1;
-    const elimWinner = teams.find((t) => t.id === elimMatch.winner);
-    const q2Match = [
-      {
-        id: 'qualifier2',
-        team1: q1Loser,
-        team2: elimWinner,
-        round: 0,
-        phase: 'qualifier2',
-        winner: null,
-        played: false,
-      },
-    ];
-    setMatches(q2Match);
-    setMatchHistory((prev) => [...prev, ...q2Match]);
-    setCurrentPhase('qualifier2');
-    setPhaseHistory((prev) => [...prev, 'qualifier1', 'eliminator']);
+    setMatches(matches);
+    setMatchHistory((prevHistory) => [...prevHistory, ...matches]);
+    setCurrentPhase('semi');
+    setPhaseHistory((prevPhase) => [...prevPhase, teams.length >= 13 ? 'quarter' : 'superKnockout']);
     setCanAdvanceToNextRound(false);
   };
 
   const initializeFinal = async (winners, tournamentId) => {
     if (winners.length !== 2) {
       console.error(`Final expects 2 teams, received ${winners.length}`);
-      alert('Failed to proceed to finals. Please check and try again.');
+      alert('Failed to proceed to final.');
       return;
     }
-    const sortedTeams = [...winners].sort((a, b) => (a.seed || 0) - (b.seed || 0));
+    const sortedTeams = [...winners].sort((a, b) => (a?.seed || 0) - (b?.seed || 0));
     const finalMatch = [
       {
         id: 'final',
         team1: sortedTeams[0],
         team2: sortedTeams[1],
-        round: 3,
+        round: teams.length >= 13 ? 4 : 3,
         phase: 'final',
         winner: null,
         played: false,
@@ -592,33 +835,28 @@ const TournamentBracket = () => {
       const tournamentDoc = await getDoc(tournamentDocRef);
       if (tournamentDoc.exists()) {
         const existingData = tournamentDoc.data();
-        console.log('Before initializing final, existing rounds:', existingData.rounds);
         const updatedRounds = existingData.rounds.map((round) => {
           if (round.stage === 'final') {
             return { ...round, matches: finalMatch };
           }
           return round;
         });
-        console.log('After initializing final, updated rounds:', updatedRounds);
         await setDoc(tournamentDocRef, {
           rounds: updatedRounds,
           currentPhase: 'final',
         }, { merge: true });
-        console.log('Final initialized successfully in Firebase');
+        console.log('Final initialized in Firebase');
       }
-      setMatches(finalMatch);
-      setMatchHistory((prev) => {
-        const existingIds = new Set(prev.map((m) => m.id));
-        const newMatches = finalMatch.filter((m) => !existingIds.has(m.id));
-        return [...prev, ...newMatches];
-      });
-      setCurrentPhase('final');
-      setPhaseHistory((prev) => [...prev, 'semi']);
-      setCanAdvanceToNextRound(false);
     } catch (error) {
       console.error('Error initializing final in Firebase:', error);
-      alert('Failed to initialize final. Please try again.');
+      alert('Failed to initialize final.');
+      return;
     }
+    setMatches(finalMatch);
+    setMatchHistory((prev) => [...prev, ...finalMatch]);
+    setCurrentPhase('final');
+    setPhaseHistory((prev) => [...prev, teams.length >= 13 ? 'semi' : 'quarter']);
+    setCanAdvanceToNextRound(false);
   };
 
   const handleMatchResult = (matchId, winnerId) => {
@@ -642,14 +880,13 @@ const TournamentBracket = () => {
         return [...prev, ...updatedMatches.filter((m) => m.id === matchId)];
       });
 
-      if ((format === 'playOff' || format === 'knockout') && tournamentId) {
+      if (['superKnockout', 'playOff', 'knockout', 'eliminatorElite', 'championship'].includes(format) && tournamentId) {
         const updateFirebase = async () => {
           try {
             const tournamentDocRef = doc(db, 'KnockoutTournamentMatches', tournamentId);
             const tournamentDoc = await getDoc(tournamentDocRef);
             if (tournamentDoc.exists()) {
               const data = tournamentDoc.data();
-              console.log('Before updating match result, existing rounds:', data.rounds);
               const updatedRounds = data.rounds.map((round) => {
                 if (round.stage === currentPhase) {
                   const updatedRoundMatches = round.matches.map((m) => {
@@ -663,7 +900,6 @@ const TournamentBracket = () => {
                 }
                 return round;
               });
-              console.log('After updating match result, updated rounds:', updatedRounds);
               await setDoc(tournamentDocRef, { rounds: updatedRounds }, { merge: true });
               console.log(`Match result updated in Firebase: match ${matchId}, winner ${winnerId}`);
             }
@@ -673,147 +909,6 @@ const TournamentBracket = () => {
           }
         };
         updateFirebase();
-      }
-
-      const phaseMatches = updatedMatches.filter((m) => m.phase === currentPhase);
-      if (phaseMatches.every((m) => m.played || m.team1?.isBye || m.team2?.isBye)) {
-        if (currentPhase === 'superKnockout') {
-          const winners = updatedMatches
-            .filter((m) => m.phase === 'superKnockout' && m.winner && !m.team1?.isBye && !m.team2?.isBye)
-            .map((m) => ({ name: m.winner }))
-            .filter((t) => t);
-          const byeTeams = teams.length >= 16 ? teams.slice(0, 4) : teams.length === 15 ? teams.slice(0, 1) : teams.length > 10 ? teams.slice(0, teams.length - 10) : teams.length > 8 ? teams.slice(0, teams.length - 8) : [];
-          const nextTeams = [...winners, ...byeTeams].sort((a, b) => (a.seed || 0) - (b.seed || 0));
-
-          if (nextTeams.length === 10) {
-            initializePreQuarter(nextTeams);
-          } else if (nextTeams.length === 8) {
-            initializeQuarterFinals(nextTeams, tournamentId);
-          } else {
-            console.error(`Unexpected number of teams after Super Knockout: ${nextTeams.length}`);
-            alert(`Error advancing from Super Knockout. Expected 8 or 10 teams, got ${nextTeams.length}.`);
-            window.location.reload();
-            return updatedMatches;
-          }
-        } else if (currentPhase === 'preQuarter' && format === 'knockout') {
-          const winners = updatedMatches
-            .filter((m) => m.phase === 'preQuarter' && m.winner)
-            .map((m) => {
-              const winnerTeam = m.team1.name === m.winner ? m.team1 : m.team2;
-              return { ...winnerTeam };
-            })
-            .filter(Boolean);
-
-          if (winners.length !== 2) {
-            console.error(`Expected 2 winners for Quarter Finals from preQuarter, got ${winners.length}`);
-            alert(`Error: Expected 2 winners for Quarter Finals from preQuarter, got ${winners.length}`);
-            return updatedMatches;
-          }
-
-          initializeQuarterFinals(winners, tournamentId);
-        } else if (currentPhase === 'quarter' && format === 'knockout') {
-          const winners = updatedMatches
-            .filter((m) => m.phase === 'quarter' && m.winner)
-            .map((m) => {
-              const winnerTeam = m.team1.name === m.winner ? m.team1 : m.team2;
-              return { ...winnerTeam };
-            })
-            .filter(Boolean);
-          if (winners.length !== 4) {
-            console.error(`Expected 4 winners for Semi Finals from ${currentPhase}, got ${winners.length}`);
-            alert(`Error: Expected 4 winners for Semi Finals from ${currentPhase}, got ${winners.length}.`);
-            return updatedMatches;
-          }
-          initializeSemiFinals(winners, tournamentId);
-        } else if (currentPhase === 'semi' && format === 'knockout') {
-          const winners = updatedMatches
-            .filter((m) => m.phase === 'semi' && m.winner)
-            .map((m) => {
-              const winnerTeam = m.team1.name === m.winner ? m.team1 : m.team2;
-              return { ...winnerTeam };
-            })
-            .filter(Boolean);
-
-          if (winners.length === 2) {
-            initializeFinal(winners, tournamentId);
-          } else {
-            console.error(`Expected 2 winners for Final from semi, got ${winners.length}`);
-            alert(`Error: Expected 2 winners for Final from semi, got ${winners.length}.`);
-            return updatedMatches;
-          }
-        } else if (currentPhase === 'quarter' && format === 'playOff') {
-          const winners = updatedMatches
-            .filter((m) => m.phase === 'quarter' && m.winner)
-            .map((m) => {
-              const winnerTeam = m.team1.name === m.winner ? m.team1 : m.team2;
-              return { ...winnerTeam };
-            })
-            .filter((t) => t);
-          if (winners.length !== 4) {
-            console.error(`Expected 4 winners for Semi Finals from ${currentPhase}, got ${winners.length}`);
-            alert(`Error: Expected 4 winners for Semi Finals from ${currentPhase}, got ${winners.length}.`);
-            return updatedMatches;
-          }
-          initializeSemiFinals(winners, tournamentId);
-        } else if (currentPhase === 'semi' && format === 'playOff') {
-          const winners = updatedMatches
-            .filter((m) => m.phase === 'semi' && m.winner)
-            .map((m) => {
-              const winnerTeam = m.team1.name === m.winner ? m.team1 : m.team2;
-              return { ...winnerTeam };
-            })
-            .filter(Boolean);
-
-          if (winners.length === 2) {
-            initializeFinal(winners, tournamentId);
-          } else {
-            console.error(`Expected 2 winners for Final from semi, got ${winners.length}`);
-            alert(`Error: Expected 2 winners for Final from semi, got ${winners.length}.`);
-            return updatedMatches;
-          }
-        } else if (currentPhase === 'eliminatorElite') {
-          const winners = updatedMatches
-            .filter((m) => m.phase === 'eliminatorElite' && m.winner)
-            .map((m) => {
-              const winnerTeam = m.team1.name === m.winner ? m.team1 : m.team2;
-              return { ...winnerTeam };
-            });
-          const losers = updatedMatches
-            .filter((m) => m.phase === 'eliminatorElite' && m.winner)
-            .map((m) => (m.team1.name === m.winner ? m.team2 : m.team1));
-          initializeFinal(winners, tournamentId);
-          if (losers.length === 2) {
-            const thirdPlaceMatch = {
-              id: 'third-place',
-              team1: losers[0],
-              team2: losers[1],
-              round: 1,
-              phase: 'thirdPlace',
-              winner: null,
-              played: false,
-            };
-            setMatches((prev) => [...prev, thirdPlaceMatch]);
-            setMatchHistory((prev) => [...prev, thirdPlaceMatch]);
-          }
-        } else if (currentPhase === 'qualifier1' || currentPhase === 'eliminator') {
-          if (updatedMatches.filter((m) => m.phase === 'qualifier1' || m.phase === 'eliminator').every((m) => m.played)) {
-            initializeQualifier2();
-          }
-        } else if (currentPhase === 'qualifier2') {
-          initializeFinal([], tournamentId);
-        } else if (currentPhase === 'championship' || (currentPhase === 'final' && (format === 'knockout' || format === 'playOff'))) {
-          const winner = updatedMatches.find((m) => m.phase === currentPhase)?.winner;
-          if (winner) {
-            setTournamentWinner(winner);
-            if (tournamentId) {
-              setDoc(doc(db, 'KnockoutTournamentMatches', tournamentId), { tournamentWinner: winner }, { merge: true })
-                .then(() => console.log(`Tournament winner set in Firebase: ${winner}`))
-                .catch((error) => console.error('Error setting tournament winner in Firebase:', error));
-            }
-          } else {
-            console.error('No winner found for final/championship.');
-          }
-        }
       }
 
       return updatedMatches;
@@ -831,17 +926,33 @@ const TournamentBracket = () => {
         phaseHistory,
         matchHistory,
         tournamentId,
+        finalRankings,
       },
     });
   };
 
   const handleStartMatch = (match) => {
     if (match.played) {
-      console.log(`Match ${match.id} has already been played. Navigation to start-match prevented.`);
+      console.log(`Match ${match.id} has already been played. Navigation to start-match stopped.`);
       return;
     }
 
-    if ((format === 'playOff' || format === 'knockout') && tournamentId) {
+    if (match.team1?.isBye || match.team2?.isBye) {
+      console.log(`Match ${match.id} involves a BYE team. Navigation to start-match stopped.`);
+      return;
+    }
+
+    if (!match.team1?.id || !match.team1?.name || !match.team2?.id || !match.team2?.name) {
+      console.error(`Invalid team data for match ${match.id}:`, match);
+      alert('Error: Invalid team data for this match.');
+      return;
+    }
+
+    if (['superKnockout', 'playOff', 'knockout', 'eliminatorElite', 'championship'].includes(format) && tournamentId) {
+      console.log(`Navigating to start-match-ko for match ${match.id} with teams:`, {
+        teamA: match.team1,
+        teamB: match.team2,
+      });
       navigate('/start-match-ko', {
         state: {
           matchId: match.id,
@@ -850,12 +961,12 @@ const TournamentBracket = () => {
           teamA: {
             id: match.team1.id,
             name: match.team1.name,
-            flagUrl: match.team1.flagUrl || '',
+            flagUrl: match.team1?.flagUrl || '',
           },
           teamB: {
             id: match.team2.id,
             name: match.team2.name,
-            flagUrl: match.team2.flagUrl || '',
+            flagUrl: match.team2?.flagUrl || '',
           },
           overs: 5,
           origin: '/match-start-ko',
@@ -869,55 +980,159 @@ const TournamentBracket = () => {
     if (!canAdvanceToNextRound) return;
 
     const advanceManually = async () => {
+      try {
       const roundNumber = getRoundNumberForPhase(currentPhase);
-      const winners = await fetchWinnersByRoundFromFirebase(tournamentId, roundNumber);
-      if (format === 'playOff') {
-        if (currentPhase === 'quarter' && winners.length === 4) {
-          console.log('Manually advancing from Quarter Finals to Semi Finals');
+      const winners = await fetchWinnersByRoundFromFirebase(tournamentId, roundNumber, currentPhase);
+      
+      if (format === 'superKnockout') {
+        const byeCount = teams.length >= 16 ? 4 : teams.length === 15 ? 1 : teams.length >= 13 ? teams.length - 10 : teams.length >= 10 ? teams.length - 8 : teams.length >= 4 ? teams.length - 4 : 0;
+        const byeTeamsSorted = teams.sort((a, b) => a.seed - b.seed).slice(0, byeCount);
+        if (currentPhase === 'superKnockout') {
+          const nextTeams = [...winners, ...byeTeamsSorted];
+          if (nextTeams.length === 10) {
+            console.log('Manually advancing from Super Knockout to Pre-Quarterfinals');
+            initializePreQuarter(nextTeams, tournamentId);
+          } else if (nextTeams.length === 8) {
+            console.log('Manually advancing from Super Knockout to Quarterfinals');
+            initializeQuarterFinals(nextTeams, tournamentId);
+          } else if (nextTeams.length === 4) {
+            console.log('Manually advancing from Super Knockout to Semifinals');
+            initializeSemiFinals(nextTeams, tournamentId);
+          } else if (nextTeams.length === 2) {
+            console.log('Manually advancing from Super Knockout to Final');
+            initializeFinal(nextTeams, tournamentId);
+          }
+        } else if (currentPhase === 'preQuarter' && winners.length === 2) {
+          console.log('Manually advancing from Pre-Quarterfinals to Quarterfinals');
+          const prevWinners = await fetchWinnersByRoundFromFirebase(tournamentId, 0, 'superKnockout');
+          const remainingSuperKnockoutWinners = prevWinners
+            .filter((w) => !winners.some((pw) => pw.name === w.name))
+            .sort((a, b) => a.seed - b.seed)
+            .slice(0, 2);
+          const nextTeams = [...byeTeamsSorted, ...remainingSuperKnockoutWinners, ...winners];
+          console.log('Quarterfinal teams:', nextTeams);
+          initializeQuarterFinals(nextTeams, tournamentId);
+        } else if (currentPhase === 'quarter' && winners.length === 4) {
+          console.log('Manually advancing from Quarterfinals to Semifinals');
           initializeSemiFinals(winners, tournamentId);
         } else if (currentPhase === 'semi' && winners.length === 2) {
-          console.log('Manually advancing from Semi Finals to Final');
+          console.log('Manually advancing from Semifinals to Final');
           initializeFinal(winners, tournamentId);
         } else if (currentPhase === 'final' && winners.length === 1) {
           console.log('Manually setting tournament winner');
           setTournamentWinner(winners[0].name);
           await setDoc(doc(db, 'KnockoutTournamentMatches', tournamentId), { tournamentWinner: winners[0].name }, { merge: true });
-          console.log(`Tournament winner set: ${winners[0].name}`);
           setCanAdvanceToNextRound(false);
-        } else {
-          console.warn(`Cannot advance manually from ${currentPhase}: Expected winners not found. Winners:`, winners);
+        }
+      } else if (format === 'playOff') {
+        if (currentPhase === 'quarter' && winners.length === 4) {
+          console.log('Manually advancing from quarterfinals to semifinals');
+          initializeSemiFinals(winners, tournamentId);
+        } else if (currentPhase === 'semi' && winners.length === 2) {
+          console.log('Manually advancing from Semifinals to Final');
+          initializeFinal(winners, tournamentId);
+        } else if (currentPhase === 'final' && winners.length === 1) {
+          console.log('Manually setting tournament winner');
+          setTournamentWinner(winners[0].name);
+          await setDoc(doc(db, 'KnockoutTournamentMatches', tournamentId), { tournamentWinner: winners[0].name }, { merge: true });
+          setCanAdvanceToNextRound(false);
         }
       } else if (format === 'knockout') {
         if (currentPhase === 'preQuarter' && winners.length === 2) {
-          console.log('Manually advancing from Pre-Quarter Finals to Quarter Finals');
+          console.log('Manually advancing from Pre-Quarterfinals to Quarterfinals');
           initializeQuarterFinals(winners, tournamentId);
         } else if (currentPhase === 'quarter' && winners.length === 4) {
-          console.log('Manually advancing from Quarter Finals to Semi Finals');
+          console.log('Manually advancing from Quarterfinals to Semifinals');
           initializeSemiFinals(winners, tournamentId);
         } else if (currentPhase === 'semi' && winners.length === 2) {
-          console.log('Manually advancing from Semi Finals to Final');
+          console.log('Manually advancing from Semifinals to Final');
           initializeFinal(winners, tournamentId);
         } else if (currentPhase === 'final' && winners.length === 1) {
           console.log('Manually setting tournament winner');
           setTournamentWinner(winners[0].name);
           await setDoc(doc(db, 'KnockoutTournamentMatches', tournamentId), { tournamentWinner: winners[0].name }, { merge: true });
-          console.log(`Tournament winner set: ${winners[0].name}`);
           setCanAdvanceToNextRound(false);
-        } else {
-          console.warn(`Cannot advance manually from ${currentPhase}: Expected winners not found. Winners:`, winners);
+        }
+      } else if (format === 'eliminatorElite') {
+        if (currentPhase === 'eliminatorElite' && winners.length === 2) {
+          console.log('Manually advancing from Eliminator Elite to Final');
+          const tournamentDocRef = doc(db, 'KnockoutTournamentMatches', tournamentId);
+          const tournamentDoc = await getDoc(tournamentDocRef);
+          if (tournamentDoc.exists()) {
+            const existingData = tournamentDoc.data();
+            const finalRound = existingData.rounds.find((r) => r.stage === 'final');
+            if (finalRound && finalRound.matches.length === 0) {
+              await setDoc(tournamentDocRef, { currentPhase: 'final' }, { merge: true });
+              setMatches(finalRound.matches);
+              setCurrentPhase('final');
+              setPhaseHistory((prev) => [...prev, 'eliminatorElite']);
+              setCanAdvanceToNextRound(false);
+            }
+          }
+        } else if (currentPhase === 'final' && winners.length === 1) {
+          console.log('Manually advancing from Final to Third Place');
+          const tournamentDocRef = doc(db, 'KnockoutTournamentMatches', tournamentId);
+          const tournamentDoc = await getDoc(tournamentDocRef);
+          if (tournamentDoc.exists()) {
+            const existingData = existingData.data();
+            const thirdPlaceRound = existingData.rounds.find((r) => r.stage === 'thirdPlace');
+            if (thirdPlaceRound && thirdPlaceRound.matches.length === 0) {
+              await setDoc(tournamentDocRef, { currentPhase: 'thirdPlace' }, { merge: true });
+              setMatches(thirdPlaceRound.matches);
+              setCurrentPhase('thirdPlace');
+              setPhaseHistory((prev) => [...prev, 'final']);
+              setCanAdvanceToNextRound(false);
+              console.log('Third Place phase transitioned');
+            }
+          }
+        } else if (currentPhase === 'thirdPlace' && winners.length === 1) {
+          console.log('Manually setting final rankings for Eliminator Elite');
+          const tournamentDocRef = doc(db, 'KnockoutTournamentMatches', tournamentId);
+          const tournamentDoc = await getDoc(tournamentDocRef);
+          if (tournamentDoc.exists()) {
+            const existingData = existingDoc.data();
+            const finalMatch = existingData.rounds.find((r) => r.stage === 'final')?.matches[0];
+            const thirdPlaceMatch = existingData.rounds.find((r) => r.stage === 'thirdPlace')?.matches[0];
+            if (finalMatch?.played && thirdPlaceMatch?.played) {
+              const firstPlace = finalMatch.winner;
+              const secondPlace = finalMatch.team1.name === finalMatch.winner ? finalMatch.team2.name : finalMatch.team1.name;
+              const thirdPlace = thirdPlaceMatch.winner;
+              const fourthPlace = thirdPlaceMatch.team1.name === thirdPlaceMatch.winner ? thirdPlaceMatch.team2.name : thirdPlaceMatch.team1.name;
+              const rankings = { first: firstPlace, second: secondPlace, third: thirdPlace, fourth: fourthPlace };
+              setTournamentWinner(firstPlace);
+              setFinalRankings(rankings);
+              await setDoc(tournamentDocRef, {
+                tournamentWinner: firstPlace,
+                finalRankings: rankings,
+                currentPhase: 'completed',
+              }, { merge: true });
+              console.log('Final rankings set in Firebase:', rankings);
+              setCanAdvanceToNextRound(false);
+            }
+          }
+        }
+      } else if (format === 'championship') {
+        if (currentPhase === 'championship' && winners.length === 1) {
+          console.log('Manually setting tournament winner');
+          setTournamentWinner(winners[0].name);
+          await setDoc(doc(db, 'KnockoutTournamentMatches', tournamentId), { tournamentWinner: winners[0].name }, { merge: true });
+          setCanAdvanceToNextRound(false);
         }
       }
+      advanceManually();
+    } catch (err) {
+      console.error('Error advancing to next round:', err);
+    }
     };
-    advanceManually();
-  };
+  }
 
   const renderMatchCard = (match) => (
     <motion.div
       key={match.id}
-      className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-4 border-2 border-purple-500 shadow-2xl mb-4"
+      className="bg-gradient-to-br from-gray-800 to-gray-900 p-6 rounded-xl shadow-lg mb-6 border-2 border-purple-500"
       whileHover={{ scale: (match.team1?.isBye || match.team2?.isBye || match.played) ? 1 : 1.02 }}
     >
-      <div className="flex justify-between items-center mb-2">
+      <div className="flex justify-between items-center mb-4">
         <div className={`flex-1 text-right ${match.winner === match.team1?.name ? 'text-green-400 font-bold' : 'text-gray-300'}`}>
           {match.team1?.isBye ? 'BYE' : match.team1?.name || 'TBD'}
         </div>
@@ -926,33 +1141,15 @@ const TournamentBracket = () => {
           {match.team2?.isBye ? 'BYE' : match.team2?.name || 'TBD'}
         </div>
       </div>
-      {format !== 'playOff' && format !== 'knockout' && !match.played && !match.team1?.isBye && !match.team2?.isBye && (
-        <div className="flex justify-center space-x-2 mt-2">
-          <button
-            onClick={() => handleMatchResult(match.id, match.team1.id)}
-            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transform transition-all duration-200 hover:scale-105"
-            disabled={match.played}
-          >
-            {match.team1?.name || 'Team 1'} Wins
-          </button>
-          <button
-            onClick={() => handleMatchResult(match.id, match.team2.id)}
-            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transform transition-all duration-200 hover:scale-105"
-            disabled={match.played}
-          >
-            {match.team2?.name || 'Team 2'} Wins
-          </button>
-        </div>
-      )}
-      {(format === 'playOff' || format === 'knockout') && (
+      {['superKnockout', 'playOff', 'knockout', 'eliminatorElite', 'championship'].includes(format) && (
         <div className="text-center mt-2">
           {match.winner ? (
-            <div className="text-sm text-green-400">
+            <div className="text-sm text-green-500">
               Winner: {match.winner}
             </div>
           ) : !match.team1?.isBye && !match.team2?.isBye ? (
-            <motion.button
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-white transform transition-all duration-200 hover:scale-105"
+            <motion.button 
+              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-white transition-all duration-200"
               onClick={() => handleStartMatch(match)}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -965,46 +1162,35 @@ const TournamentBracket = () => {
     </motion.div>
   );
 
-  if (loading) {
-    return <div className="min-h-screen bg-gray-900 text-gray-100 p-8 text-center">Loading tournament...</div>;
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-900 text-gray-100 p-8 text-center">
-        <p>{error}</p>
-        <button
-          onClick={() => navigate('/TournamentPage')}
-          className="mt-4 px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg text-white"
-        >
-          Go Back
-        </button>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100 p-8">
       <div className="max-w-7xl mx-auto">
-        {!format ? (
-         
+        {loading ? (
+          <div className="text-center">Loading tournament...</div>
+        ) : error ? (
           <div className="text-center">
-            <h1 className="text-4xl font-bold mb-8 text-purple-400">Select Tournament Format</h1>
-            <div className="flex flex-wrap justify-center gap-6">
+            <p>{error}</p>
+            <button 
+              onClick={() => navigate('/TournamentPage')}
+              className="mt-4 px-6 py-2 bg-purple-600 hover:bg-blue-800 rounded-lg text-white"
+            >
+              Go Back
+            </button>
+          </div>
+        ) : !format ? (
+          <div className="text-center">
+            <h1 className="text-4xl font-bold mb-8 text-blue-400">Select Tournament Format</h1>
+            <div className="flex flex-wrap justify-center gap-4">
               {['superKnockout', 'knockout', 'playOff', 'eliminatorElite', 'championship'].map((formatType) => (
-                <button
+                <button 
                   key={formatType}
                   onClick={() => initializeTournament(formatType)}
-                  className="px-8 py-4 bg-purple-600 hover:bg-purple-700 rounded-xl text-xl transform transition-all duration-200 hover:scale-110"
+                  className="px-8 py-3 bg-blue-600 hover:bg-blue-700 rounded-xl text-lg font-semibold mb-2 transition-transform duration-200 hover:scale-105"
                 >
-                  {formatType === 'superKnockout'
-                    ? 'Super Knockout'
-                    : formatType === 'knockout'
-                    ? 'Knockout'
-                    : formatType === 'playOff'
-                    ? 'Play Off'
-                    : formatType === 'eliminatorElite'
-                    ? 'Eliminator Elite'
+                  {formatType === 'superKnockout' ? 'Super Knockout' 
+                    : formatType === 'knockout' ? 'Knockout' 
+                    : formatType === 'playOff' ? 'Play Off' 
+                    : formatType === 'eliminatorElite' ? 'Eliminator Elite' 
                     : 'Championship'}
                 </button>
               ))}
@@ -1013,77 +1199,45 @@ const TournamentBracket = () => {
         ) : (
           <>
             <div className="mb-8">
-              <h1 className="text-3xl font-bold text-purple-400">
-                {currentPhase === 'superKnockout'
-                  ? 'Super Bracket'
-                  : currentPhase === 'preQuarter'
-                  ? 'Pre-Quarter Finals'
-                  : currentPhase === 'quarter'
-                  ? 'Quarter Finals'
-                  : currentPhase === 'semi'
-                  ? 'Semi Finals'
-                  : currentPhase === 'final'
-                  ? 'Final'
-                  : currentPhase === 'qualifier1'
-                  ? 'Qualifier 1'
-                  : currentPhase === 'eliminator'
-                  ? 'Eliminator'
-                  : currentPhase === 'qualifier2'
-                  ? 'Qualifier Finals'
-                  : currentPhase === 'playOff'
-                  ? 'Play Off'
-                  : currentPhase === 'eliminatorElite'
-                  ? 'Elite Finals'
-                  : currentPhase === 'championship'
-                  ? 'Championship'
-                  : currentPhase === 'thirdPlace'
-                  ? 'Third Place Match'
+              <h1 className="text-3xl font-bold text-blue-400">
+                {currentPhase === 'superKnockout' ? 'Super Knockout' 
+                  : currentPhase === 'preQuarter' ? 'Pre-Quarter Finals' 
+                  : currentPhase === 'quarter' ? 'Quarter Finals' 
+                  : currentPhase === 'semi' ? 'Semi Finals' 
+                  : currentPhase === 'final' ? 'Final' 
+                  : currentPhase === 'eliminatorElite' ? 'Semifinals' 
+                  : currentPhase === 'championship' ? 'Championship' 
+                  : currentPhase === 'thirdPlace' ? 'Third Place Match' 
+                  : currentPhase === 'completed' ? 'Tournament Completed' 
                   : 'Tournament'}
               </h1>
             </div>
 
             <div className="space-y-8">
-              <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-6 rounded-xl shadow-2xl">
-                <h3 className="text-2xl font-bold mb-4 text-purple-400">
-                  {currentPhase === 'superKnockout'
-                    ? 'Super Knockout'
-                    : currentPhase === 'preQuarter'
-                    ? 'Pre-Quarter Finals'
-                    : currentPhase === 'quarter'
-                    ? 'Quarter Finals'
-                    : currentPhase === 'semi'
-                    ? 'Semi Finals'
-                    : currentPhase === 'final'
-                    ? 'Final'
-                    : currentPhase === 'qualifier1'
-                    ? 'Qualifier 1'
-                    : currentPhase === 'eliminator'
-                    ? 'Eliminator'
-                    : currentPhase === 'qualifier2'
-                    ? 'Qualifier Finals'
-                    : currentPhase === 'playOff'
-                    ? 'Play Off'
-                    : currentPhase === 'eliminatorElite'
-                    ? 'Eliminator Elite'
-                    : currentPhase === 'championship'
-                    ? 'Championship'
-                    : currentPhase === 'thirdPlace'
-                    ? 'Third Place Match'
+              <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-6 rounded-xl shadow-lg">
+                <h3 className="text-2xl font-bold mb-4 text-blue-400">
+                  {currentPhase === 'superKnockout' ? 'Super Knockout' 
+                    : currentPhase === 'preQuarter' ? 'Pre-Quarterfinals' 
+                    : currentPhase === 'quarter' ? 'Quarterfinals' 
+                    : currentPhase === 'semi' ? 'Semifinals' 
+                    : currentPhase === 'final' ? 'Final' 
+                    : currentPhase === 'eliminatorElite' ? 'Semifinals' 
+                    : currentPhase === 'championship' ? 'Championship' 
+                    : currentPhase === 'thirdPlace' ? 'Third Place Match' 
+                    : currentPhase === 'completed' ? 'Tournament Matches' 
                     : 'Tournament'}
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {matches
-                    .filter((m) => m.phase === currentPhase)
-                    .map((match) => renderMatchCard(match))}
+                  {matches.map((match) => renderMatchCard(match))}
                 </div>
               </div>
             </div>
 
-            {canAdvanceToNextRound && (format === 'playOff' || format === 'knockout') && !tournamentWinner && (
+            {canAdvanceToNextRound && ['superKnockout', 'playOff', 'knockout', 'eliminatorElite'].includes(format) && !tournamentWinner && currentPhase !== 'completed' && (
               <div className="text-center mt-8">
-                <button
+                <button 
                   onClick={handleNextRound}
-                  className="px-6 py-3 bg-green-600 hover:bg-green-700 rounded-lg text-white transform transition-all duration-200 hover:scale-105"
+                  className="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg text-white transition-transform duration-200 hover:scale-105"
                 >
                   Next Round
                 </button>
@@ -1092,19 +1246,34 @@ const TournamentBracket = () => {
 
             {tournamentWinner && (
               <div className="text-center mt-8">
-                <div className="bg-purple-600 p-8 rounded-xl inline-block shadow-2xl">
-                  <h2 className="text-4xl font-bold text-white animate-pulse">
+                {/* Champion Banner */}
+                <div className="bg-blue-500 p-8 rounded-full mx-auto shadow-lg w-fit">
+                  <h2 className="text-4xl font-bold text-white mb-4 animate-pulse">
                     🏆 Champion: {tournamentWinner} 🏆
                   </h2>
-                  <button
-                    onClick={handleGoToFlowchart}
-                    className="mt-4 px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg text-white transform transition-all duration-200 hover:scale-105"
-                  >
-                    GO TO FLOWCHART
-                  </button>
                 </div>
+
+                {/* Button placed correctly below the champion div */}
+                <button 
+                  onClick={handleGoToFlowchart}
+                  className="mt-4 px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg text-lg text-white font-semibold transition-all duration-200 hover:scale-105"
+                >
+                  Go to Flowchart
+                </button>
+
+                {/* Final Rankings */}
+                {finalRankings && format === 'eliminatorElite' && (
+                  <div className="mt-6 bg-gray-100 p-4 rounded-lg shadow-lg inline-block">
+                    <h3 className="text-2xl font-bold text-blue-600 mb-2">Final Rankings</h3>
+                    <p className="text-lg text-gray-900">1st: {finalRankings.first}</p>
+                    <p className="text-lg text-gray-700">2nd: {finalRankings.second}</p>
+                    <p className="text-lg text-gray-700">3rd: {finalRankings.third}</p>
+                    <p className="text-lg text-gray-600">4th: {finalRankings.fourth}</p>
+                  </div>
+                )}
               </div>
             )}
+
           </>
         )}
       </div>

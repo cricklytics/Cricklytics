@@ -236,6 +236,10 @@ const Selection = () => {
         matches = [
           { id: 'third-place', team1: prevLosers[0] || { name: 'Loser of S1' }, team2: prevLosers[1] || { name: 'Loser of S2' }, round: index, phase: 'thirdPlace', winner: null, played: false },
         ];
+      } else if (phase === 'championship') {
+        matches = [
+          { id: 'championship', team1: teams[0] || { name: 'TBD' }, team2: teams[1] || { name: 'TBD' }, round: index, phase: 'championship', winner: null, played: false },
+        ];
       } else {
         for (let i = 0; i < matchCount; i++) {
           matches.push({
@@ -256,7 +260,10 @@ const Selection = () => {
       <div className="w-full max-w-6xl mx-auto space-y-12">
         {structure.map((stage, index) => {
           const isCurrent = stage.phase === currentPhase;
-          const phaseMatches = rounds.find((r) => r.stage === stage.phase)?.matches || [];
+          // For championship format, fetch matches from 'championship' stage when phase is 'final'
+          const phaseMatches = format === 'championship' && stage.phase === 'final'
+            ? rounds.find((r) => r.stage === 'championship')?.matches || []
+            : rounds.find((r) => r.stage === stage.phase)?.matches || [];
           const hasPlayedMatches = phaseMatches.some((m) => m.played);
           const isFuture = !hasPlayedMatches && !isCurrent;
           const actualMatches = phaseMatches.length > 0 ? phaseMatches : getFutureMatches(stage.phase, index);
@@ -305,9 +312,6 @@ const Selection = () => {
                   </table>
                 </div>
               </div>
-              {/* {index < structure.length - 1 && (
-                <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-1 h-8 bg-gray-400"></div>
-              )} */}
             </div>
           );
         })}

@@ -47,7 +47,7 @@ import MatchStart from './pages/MatchStart';
 import MatchStartKO from './pages/KnouckOut/MatchStartKO';
 import TournamentBracket from './components/kumar/flowchart';
 
-import Subscription from './components/pawan/Subscription';
+
 
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -66,7 +66,8 @@ import International from './components/pawan/International';
 import Stats from './pages/Stats';
 import Match from './pages/Match';
 import Insights from './components/yogesh/LandingPage/Insights';
-
+import Subscription from './components/pawan/Subscription';
+import SubscriptionSuccess from './components/pawan/SubscriptionSuccess';
 
 import TournamentSeries from './pages/tournamentseries';
 import share from './components/kumar/share';
@@ -240,6 +241,7 @@ function App() {
           <Route path="/insights" element={< Insights/>} />
           <Route path="/contacts" element={<Contact/>} />
           <Route path="/subscription" element={<Subscription/>} />
+          <Route path="/subscription/success" element={<SubscriptionSuccess/>} />
 
           <Route path="/tournamentseries" element={<TournamentSeries />} />
            {/* Newly Added Routes */}

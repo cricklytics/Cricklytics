@@ -371,7 +371,7 @@ const FixtureGenerator = () => {
     return acc;
   }, {});
 
-  console.log('match-start-sb activeTab:', activeTab);
+  console.log('match-start-ko activeTab:', activeTab);
   const allTabs = ['Knockout Brackets', 'Live Score', 'Match Results', 'Highlights', 'Match Analytics'];
 
   return (

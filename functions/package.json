@@ -17,10 +17,12 @@
     "@google-cloud/text-to-speech": "^6.0.1",
     "@google/generative-ai": "^0.24.1",
     "cors": "^2.8.5",
+    "crypto": "^1.0.1",
     "firebase-admin": "^13.4.0",
     "firebase-functions": "^6.3.2",
     "googleapis": "^148.0.0",
     "googlethis": "^1.8.0",
+    "razorpay": "^2.9.6",
     "uuid": "^8.3.2"
   },
   "devDependencies": {
