@@ -456,6 +456,7 @@ const AccountSettingsContent = ({
   accountSettingsBg,
   userProfile
 }) => {
+  const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState("accountType");
   
   const getIconStyle = () => (isMobileView ? { color: 'black' } : { color: selectedColor });
@@ -522,7 +523,7 @@ const AccountSettingsContent = ({
         <span>Permissions</span>
       </div>
 
-      <div className="flex items-center gap-3 p-2 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer text-sm">
+      <div className="flex items-center gap-3 p-2 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer text-sm" onClick={()=>navigate('/subscription')}>
         <FaCreditCard style={getIconStyle()} />
         <span>Subscriptions</span>
       </div>
