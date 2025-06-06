@@ -1,21 +1,20 @@
-import React, { useState, useEffect, useRef  } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   FaTimes, FaTrophy, FaUsers, FaTv, FaStar, FaSignOutAlt,
-  FaChevronDown, FaChevronUp, FaLock,  FaPencilAlt, 
+  FaChevronDown, FaChevronUp, FaLock, FaPencilAlt, 
   FaEye, FaEyeSlash, FaShieldAlt, FaUserCog, FaCreditCard,
-  FaTag, FaAt, FaComment, FaPalette
+  FaTag, FaAt, FaComment, FaPalette, FaCheck, FaEnvelope,
+  FaMobile, FaCalendarAlt, FaIdCard, FaKey, FaBell,
+  FaFacebook, FaWhatsapp, FaInstagram, FaTwitter
 } from "react-icons/fa";
-import profImg from "../../../assets/sophita/HomePage/profpic.png";
 import { LockKeyholeIcon } from "lucide-react";
-
 import { auth, db } from "../../../firebase";
-import { doc, getDoc, updateDoc  } from "firebase/firestore";
-import { signOut } from "firebase/auth"; // ✅ Sign out import
+import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { signOut } from "firebase/auth";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { FaPlus } from "react-icons/fa";
 
-// Helper function for RGB conversion (defined outside for clarity or can be in a utils file)
 const hexToRgb = (hex) => {
   hex = hex.replace('#', '');
   const r = parseInt(hex.substring(0, 2), 16);
@@ -24,148 +23,534 @@ const hexToRgb = (hex) => {
   return `${r}, ${g}, ${b}`;
 };
 
-// Reusable Account Settings Content Component
+const PasswordSecurityContent = ({ selectedColor, isMobileView }) => {
+  const [showPasswordOptions, setShowPasswordOptions] = useState(false);
+  const [showSecurityChecks, setShowSecurityChecks] = useState(false);
+  
+  const getIconStyle = () => (isMobileView ? { color: 'black' } : { color: selectedColor });
+  const getTextStyleClass = () => (isMobileView ? 'text-black' : '');
+
+  return (
+    <div className={`space-y-3 p-2 ${getTextStyleClass()}`}>
+      <div 
+        className="flex items-center justify-between gap-3 p-2 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer text-sm"
+        onClick={() => setShowPasswordOptions(!showPasswordOptions)}
+      >
+        <div className="flex items-center gap-3">
+          <FaKey style={getIconStyle()} />
+          <span>Change Password</span>
+        </div>
+        {showPasswordOptions ? <FaChevronUp style={getIconStyle()} /> : <FaChevronDown style={getIconStyle()} />}
+      </div>
+      
+      {showPasswordOptions && (
+        <div className="pl-8 space-y-2 text-xs">
+          <div className="p-1 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer">
+            Update password
+          </div>
+          <div className="p-1 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer">
+            Two-factor authentication
+          </div>
+          <div className="p-1 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer">
+            Saved login information
+          </div>
+        </div>
+      )}
+
+      <div 
+        className="flex items-center justify-between gap-3 p-2 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer text-sm"
+        onClick={() => setShowSecurityChecks(!showSecurityChecks)}
+      >
+        <div className="flex items-center gap-3">
+          <FaShieldAlt style={getIconStyle()} />
+          <span>Security checks</span>
+        </div>
+        {showSecurityChecks ? <FaChevronUp style={getIconStyle()} /> : <FaChevronDown style={getIconStyle()} />}
+      </div>
+      
+      {showSecurityChecks && (
+        <div className="pl-8 space-y-2 text-xs">
+          <div className="p-1 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer">
+            Where you're logged in
+          </div>
+          <div className="p-1 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer">
+            Login alerts
+          </div>
+          <div className="p-1 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer">
+            Recent emails
+          </div>
+          <div className="p-1 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer">
+            Security checkup
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const PersonalDetailsContent = ({ selectedColor, isMobileView, userProfile }) => {
+  const [showDOBInput, setShowDOBInput] = useState(false);
+  const [dob, setDob] = useState(userProfile?.dob || "");
+  const [showIdentityConfirmation, setShowIdentityConfirmation] = useState(false);
+  const [socialMediaLinks, setSocialMediaLinks] = useState({
+    facebook: userProfile?.socialMedia?.facebook || "",
+    whatsapp: userProfile?.socialMedia?.whatsapp || "",
+    instagram: userProfile?.socialMedia?.instagram || "",
+    twitter: userProfile?.socialMedia?.twitter || ""
+  });
+  const [isEditing, setIsEditing] = useState(false);
+
+  const getIconStyle = () => (isMobileView ? { color: 'black' } : { color: selectedColor });
+  const getTextStyleClass = () => (isMobileView ? 'text-black' : '');
+
+  const handleSaveDOB = async () => {
+    try {
+      await updateDoc(doc(db, "users", auth.currentUser.uid), {
+        dob: dob
+      });
+      setShowDOBInput(false);
+    } catch (err) {
+      console.error("Error updating date of birth:", err);
+    }
+  };
+
+  const handleSaveSocialMedia = async () => {
+    try {
+      await updateDoc(doc(db, "users", auth.currentUser.uid), {
+        socialMedia: socialMediaLinks
+      });
+      setIsEditing(false);
+    } catch (err) {
+      console.error("Error updating social media links:", err);
+    }
+  };
+
+  return (
+    <div className={`space-y-3 p-2 ${getTextStyleClass()}`}>
+      <div className="flex items-center gap-3 p-2 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer text-sm">
+        <FaEnvelope style={getIconStyle()} />
+        <span>Email: {userProfile?.email || "No email"}</span>
+      </div>
+      <div className="flex items-center gap-3 p-2 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer text-sm">
+        <FaMobile style={getIconStyle()} />
+        <span>Phone: {userProfile?.whatsapp || "No phone"}</span>
+      </div>
+      
+      {/* Date of Birth Section */}
+      <div 
+        className="flex items-center justify-between gap-3 p-2 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer text-sm"
+        onClick={() => setShowDOBInput(!showDOBInput)}
+      >
+        <div className="flex items-center gap-3">
+          <FaCalendarAlt style={getIconStyle()} />
+          <span>Date of Birth: {dob || "Not set"}</span>
+        </div>
+        {showDOBInput ? <FaChevronUp style={getIconStyle()} /> : <FaChevronDown style={getIconStyle()} />}
+      </div>
+      
+      {showDOBInput && (
+        <div className="pl-8 space-y-2">
+          <input
+            type="date"
+            value={dob}
+            onChange={(e) => setDob(e.target.value)}
+            className="w-full p-2 rounded bg-white/10 border border-white/20 text-sm"
+            max={new Date().toISOString().split('T')[0]}
+          />
+          <div className="flex justify-end gap-2">
+            <button 
+              onClick={() => setShowDOBInput(false)}
+              className="px-3 py-1 text-xs rounded bg-gray-500 hover:bg-gray-600"
+            >
+              Cancel
+            </button>
+            <button 
+              onClick={handleSaveDOB}
+              className="px-3 py-1 text-xs rounded"
+              style={{ backgroundColor: selectedColor }}
+            >
+              Save
+            </button>
+          </div>
+        </div>
+      )}
+      
+      {/* Identity Confirmation Section */}
+      <div 
+        className="flex items-center justify-between gap-3 p-2 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer text-sm"
+        onClick={() => setShowIdentityConfirmation(!showIdentityConfirmation)}
+      >
+        <div className="flex items-center gap-3">
+          <FaIdCard style={getIconStyle()} />
+          <span>Identity confirmation</span>
+        </div>
+        {showIdentityConfirmation ? <FaChevronUp style={getIconStyle()} /> : <FaChevronDown style={getIconStyle()} />}
+      </div>
+      
+      {showIdentityConfirmation && (
+        <div className="pl-8 space-y-3">
+          <p className="text-xs">Link your social media profiles to verify your identity:</p>
+          
+          {isEditing ? (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <FaFacebook style={{ color: '#1877F2' }} />
+                <input
+                  type="text"
+                  placeholder="Facebook profile URL"
+                  value={socialMediaLinks.facebook}
+                  onChange={(e) => setSocialMediaLinks({...socialMediaLinks, facebook: e.target.value})}
+                  className="flex-1 p-2 rounded bg-white/10 border border-white/20 text-sm"
+                />
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <FaWhatsapp style={{ color: '#25D366' }} />
+                <input
+                  type="text"
+                  placeholder="WhatsApp number"
+                  value={socialMediaLinks.whatsapp}
+                  onChange={(e) => setSocialMediaLinks({...socialMediaLinks, whatsapp: e.target.value})}
+                  className="flex-1 p-2 rounded bg-white/10 border border-white/20 text-sm"
+                />
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <FaInstagram style={{ color: '#E4405F' }} />
+                <input
+                  type="text"
+                  placeholder="Instagram username"
+                  value={socialMediaLinks.instagram}
+                  onChange={(e) => setSocialMediaLinks({...socialMediaLinks, instagram: e.target.value})}
+                  className="flex-1 p-2 rounded bg-white/10 border border-white/20 text-sm"
+                />
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <FaTwitter style={{ color: '#1DA1F2' }} />
+                <input
+                  type="text"
+                  placeholder="Twitter handle"
+                  value={socialMediaLinks.twitter}
+                  onChange={(e) => setSocialMediaLinks({...socialMediaLinks, twitter: e.target.value})}
+                  className="flex-1 p-2 rounded bg-white/10 border border-white/20 text-sm"
+                />
+              </div>
+              
+              <div className="flex justify-end gap-2 pt-2">
+                <button 
+                  onClick={() => setIsEditing(false)}
+                  className="px-3 py-1 text-xs rounded bg-gray-500 hover:bg-gray-600"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={handleSaveSocialMedia}
+                  className="px-3 py-1 text-xs rounded"
+                  style={{ backgroundColor: selectedColor }}
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {socialMediaLinks.facebook && (
+                <div className="flex items-center gap-2 text-sm">
+                  <FaFacebook style={{ color: '#1877F2' }} />
+                  <span>{socialMediaLinks.facebook}</span>
+                </div>
+              )}
+              
+              {socialMediaLinks.whatsapp && (
+                <div className="flex items-center gap-2 text-sm">
+                  <FaWhatsapp style={{ color: '#25D366' }} />
+                  <span>{socialMediaLinks.whatsapp}</span>
+                </div>
+              )}
+              
+              {socialMediaLinks.instagram && (
+                <div className="flex items-center gap-2 text-sm">
+                  <FaInstagram style={{ color: '#E4405F' }} />
+                  <span>@{socialMediaLinks.instagram}</span>
+                </div>
+              )}
+              
+              {socialMediaLinks.twitter && (
+                <div className="flex items-center gap-2 text-sm">
+                  <FaTwitter style={{ color: '#1DA1F2' }} />
+                  <span>@{socialMediaLinks.twitter}</span>
+                </div>
+              )}
+              
+              {!socialMediaLinks.facebook && !socialMediaLinks.whatsapp && 
+               !socialMediaLinks.instagram && !socialMediaLinks.twitter && (
+                <p className="text-xs italic">No social media links added</p>
+              )}
+              
+              <button 
+                onClick={() => setIsEditing(true)}
+                className="flex items-center gap-1 text-xs mt-2"
+                style={{ color: selectedColor }}
+              >
+                <FaPencilAlt size={10} /> {socialMediaLinks.facebook ? 'Edit' : 'Add'} links
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+      
+      <div className="flex items-center gap-3 p-2 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer text-sm">
+        <FaCheck style={getIconStyle()} />
+        <span>Allow ownership and control</span>
+      </div>
+    </div>
+  );
+};
+
+const TagsMentionsContent = ({ selectedColor, isMobileView }) => {
+  const [showTagsOptions, setShowTagsOptions] = useState(false);
+  const [showMentionsOptions, setShowMentionsOptions] = useState(false);
+  const [tagsPermission, setTagsPermission] = useState("peopleYouFollow");
+  const [mentionsPermission, setMentionsPermission] = useState("everyone");
+  const [manualApproveTags, setManualApproveTags] = useState(false);
+  
+  const getIconStyle = () => (isMobileView ? { color: 'black' } : { color: selectedColor });
+  const getTextStyleClass = () => (isMobileView ? 'text-black' : '');
+
+  const handleTagsPermissionChange = (value) => {
+    setTagsPermission(value);
+    // Here you would also update the setting in your database
+  };
+
+  const handleMentionsPermissionChange = (value) => {
+    setMentionsPermission(value);
+    // Here you would also update the setting in your database
+  };
+
+  const toggleManualApproveTags = () => {
+    setManualApproveTags(!manualApproveTags);
+    // Here you would also update the setting in your database
+  };
+
+  return (
+    <div className={`space-y-3 p-2 ${getTextStyleClass()}`}>
+      <div 
+        className="flex items-center justify-between gap-3 p-2 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer text-sm"
+        onClick={() => setShowTagsOptions(!showTagsOptions)}
+      >
+        <div className="flex items-center gap-3">
+          <FaTag style={getIconStyle()} />
+          <span>Tags and Mentions</span>
+        </div>
+        {showTagsOptions ? <FaChevronUp style={getIconStyle()} /> : <FaChevronDown style={getIconStyle()} />}
+      </div>
+      
+      {showTagsOptions && (
+        <div className="pl-8 space-y-4 text-xs">
+          <div className="space-y-2">
+            <h4 className="font-medium">Who can tag you</h4>
+            <div className="space-y-2 pl-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="tagsPermission"
+                  checked={tagsPermission === "everyone"}
+                  onChange={() => handleTagsPermissionChange("everyone")}
+                  className="appearance-none w-4 h-4 rounded-full border-2 border-gray-300 checked:bg-blue-500 checked:border-blue-500 relative"
+                />
+                <span>Everyone</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="tagsPermission"
+                  checked={tagsPermission === "peopleYouFollow"}
+                  onChange={() => handleTagsPermissionChange("peopleYouFollow")}
+                  className="appearance-none w-4 h-4 rounded-full border-2 border-gray-300 checked:bg-blue-500 checked:border-blue-500 relative"
+                />
+                <span>People you follow</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="tagsPermission"
+                  checked={tagsPermission === "noOne"}
+                  onChange={() => handleTagsPermissionChange("noOne")}
+                  className="appearance-none w-4 h-4 rounded-full border-2 border-gray-300 checked:bg-blue-500 checked:border-blue-500 relative"
+                />
+                <span>Don't allow tags</span>
+              </label>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <h4 className="font-medium">How you manage tags</h4>
+            <div className="flex items-center justify-between pl-2">
+              <span>Manually approve tags</span>
+              <button
+                onClick={toggleManualApproveTags}
+                className={`w-10 h-5 rounded-full p-1 transition-colors duration-200 ${manualApproveTags ? 'bg-blue-500' : 'bg-gray-300'}`}
+              >
+                <div className={`w-3 h-3 rounded-full bg-white transform transition-transform duration-200 ${manualApproveTags ? 'translate-x-5' : 'translate-x-0'}`}></div>
+              </button>
+            </div>
+            <div className="pl-2 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer">
+              Review tags
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <h4 className="font-medium">Who can @mention you</h4>
+            <div className="space-y-2 pl-2">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="mentionsPermission"
+                  checked={mentionsPermission === "everyone"}
+                  onChange={() => handleMentionsPermissionChange("everyone")}
+                  className="appearance-none w-4 h-4 rounded-full border-2 border-gray-300 checked:bg-blue-500 checked:border-blue-500 relative"
+                />
+                <span>Everyone</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="mentionsPermission"
+                  checked={mentionsPermission === "peopleYouFollow"}
+                  onChange={() => handleMentionsPermissionChange("peopleYouFollow")}
+                  className="appearance-none w-4 h-4 rounded-full border-2 border-gray-300 checked:bg-blue-500 checked:border-blue-500 relative"
+                />
+                <span>People you follow</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="mentionsPermission"
+                  checked={mentionsPermission === "noOne"}
+                  onChange={() => handleMentionsPermissionChange("noOne")}
+                  className="appearance-none w-4 h-4 rounded-full border-2 border-gray-300 checked:bg-blue-500 checked:border-blue-500 relative"
+                />
+                <span>Don't allow mentions</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const AccountSettingsContent = ({
   selectedColor,
   accountType,
   handleAccountTypeChange,
-  showDropdown, // This was for leaderboard, maybe a typo from original code for Hide Stories icon
+  showDropdown,
   setShowTagsDropdown,
   showTagsDropdown,
   setShowCommentsDropdown,
   showCommentsDropdown,
   colors,
   handleColorChange,
-  isMobileView, // Receive mobile view state
-
-  accountSettingsBg // Pass this for potential use if items need specific background
+  isMobileView,
+  accountSettingsBg,
+  userProfile
 }) => {
-
-  // Determine icon style based on view
-    // In mobile, icons should be black. In desktop, theme color or inherit (from parent text-white).
-    const getIconStyle = () => (isMobileView ? { color: 'black' } : { color: selectedColor });
-
-    // Determine text style for items based on view
-    // In mobile, text should be black. In desktop, text inherits parent (white).
-    const getTextStyleClass = () => (isMobileView ? 'text-black' : ''); // Apply text-black only in mobile
+  const [activeSection, setActiveSection] = useState("accountType");
+  
+  const getIconStyle = () => (isMobileView ? { color: 'black' } : { color: selectedColor });
+  const getTextStyleClass = () => (isMobileView ? 'text-black' : '');
 
   return (
-    <div className={`space-y-3 p-2 ${getTextStyleClass()}`}> {/* Added padding for dropdown view */}
+    <div className={`space-y-3 p-2 ${getTextStyleClass()}`}>
       {/* Public/Private Radio Buttons */}
-      <div className="p-2">
-        <div className="flex items-center gap-3 mb-2">
-          <FaUserCog style={getIconStyle()} />
-          <span>Account Type</span>
+      {activeSection === "accountType" && (
+        <div className="p-2">
+          <div className="flex items-center gap-3 mb-2">
+            <FaUserCog style={getIconStyle()} />
+            <span>Account Type</span>
+          </div>
+          <div className="space-y-2 pl-8">
+            <label className="flex items-center gap-2 cursor-pointer text-sm">
+              <input
+                type="radio"
+                name="accountType"
+                checked={accountType === "public"}
+                onChange={() => handleAccountTypeChange("public")}
+                className="appearance-none w-4 h-4 rounded-full border-2 border-gray-300 checked:bg-blue-500 checked:border-blue-500 relative"
+              />
+              <span>Public</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer text-sm">
+              <input
+                type="radio"
+                name="accountType"
+                checked={accountType === "private"}
+                onChange={() => handleAccountTypeChange("private")}
+                className="appearance-none w-4 h-4 rounded-full border-2 border-gray-300 checked:bg-blue-500 checked:border-blue-500 relative"
+              />
+              <span>Private</span>
+            </label>
+          </div>
         </div>
-        <div className="space-y-2 pl-8">
-          <label className="flex items-center gap-2 cursor-pointer text-sm">
-            <input
-              type="radio"
-              name="accountType"
-              checked={accountType === "public"}
-              onChange={() => handleAccountTypeChange("public")}
-              className="appearance-none w-4 h-4 rounded-full border-2 border-gray-300 checked:bg-blue-500 checked:border-blue-500 relative"
-              // For custom checkmark, you might need a pseudo-element or an inner div
-            />
-            <span>Public</span>
-          </label>
-          <label className="flex items-center gap-2 cursor-pointer text-sm">
-            <input
-              type="radio"
-              name="accountType"
-              checked={accountType === "private"}
-              onChange={() => handleAccountTypeChange("private")}
-              className="appearance-none w-4 h-4 rounded-full border-2 border-gray-300 checked:bg-blue-500 checked:border-blue-500 relative"
-            />
-            <span>Private</span>
-          </label>
-        </div>
+      )}
+
+      <div 
+        className="flex items-center gap-3 p-2 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer text-sm"
+        onClick={() => setActiveSection("passwordSecurity")}
+      >
+        <FaLock style={getIconStyle()} />
+        <span>Password and Security</span>
+      </div>
+      {activeSection === "passwordSecurity" && (
+        <PasswordSecurityContent selectedColor={selectedColor} isMobileView={isMobileView} />
+      )}
+
+      <div 
+        className="flex items-center gap-3 p-2 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer text-sm"
+        onClick={() => setActiveSection("personalDetails")}
+      >
+        <FaUserCog style={getIconStyle()} />
+        <span>Personal Details</span>
+      </div>
+      {activeSection === "personalDetails" && (
+        <PersonalDetailsContent selectedColor={selectedColor} isMobileView={isMobileView} userProfile={userProfile} />
+      )}
+
+      <div className="flex items-center gap-3 p-2 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer text-sm">
+        <FaShieldAlt style={getIconStyle()} />
+        <span>Permissions</span>
       </div>
 
       <div className="flex items-center gap-3 p-2 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer text-sm">
-        <FaLock style={getIconStyle()}  />
-        <span>Password and Security</span>
-      </div>
-      <div className="flex items-center gap-3 p-2 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer text-sm">
-        <FaUserCog style={getIconStyle()}  />
-        <span>Personal Details</span>
-      </div>
-      <div className="flex items-center gap-3 p-2 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer text-sm">
-        <FaShieldAlt style={getIconStyle()}  />
-        <span>Permissions</span>
-      </div>
-      <div className="flex items-center gap-3 p-2 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer text-sm">
-        <FaCreditCard style={getIconStyle()}  />
+        <FaCreditCard style={getIconStyle()} />
         <span>Subscriptions</span>
       </div>
+
       <div className="flex items-center gap-3 p-2 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer text-sm">
-        {/* Assuming 'showDropdown' here was for the Leaderboard, not related to Hide Stories icon directly */}
-        {/* For simplicity, using a generic state for the icon, or pass a specific one if needed */}
-        {false ? <FaEyeSlash style={getIconStyle()}  /> : <FaEye style={getIconStyle()}  />}
+        {false ? <FaEyeSlash style={getIconStyle()} /> : <FaEye style={getIconStyle()} />}
         <span>Hide Stories</span>
       </div>
+
       <div className="flex items-center gap-3 p-2 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer text-sm">
-        <FaShieldAlt style={getIconStyle()}  />
+        <FaShieldAlt style={getIconStyle()} />
         <span>Restrict</span>
       </div>
 
-      <div
-        className="flex items-center justify-between gap-3 p-2 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer text-sm"
-        onClick={() => setShowTagsDropdown(!showTagsDropdown)}
+      <div 
+        className="flex items-center gap-3 p-2 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer text-sm"
+        onClick={() => setActiveSection("tagsMentions")}
       >
-        <div className="flex items-center gap-3">
-          <FaTag style={getIconStyle()}  />
-          <span>Tags and Mentions</span>
-        </div>
-        {showTagsDropdown ? <FaChevronUp style={getIconStyle()}  /> : <FaChevronDown style={getIconStyle()} />}
+        <FaTag style={getIconStyle()} />
+        <span>Tags and Mentions</span>
       </div>
-      {showTagsDropdown && (
-        <div className="pl-8 space-y-2 text-xs">
-          <div className="flex items-center justify-between p-1 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer">
-            <span>Allow Tags</span>
-          </div>
-          <div className="pl-4">
-            <div className="p-1 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer">
-              Don't allow tags
-            </div>
-          </div>
-          <div className="flex items-center justify-between p-1 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer">
-            <span>Allow Mentions</span>
-          </div>
-          <div className="pl-4">
-            <div className="p-1 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer">
-              Don't allow mentions
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div
-        className="flex items-center justify-between gap-3 p-2 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer text-sm"
-        onClick={() => setShowCommentsDropdown(!showCommentsDropdown)}
-      >
-        <div className="flex items-center gap-3">
-          <FaComment style={getIconStyle()}  />
-          <span>Comments</span>
-        </div>
-        {showCommentsDropdown ? <FaChevronUp style={getIconStyle()}  /> : <FaChevronDown style={getIconStyle()}  />}
-      </div>
-      {showCommentsDropdown && (
-        <div className="pl-8 space-y-2 text-xs">
-          <div className="flex items-center justify-between p-1 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer">
-            <span>Allow Followers to Comment</span>
-          </div>
-          <div className="pl-4">
-            <div className="p-1 hover:bg-[rgba(255,255,255,0.1)] rounded cursor-pointer">
-              Don't allow comments
-            </div>
-          </div>
-        </div>
+      {activeSection === "tagsMentions" && (
+        <TagsMentionsContent selectedColor={selectedColor} isMobileView={isMobileView} />
       )}
 
       <div className="p-2">
         <div className="flex items-center gap-3 mb-2">
-          <FaPalette style={getIconStyle()}  />
+          <FaPalette style={getIconStyle()} />
           <span>Theme Color</span>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -191,99 +576,49 @@ const Sidebar = ({ isOpen, closeMenu, userProfile }) => {
   const [showAccountSettings, setShowAccountSettings] = useState(false);
   const [showTagsDropdown, setShowTagsDropdown] = useState(false);
   const [showCommentsDropdown, setShowCommentsDropdown] = useState(false);
-  // const [userName, setUserName] = useState("Loading...");
-  // const [userEmail, setUserEmail] = useState("");
-  // const [userPhone, setUserPhone] = useState("");
-  // const [profileImage, setProfileImage] = useState(null);
   const [selectedColor, setSelectedColor] = useState("#5DE0E6");
   const [accountType, setAccountType] = useState("public");
   const [accountSettingsBg, setAccountSettingsBg] = useState("rgb(93, 224, 230, 0.5)");
 
-  const accountSettingsPanelRef = useRef(null); // Ref for the DESKTOP account settings panel
+  const accountSettingsPanelRef = useRef(null);
   const [isMobileView, setIsMobileView] = useState(false);
-
-  const MD_BREAKPOINT = 768; // Tailwind's default md breakpoint
-
+  const MD_BREAKPOINT = 768;
 
   const colors = [
     "#5DE0E6", "#FF6B6B", "#48BB78", "#F6AD55", 
     "#667EEA", "#9F7AEA", "#ED64A6", "#38B2AC"
   ];
+
   useEffect(() => {
     const checkMobileView = () => setIsMobileView(window.innerWidth < MD_BREAKPOINT);
-    checkMobileView(); // Initial check
+    checkMobileView();
     window.addEventListener('resize', checkMobileView);
     return () => window.removeEventListener('resize', checkMobileView);
   }, []);
 
-  // useEffect(() => {
-  //   const fetchUserData = async () => {
-  //     const currentUser = auth.currentUser;
-  
-  //     if (currentUser) {
-  //       try {
-  //         const docRef = doc(db, "users", currentUser.uid);
-  //         const docSnap = await getDoc(docRef);
-  
-  //         if (docSnap.exists()) {
-  //           const userData = docSnap.data();
-  //           setUserName(userData.firstName || "User");
-  //           setUserPhone(userData.whatsapp || "No phone");
-  //           if (userData.profileImageUrl) setProfileImage(userData.profileImageUrl);
-  //           if (userData.themeColor) {
-  //             setSelectedColor(userData.themeColor);
-  //           }
-  //           if (userData.accountType) setAccountType(userData.accountType);
-  //         } else {
-  //           console.log("No such user document!");
-  //           setUserName("User");
-  //           setUserPhone("No phone");
-  //         }
-  
-  //         setUserEmail(currentUser.email || "No email");
-  //       } catch (err) {
-  //         console.error("Error fetching user data:", err);
-  //         setUserName("User");
-  //         setUserEmail("No email");
-  //         setUserPhone("No phone");
-  //       }
-  //     }
-  //   };
-  
-  //   fetchUserData();
-  // }, []);
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!isMobileView && showAccountSettings && accountSettingsPanelRef.current && !accountSettingsPanelRef.current.contains(event.target)) {
+        setShowAccountSettings(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showAccountSettings, isMobileView]);
 
-    // Effect to handle clicks outside the Account Settings panel
-    useEffect(() => {
-      const handleClickOutside = (event) => {
-        // Only apply click outside for desktop panel view
-        if (!isMobileView && showAccountSettings && accountSettingsPanelRef.current && !accountSettingsPanelRef.current.contains(event.target)) {
-          // Check if the click target is the button that opens the account settings to avoid immediate close
-          // This requires ensuring the "Account Settings" LI item is not part of the ref, which it isn't.
-          setShowAccountSettings(false);
-        }
-      };
-      document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, [showAccountSettings, isMobileView]); // Add isMobileView to dependencies
-  
-
-      // Effect to close account settings if main sidebar is closed
   useEffect(() => {
     if (!isOpen && showAccountSettings) {
       setShowAccountSettings(false);
     }
   }, [isOpen, showAccountSettings]);
 
-   // Effect to update state if userProfile prop changes (e.g., after an update in App)
-   useEffect(() => {
+  useEffect(() => {
     if (userProfile) {
       setSelectedColor(userProfile.themeColor || "#5DE0E6");
       setAccountType(userProfile.accountType || "public");
       setAccountSettingsBg(`rgba(${hexToRgb(userProfile.themeColor || "#5DE0E6")}, 0.2)`);
     }
   }, [userProfile]);
-
 
   const handleColorChange = async (color) => {
     setSelectedColor(color);
@@ -309,26 +644,22 @@ const Sidebar = ({ isOpen, closeMenu, userProfile }) => {
   };
 
   const handleImageUpload = async (e) => {
-      const file = e.target.files[0];
-      if (!file || !userProfile?.uid) return; // Ensure file and user ID exist
-    
-      const storage = getStorage();
-      const storageRef = ref(storage, `profileImages/${userProfile.uid}`);
-      
-      try {
-       await uploadBytes(storageRef, file);
-       const downloadURL = await getDownloadURL(storageRef);
-       // setProfileImage(downloadURL); // Update local state
+    const file = e.target.files[0];
+    if (!file || !userProfile?.uid) return;
   
-       await updateDoc(doc(db, "users", userProfile.uid), {
+    const storage = getStorage();
+    const storageRef = ref(storage, `profileImages/${userProfile.uid}`);
+    
+    try {
+      await uploadBytes(storageRef, file);
+      const downloadURL = await getDownloadURL(storageRef);
+      await updateDoc(doc(db, "users", userProfile.uid), {
         profileImageUrl: downloadURL,
-       });
-     // Ideally, trigger an update in the parent (App) state here
-     // e.g., via a prop: onProfileUpdate({ profileImageUrl: downloadURL })
-      } catch (err) {
-       console.error("Error uploading image:", err);
-      }
-     };
+      });
+    } catch (err) {
+      console.error("Error uploading image:", err);
+    }
+  };
 
   const handleSignOut = async () => {
     try {
@@ -338,23 +669,22 @@ const Sidebar = ({ isOpen, closeMenu, userProfile }) => {
       console.error("Sign out error:", error);
     }
   };
-    // Centralized function to handle closing the main sidebar and account settings
-    const handleCloseAllMenus = () => {
-      setShowAccountSettings(false); // Ensure account settings is closed
-      closeMenu(); // Close the main sidebar
-    };
+
+  const handleCloseAllMenus = () => {
+    setShowAccountSettings(false);
+    closeMenu();
+  };
 
   const sidebarStyle = { backgroundColor: selectedColor };
-
 
   return (
     <>
       <div
-  className={`fixed top-0 left-0 w-[220px] md:w-[300px] h-screen shadow-lg
-              transition-transform duration-300 ease-in-out z-[1100] overflow-y-auto select-none
-              ${isOpen ? "translate-x-0" : "-translate-x-full"}`} // Gradient class removed
-  style={sidebarStyle} // Applies { backgroundColor: selectedColor }
->
+        className={`fixed top-0 left-0 w-[220px] md:w-[300px] h-screen shadow-lg
+                    transition-transform duration-300 ease-in-out z-[1100] overflow-y-auto select-none
+                    ${isOpen ? "translate-x-0" : "-translate-x-full"}`}
+        style={sidebarStyle}
+      >
         <div className="h-full relative">
           <button 
             className="absolute top-4 right-4 text-xl md:text-2xl text-black cursor-pointer"
@@ -366,17 +696,17 @@ const Sidebar = ({ isOpen, closeMenu, userProfile }) => {
           {/* Profile Section */}
           <div className="text-center py-4 px-4 mt-6 text-black">
             <div className="relative w-16 h-16 md:w-20 md:h-20 mx-auto mb-4">
-            {userProfile?.profileImageUrl ? ( // Use profileImageUrl from prop
-                 <img
+              {userProfile?.profileImageUrl ? (
+                <img
                   src={userProfile.profileImageUrl}
                   alt="Profile"
                   className="w-full h-full rounded-full object-cover border-2 border-black"
-                 />
-               ) : (
-                 <div className="w-full h-full rounded-full bg-black text-white flex items-center justify-center text-2xl font-bold border-2 border-[#5DE0E6]">
-                  {userProfile?.userName ? userProfile.userName.charAt(0).toUpperCase() : 'U'} {/* Use userName from prop */}
-                 </div>
-               )}
+                />
+              ) : (
+                <div className="w-full h-full rounded-full bg-black text-white flex items-center justify-center text-2xl font-bold border-2 border-[#5DE0E6]">
+                  {userProfile?.userName ? userProfile.userName.charAt(0).toUpperCase() : 'U'}
+                </div>
+              )}
 
               <label className="absolute bottom-0 right-0 bg-white p-1 rounded-full cursor-pointer shadow-md">
                 <FaPlus className="text-black text-xs" />
@@ -391,7 +721,7 @@ const Sidebar = ({ isOpen, closeMenu, userProfile }) => {
 
             <div className="flex items-center justify-center gap-2">
               <h6 className="text-base md:text-lg font-bold">
-              {userProfile?.userName || "User"}
+                {userProfile?.userName || "User"}
               </h6>
             </div>
             <p className="text-xs md:text-sm opacity-80 mt-1">{userProfile?.email || "No email"}</p>
@@ -470,12 +800,11 @@ const Sidebar = ({ isOpen, closeMenu, userProfile }) => {
               <FaUsers className="min-w-[20px]" /> Community
             </li>
             
-            {/* New Account Settings Menu Item */}
             <li
               className={`px-4 py-2 md:px-6 md:py-3 flex items-center justify-between cursor-pointer ${isMobileView ? 'hover:bg-white/10' : 'hover:bg-[rgba(0,0,0,0.1)]'} transition-all duration-300`}
               onClick={(e) => {
                 e.stopPropagation();
-                setShowAccountSettings(!showAccountSettings); // Toggle visibility
+                setShowAccountSettings(!showAccountSettings);
               }}
             >
               <span className="flex items-center gap-2 md:gap-3">
@@ -483,26 +812,26 @@ const Sidebar = ({ isOpen, closeMenu, userProfile }) => {
               </span>
               {isMobileView && (showAccountSettings ? <FaChevronUp /> : <FaChevronDown />)}
             </li>
-             {/* Mobile Dropdown for Account Settings */}
-             {showAccountSettings && isMobileView && (
+            
+            {showAccountSettings && isMobileView && (
               <div 
-                className="text-black" // Ensures text is white if not inheriting properly
-                style={{ backgroundColor: accountSettingsBg }} // Use themed semi-transparent bg
+                className="text-black"
+                style={{ backgroundColor: accountSettingsBg }}
               >
                 <div className={`pl-6 border-l-2 ${isMobileView ? 'border-white/50' : 'border-[#5DE0E6]'}`}>
-                     <AccountSettingsContent
-                        selectedColor={selectedColor} 
-                        accountType={accountType}
-                        handleAccountTypeChange={handleAccountTypeChange}
-                        showTagsDropdown={showTagsDropdown}
-                        setShowTagsDropdown={setShowTagsDropdown}
-                        showCommentsDropdown={showCommentsDropdown}
-                        setShowCommentsDropdown={setShowCommentsDropdown}
-                        colors={colors}
-                        handleColorChange={handleColorChange}
-                        isMobileView={isMobileView} // Pass mobile view state
-                        // accountSettingsBg={accountSettingsBg}
-                    />
+                  <AccountSettingsContent
+                    selectedColor={selectedColor} 
+                    accountType={accountType}
+                    handleAccountTypeChange={handleAccountTypeChange}
+                    showTagsDropdown={showTagsDropdown}
+                    setShowTagsDropdown={setShowTagsDropdown}
+                    showCommentsDropdown={showCommentsDropdown}
+                    setShowCommentsDropdown={setShowCommentsDropdown}
+                    colors={colors}
+                    handleColorChange={handleColorChange}
+                    isMobileView={isMobileView}
+                    userProfile={userProfile}
+                  />
                 </div>
               </div>
             )}
@@ -519,46 +848,47 @@ const Sidebar = ({ isOpen, closeMenu, userProfile }) => {
 
       {/* Account Settings Panel */}
       {showAccountSettings && !isMobileView && (
-          <div
-          ref={accountSettingsPanelRef} // Ref for desktop panel only
-          className="fixed top-0 left-[220px] md:left-[300px] w-[280px] h-full shadow-xl rounded-lg p-0 text-white z-[1200] overflow-y-auto" // Removed main padding, content will have it
+        <div
+          ref={accountSettingsPanelRef}
+          className="fixed top-0 left-[220px] md:left-[300px] w-[280px] h-full shadow-xl rounded-lg p-0 text-white z-[1200] overflow-y-auto"
           style={{
-              borderTop: `4px solid ${selectedColor}`,
-              backgroundColor: accountSettingsBg,
-              boxShadow: `0 0 10px ${selectedColor}20`
-            }}
-          >
-            <div className="flex justify-between items-center p-4"> {/* Padding for header */}
-              <h3 className="font-bold text-lg" style={{ color: selectedColor }}>
-                Account Settings
-              </h3>
-              <FaTimes
-                className="cursor-pointer"
-                onClick={() => setShowAccountSettings(false)}
-                style={{ color: selectedColor }}
-              />
-            </div>
-            <AccountSettingsContent
-                selectedColor={selectedColor}
-                accountType={accountType}
-                handleAccountTypeChange={handleAccountTypeChange}
-                showTagsDropdown={showTagsDropdown}
-                setShowTagsDropdown={setShowTagsDropdown}
-                showCommentsDropdown={showCommentsDropdown}
-                setShowCommentsDropdown={setShowCommentsDropdown}
-                colors={colors}
-                handleColorChange={handleColorChange}
-                accountSettingsBg={accountSettingsBg}
+            borderTop: `4px solid ${selectedColor}`,
+            backgroundColor: accountSettingsBg,
+            boxShadow: `0 0 10px ${selectedColor}20`
+          }}
+        >
+          <div className="flex justify-between items-center p-4">
+            <h3 className="font-bold text-lg" style={{ color: selectedColor }}>
+              Account Settings
+            </h3>
+            <FaTimes
+              className="cursor-pointer"
+              onClick={() => setShowAccountSettings(false)}
+              style={{ color: selectedColor }}
             />
           </div>
+          <AccountSettingsContent
+            selectedColor={selectedColor}
+            accountType={accountType}
+            handleAccountTypeChange={handleAccountTypeChange}
+            showTagsDropdown={showTagsDropdown}
+            setShowTagsDropdown={setShowTagsDropdown}
+            showCommentsDropdown={showCommentsDropdown}
+            setShowCommentsDropdown={setShowCommentsDropdown}
+            colors={colors}
+            handleColorChange={handleColorChange}
+            isMobileView={isMobileView}
+            userProfile={userProfile}
+          />
+        </div>
       )}
 
       {/* Background Overlay */}
       {isOpen && (
         <div
-        className="fixed top-0 left-0 w-screen h-screen bg-[rgba(0,0,0,0.5)] backdrop-blur-sm transition-opacity duration-300 ease-in-out z-[1050]"
-        onClick={handleCloseAllMenus} // MODIFIED: Close both sidebar and account settings
-      />
+          className="fixed top-0 left-0 w-screen h-screen bg-[rgba(0,0,0,0.5)] backdrop-blur-sm transition-opacity duration-300 ease-in-out z-[1050]"
+          onClick={handleCloseAllMenus}
+        />
       )}
     </>
   );
