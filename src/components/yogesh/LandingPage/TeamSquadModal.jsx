@@ -40,7 +40,7 @@ const TeamSquadModal = ({ team, onClose }) => {
               {team.players.map((player, index) => (
                 <li key={index} className="flex items-center space-x-4 bg-gray-700 p-3 rounded-md">
                   <img
-                    src={player.image || 'https://via.placeholder.com/60?text=Player'}
+                    src={player.imageUrl || 'https://via.placeholder.com/60?text=Player'}
                     alt={player.name}
                     className="w-16 h-16 rounded-full object-cover border-2 border-purple-500"
                   />

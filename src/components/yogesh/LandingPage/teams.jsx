@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import RoleSelectionModal from '../LandingPage/RoleSelectionModal'; // Adjust path if needed
 import AddTeamModal from '../LandingPage/AddTeamModal'; // Import the new modal
-import AddPlayerModal from '../../../pages/AddClubPlayer'; // Import AddPlayerModal
 import TeamSquadModal from '../LandingPage/TeamSquadModal'; // Import the TeamSquadModal
-import { db, auth } from '../../../firebase'; // Adjust path to firebase.js
-import { collection, onSnapshot, query } from 'firebase/firestore';
+import { db, auth, storage } from '../../../firebase'; // Adjust path to firebase.js
+import { collection, onSnapshot, query, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
-import { FiPlusCircle } from 'react-icons/fi';
+import { ref, uploadString, getDownloadURL } from 'firebase/storage';
+import { FiPlusCircle, FiEdit, FiTrash2 } from 'react-icons/fi';
 
 const Teams = () => {
   // State for role selection modal
@@ -26,6 +26,17 @@ const Teams = () => {
 
   // State for Add Player Modal
   const [isAddPlayerModalOpen, setIsAddPlayerModalOpen] = useState(false);
+  const [selectedTeamForPlayer, setSelectedTeamForPlayer] = useState(null); // For adding player to specific team
+
+  // State for Edit Player Modal
+  const [isEditPlayerModalOpen, setIsEditPlayerModalOpen] = useState(false);
+  const [selectedPlayer, setSelectedPlayer] = useState(null); // For editing player
+  const [selectedTeamForEdit, setSelectedTeamForEdit] = useState(null); // Team of the player being edited
+
+  // State for Delete Confirmation
+  const [showDeletePlayerConfirm, setShowDeletePlayerConfirm] = useState(false);
+  const [showDeleteTeamConfirm, setShowDeleteTeamConfirm] = useState(false);
+  const [teamToDelete, setTeamToDelete] = useState(null); // Team to be deleted
 
   // State for Team Squad Modal
   const [showTeamSquadModal, setShowTeamSquadModal] = useState(false);
@@ -52,6 +63,114 @@ const Teams = () => {
   // Function to handle player added
   const handlePlayerAdded = () => {
     setIsAddPlayerModalOpen(false);
+    setSelectedTeamForPlayer(null);
+  };
+
+  // Function to open add player modal for a specific team
+  const handleOpenAddPlayer = (team) => {
+    setSelectedTeamForPlayer(team);
+    setIsAddPlayerModalOpen(true);
+  };
+
+  // Function to open edit player modal
+  const handleOpenEditPlayer = (team, player) => {
+    setSelectedTeamForEdit(team);
+    setSelectedPlayer(player);
+    setIsEditPlayerModalOpen(true);
+  };
+
+  // Function to handle image upload to Firebase Storage
+  const handleImageUpload = async (file, playerName, teamId) => {
+    if (!file) return null;
+    try {
+      const storageRef = ref(storage, `player_images/${teamId}/${playerName}_${Date.now()}`);
+      const reader = new FileReader();
+      return new Promise((resolve, reject) => {
+        reader.onload = async (event) => {
+          try {
+            const base64Image = event.target.result.split(',')[1]; // Remove data URL prefix
+            await uploadString(storageRef, base64Image, 'base64');
+            const downloadURL = await getDownloadURL(storageRef);
+            resolve(downloadURL);
+          } catch (error) {
+            console.error('Error uploading image: ', error);
+            reject(error);
+          }
+        };
+        reader.readAsDataURL(file);
+      });
+    } catch (error) {
+      console.error('Error uploading image: ', error);
+      return null;
+    }
+  };
+
+  // Function to handle player edit
+  const handleEditPlayer = async (teamId, updatedPlayer, imageFile) => {
+    try {
+      let imageUrl = updatedPlayer.imageUrl || selectedPlayer?.imageUrl || '';
+      if (imageFile) {
+        imageUrl = await handleImageUpload(imageFile, updatedPlayer.name, teamId);
+      }
+      const teamRef = doc(db, 'clubTeams', teamId);
+      const updatedPlayerData = { ...updatedPlayer, imageUrl };
+      const updatedPlayers = selectedTeamForEdit.players.map((player) =>
+        player.name === selectedPlayer.name ? updatedPlayerData : player
+      );
+      await updateDoc(teamRef, { players: updatedPlayers });
+      setIsEditPlayerModalOpen(false);
+      setSelectedPlayer(null);
+      setSelectedTeamForEdit(null);
+    } catch (error) {
+      console.error("Error updating player: ", error);
+    }
+  };
+
+  // Function to handle removing a player
+  const handleRemovePlayer = async (teamId) => {
+    try {
+      const teamRef = doc(db, 'clubTeams', teamId);
+      const updatedPlayers = selectedTeamForEdit.players.filter(
+        (player) => player.name !== selectedPlayer.name
+      );
+      await updateDoc(teamRef, { players: updatedPlayers });
+      setShowDeletePlayerConfirm(false);
+      setIsEditPlayerModalOpen(false);
+      setSelectedPlayer(null);
+      setSelectedTeamForEdit(null);
+    } catch (error) {
+      console.error("Error removing player: ", error);
+    }
+  };
+
+  // Function to handle deleting a team
+  const handleDeleteTeam = async (teamId) => {
+    try {
+      const teamRef = doc(db, 'clubTeams', teamId);
+      await deleteDoc(teamRef);
+      setShowDeleteTeamConfirm(false);
+      setTeamToDelete(null);
+    } catch (error) {
+      console.error("Error deleting team: ", error);
+    }
+  };
+
+  // Function to handle adding a new player
+  const handleAddPlayer = async (teamId, newPlayer, imageFile) => {
+    try {
+      let imageUrl = '';
+      if (imageFile) {
+        imageUrl = await handleImageUpload(imageFile, newPlayer.name, teamId);
+      }
+      const teamRef = doc(db, 'clubTeams', teamId);
+      const team = teams.find((t) => t.id === teamId);
+      const updatedPlayer = { ...newPlayer, imageUrl };
+      const updatedPlayers = [...(team.players || []), updatedPlayer];
+      await updateDoc(teamRef, { players: updatedPlayers });
+      handlePlayerAdded();
+    } catch (error) {
+      console.error("Error adding player: ", error);
+    }
   };
 
   // Effect to listen for auth state changes
@@ -60,7 +179,7 @@ const Teams = () => {
       if (user) {
         setCurrentUserId(user.uid);
       } else {
-        setCurrentUserId(null); // No user logged in
+        setCurrentUserId(null); // No user is logged in
       }
       setAuthLoading(false);
     });
@@ -73,20 +192,24 @@ const Teams = () => {
     const teamsCollectionRef = collection(db, 'clubTeams');
     const q = query(teamsCollectionRef);
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setLoadingTeams(true);
-      setTeamsError(null);
-      const fetchedTeams = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setTeams(fetchedTeams);
-      setLoadingTeams(false);
-    }, (error) => {
-      console.error("Error fetching teams: ", error);
-      setTeamsError("Failed to load teams: " + error.message);
-      setLoadingTeams(false);
-    });
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        setLoadingTeams(true);
+        setTeamsError(null);
+        const fetchedTeams = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setTeams(fetchedTeams);
+        setLoadingTeams(false);
+      },
+      (error) => {
+        console.error('Error fetching teams: ', error);
+        setTeamsError('Failed to load teams: ' + error.message);
+        setLoadingTeams(false);
+      }
+    );
 
     return () => unsubscribe(); // Clean up listener on unmount
   }, []);
@@ -104,7 +227,7 @@ const Teams = () => {
   if (!currentUserId && userRole === 'admin') {
     return (
       <div className="bg-gray-900 min-h-screen flex items-center justify-center text-white text-xl">
-        Please log in to manage teams as an admin.
+        <p>Please log in to manage teams as an admin.</p>
       </div>
     );
   }
@@ -164,7 +287,20 @@ const Teams = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {teams.map((team) => (
-                <div key={team.id} className="bg-gray-800 rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow border border-gray-700">
+                <div key={team.id} className="bg-gray-800 rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow border border-gray-700 relative">
+                  {/* Delete Team Button */}
+                  {userRole === 'admin' && currentUserId && (
+                    <button
+                      onClick={() => {
+                        setTeamToDelete(team);
+                        setShowDeleteTeamConfirm(true);
+                      }}
+                      className="absolute top-2 right-2 text-red-400 hover:text-red-500"
+                      title="Delete Team"
+                    >
+                      <FiTrash2 size={20} />
+                    </button>
+                  )}
                   {/* Team Header */}
                   <div className="bg-purple-800 p-4 text-white">
                     <h2 className="text-xl font-bold truncate">{team.name}</h2>
@@ -198,12 +334,34 @@ const Teams = () => {
 
                     {/* Key Players */}
                     <div>
-                      <p className="text-sm font-medium text-gray-400 mb-2">Key Players</p>
+                      <div className="flex justify-between items-center mb-2">
+                        <p className="text-sm font-medium text-gray-400">Key Players</p>
+                        {userRole === 'admin' && currentUserId && (
+                          <button
+                            onClick={() => handleOpenAddPlayer(team)}
+                            className="text-green-400 hover:text-green-500"
+                            title="Add Player"
+                          >
+                            <FiPlusCircle size={20} />
+                          </button>
+                        )}
+                      </div>
                       <div className="space-y-2">
                         {team.players && team.players.length > 0 ? (
-                          team.players.map((player, index) => (
+                          team.players.slice(0, 3).map((player, index) => (
                             <div key={index} className="flex justify-between items-center text-sm">
-                              <span className="font-medium text-gray-300">{player.name}</span>
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium text-gray-300">{player.name}</span>
+                                {userRole === 'admin' && currentUserId && (
+                                  <button
+                                    onClick={() => handleOpenEditPlayer(team, player)}
+                                    className="text-yellow-400 hover:text-yellow-500"
+                                    title="Edit Player"
+                                  >
+                                    <FiEdit size={16} />
+                                  </button>
+                                )}
+                              </div>
                               <div className="flex gap-2">
                                 <span className="bg-purple-900 text-purple-300 px-2 py-0.5 rounded text-xs">
                                   {player.runs || 0}r
@@ -343,13 +501,13 @@ const Teams = () => {
                   <span className="font-medium text-gray-300">93 runs</span>
                   <span className="text-sm text-gray-400">LUT Biggieagles vs Aavas Financiers</span>
                 </div>
-                <div className="flex justify-between items-center pb-2 border-b border-gray-700">
+                <div className="flex justify-between items-center pb-2 border-b border-b">
                   <span className="font-medium text-gray-300">74 runs</span>
                   <span className="text-sm text-gray-400">Jaipur Strikers vs JAY GARHWAL</span>
                 </div>
-                <div className="flex justify-between items-center">
+                <div className="flex items-center">
                   <span className="font-medium text-gray-300">8 wickets</span>
-                  <span className="text-sm text-gray-400">Golden Warriors vs Jaipur Strikers</span>
+                  <span className="text-sm text-gray-500">Golden Warriors vs Jaipur Strikers</span>
                 </div>
               </div>
             </div>
@@ -372,10 +530,261 @@ const Teams = () => {
       {/* Add Player Modal */}
       <AnimatePresence>
         {isAddPlayerModalOpen && currentUserId && userRole === 'admin' && (
-          <AddPlayerModal
-            onClose={() => setIsAddPlayerModalOpen(false)}
-            onPlayerAdded={handlePlayerAdded}
-          />
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          >
+            <div className="bg-gray-800 p-6 rounded-lg w-full max-w-md">
+              <h2 className="text-xl font-bold text-gray-200 mb-4">Add Player to {selectedTeamForPlayer?.name}</h2>
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  const newPlayer = {
+                    name: e.target.name.value,
+                    runs: parseInt(e.target.runs.value) || 0,
+                    wickets: parseInt(e.target.wickets.value) || 0,
+                  };
+                  const imageFile = e.target.image.files[0];
+                  await handleAddPlayer(selectedTeamForPlayer.id, newPlayer, imageFile);
+                }}
+              >
+                <div className="mb-4">
+                  <label className="block text-gray-300 mb-1">Name</label>
+                  <input
+                    type="text"
+                    name="name"
+                    className="w-full bg-gray-700 text-gray-200 p-2 rounded"
+                    required
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="block text-gray-300 mb-1">Runs</label>
+                  <input
+                    type="number"
+                    name="runs"
+                    defaultValue={0}
+                    className="w-full bg-gray-700 text-gray-200 p-2 rounded"
+                    min="0"
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="block text-gray-300 mb-1">Wickets</label>
+                  <input
+                    type="number"
+                    name="wickets"
+                    defaultValue={0}
+                    className="w-full bg-gray-700 text-gray-200 p-2 rounded"
+                    min="0"
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="block text-gray-300 mb-1">Upload Profile Image</label>
+                  <input
+                    type="file"
+                    name="image"
+                    accept="image/*"
+                    className="w-full bg-gray-700 text-gray-200 p-2 rounded"
+                  />
+                </div>
+                <div className="flex gap-4">
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                  >
+                    Add Player
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsAddPlayerModalOpen(false);
+                      setSelectedTeamForPlayer(null);
+                    }}
+                    className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Edit Player Modal */}
+      <AnimatePresence>
+        {isEditPlayerModalOpen && currentUserId && userRole === 'admin' && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          >
+            <div className="bg-gray-800 p-6 rounded-lg w-full max-w-md">
+              <h2 className="text-xl font-bold text-gray-200 mb-4">Edit Player</h2>
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  const updatedPlayer = {
+                    name: e.target.name.value,
+                    runs: parseInt(e.target.runs.value) || 0,
+                    wickets: parseInt(e.target.wickets.value) || 0,
+                    imageUrl: e.target.imageUrl.value || selectedPlayer?.imageUrl || '',
+                  };
+                  const imageFile = e.target.image.files[0];
+                  await handleEditPlayer(selectedTeamForEdit.id, updatedPlayer, imageFile);
+                }}
+              >
+                <div className="mb-4">
+                  <label className="block text-gray-300 mb-1">Name</label>
+                  <input
+                    type="text"
+                    name="name"
+                    defaultValue={selectedPlayer?.name}
+                    className="w-full bg-gray-700 text-gray-200 p-2 rounded"
+                    required
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="block text-gray-300 mb-1">Runs</label>
+                  <input
+                    type="number"
+                    name="runs"
+                    defaultValue={selectedPlayer?.runs || 0}
+                    className="w-full bg-gray-700 text-gray-200 p-2 rounded"
+                    min="0"
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="block text-gray-300 mb-1">Wickets</label>
+                  <input
+                    type="number"
+                    name="wickets"
+                    defaultValue={selectedPlayer?.wickets || 0}
+                    className="w-full bg-gray-700 text-gray-200 p-2 rounded"
+                    min="0"
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="block text-gray-300 mb-1">Profile Image URL</label>
+                  <input
+                    type="text"
+                    name="imageUrl"
+                    defaultValue={selectedPlayer?.imageUrl || ''}
+                    className="w-full bg-gray-700 text-gray-200 p-2 rounded"
+                    placeholder="Enter image URL"
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="block text-gray-300 mb-1">Upload Profile Image</label>
+                  <input
+                    type="file"
+                    name="image"
+                    accept="image/*"
+                    className="w-full bg-gray-700 text-gray-200 p-2 rounded"
+                  />
+                </div>
+                <div className="flex gap-4">
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                  >
+                    Save
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowDeletePlayerConfirm(true);
+                    }}
+                    className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                  >
+                    Remove Player
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsEditPlayerModalOpen(false);
+                      setSelectedPlayer(null);
+                      setSelectedTeamForEdit(null);
+                    }}
+                    className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Player Confirmation Modal */}
+      <AnimatePresence>
+        {showDeletePlayerConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          >
+            <div className="bg-gray-800 p-6 rounded-lg w-full max-w-md">
+              <h2 className="text-xl font-bold text-gray-200 mb-4">Confirm Delete</h2>
+              <p className="text-gray-300 mb-4">
+                Are you sure you want to remove {selectedPlayer?.name} from {selectedTeamForEdit?.name}?
+              </p>
+              <div className="flex gap-4">
+                <button
+                  onClick={() => handleRemovePlayer(selectedTeamForEdit.id)}
+                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                >
+                  Yes, Remove
+                </button>
+                <button
+                  onClick={() => setShowDeletePlayerConfirm(false)}
+                  className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Team Confirmation Modal */}
+      <AnimatePresence>
+        {showDeleteTeamConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          >
+            <div className="bg-gray-800 p-6 rounded-lg w-full max-w-md">
+              <h2 className="text-xl font-bold text-gray-200 mb-4">Confirm Delete</h2>
+              <p className="text-gray-300 mb-4">
+                Are you sure you want to delete {teamToDelete?.name}? This action cannot be undone.
+              </p>
+              <div className="flex gap-4">
+                <button
+                  onClick={() => handleDeleteTeam(teamToDelete.id)}
+                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                >
+                  Yes, Delete
+                </button>
+                <button
+                  onClick={() => {
+                    setShowDeleteTeamConfirm(false);
+                    setTeamToDelete(null);
+                  }}
+                  className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
 
