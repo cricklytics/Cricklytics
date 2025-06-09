@@ -1,230 +1,315 @@
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Picture3 from '../../../assets/sophita/HomePage/Picture3.png';
 import { motion } from 'framer-motion';
-import { FaCrown, FaStar, FaArrowLeft } from 'react-icons/fa';
+import { FaCrown, FaArrowLeft, FaPlus, FaStar } from 'react-icons/fa';
+import { collection, getDocs, doc, setDoc } from "firebase/firestore";
+import { db } from '../../../firebase';
 
 const FieldingStatsPage = () => {
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [stats, setStats] = useState([]);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    matches: '',
+    dismissals: '',
+    catches: '',
+    overs: '',
+    rank: '',
+    stars: '',
+    isPro: false,
+    avatarInputType: 'url', // 'url' or 'file'
+    avatarUrl: '',
+    avatarFile: null,
+    avatarBase64: ''
+  });
+
   const navigate = useNavigate();
 
-  // Function to generate random avatar image URL
-  const getRandomAvatar = (seed) => {
-    return `https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}`;
-  };
+  useEffect(() => {
+    (async () => {
+      const snap = await getDocs(collection(db, "fieldingStats"));
+      setStats(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    })();
+  }, [showAddModal]);
 
-  // Player data with PRO status and random images
-  const fieldingData = [
-    { 
-      name: "Ajay Bhanderi Surat", 
-      matches: 644, 
-      dismissals: 1069, 
-      catches: 999, 
-      rank: "001", 
-      other: 63, 
-      image: getRandomAvatar("Ajay"),
-      isPro: true 
-    },
-    { 
-      name: "Nilesh Der Surat", 
-      matches: 597, 
-      dismissals: 966, 
-      catches: 918, 
-      rank: "002", 
-      other: 46, 
-      image: getRandomAvatar("Nilesh"),
-      isPro: false 
-    },
-    { 
-      name: "Sahir Attar Pune", 
-      matches: 554, 
-      dismissals: 787, 
-      catches: 627, 
-      rank: "003", 
-      other: 150, 
-      image: getRandomAvatar("Sahir"),
-      isPro: true 
-    },
-    { 
-      name: "Ashuu Surat", 
-      matches: 466, 
-      dismissals: 717, 
-      catches: 666, 
-      rank: "004", 
-      other: 47, 
-      image: getRandomAvatar("Ashuu"),
-      isPro: false 
-    },
-    { 
-      name: "Pradeep Rajpurohit Mumbai", 
-      matches: 466, 
-      dismissals: 677, 
-      catches: 547, 
-      rank: "005", 
-      other: 126, 
-      image: getRandomAvatar("Pradeep"),
-      isPro: false 
-    },
-    { 
-      name: "Milan Hingrajiya Surat", 
-      matches: 417, 
-      dismissals: 618, 
-      catches: 585, 
-      rank: "006", 
-      other: 29, 
-      image: getRandomAvatar("Milan"),
-      isPro: false 
-    },
-  ];
+  const handleChange = e => {
+    const { name, value, type, checked, files } = e.target;
 
-  // Animation variants
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1
-      }
+    if (name === "avatarFile" && files && files[0]) {
+      const file = files[0];
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData(prev => ({
+          ...prev,
+          avatarFile: file,
+          avatarBase64: reader.result,
+          avatarUrl: ''
+        }));
+      };
+      reader.readAsDataURL(file);
+    } else if (name === "avatarInputType") {
+      setFormData(prev => ({
+        ...prev,
+        avatarInputType: value,
+        avatarUrl: '',
+        avatarFile: null,
+        avatarBase64: ''
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: type === 'checkbox' ? checked : value
+      }));
     }
   };
 
-  const rowVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        duration: 0.5
-      }
-    }
+  const handleSubmit = async e => {
+    e.preventDefault();
+    const id = formData.name.toLowerCase().replace(/\s+/g, '_');
+    const avatarToSave = formData.avatarBase64 || formData.avatarUrl || '';
+
+    await setDoc(doc(db, "fieldingStats", id), {
+      name: formData.name,
+      matches: formData.matches,
+      dismissals: formData.dismissals,
+      catches: formData.catches,
+      overs: formData.overs,
+      rank: formData.rank,
+      stars: Number(formData.stars),
+      isPro: Boolean(formData.isPro),
+      avatar: avatarToSave,
+    });
+
+    setFormData({
+      name: '',
+      matches: '',
+      dismissals: '',
+      catches: '',
+      overs: '',
+      rank: '',
+      stars: '',
+      isPro: false,
+      avatarInputType: 'url',
+      avatarUrl: '',
+      avatarFile: null,
+      avatarBase64: ''
+    });
+    setShowAddModal(false);
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#03001e] via-[#7303c0] to-[#ec38bc] text-white">
-      {/* Navbar */}
       <nav className="fixed top-0 w-full bg-gradient-to-r from-[#03001e] to-[#7303c0] p-4 shadow-lg z-10">
         <div className="flex items-center justify-between">
-        <div className="fixed bottom-4 left-4 z-50">
-      <button 
-        onClick={() => navigate("/landingpage")}
-        className="flex items-center gap-2 bg-[#7303c0] hover:bg-[#8a05e6] text-white px-4 py-2 rounded-full shadow-lg transition-all duration-300 transform hover:scale-105"
-      >
-        <FaArrowLeft className="text-xl" />
-        <span className="hidden sm:inline">Back</span>
-      </button>
-    </div>
-<div className="flex items-center gap-4">
-          <img
-            src={Picture3}
-            alt="Cricklytics Logo"
-            className="h-7 w-7 md:h-10 object-contain block select-none mt-1"
-            onError={(e) => {
-              e.target.onerror = null;
-              e.target.src = "/images/Picture3 2.png";
-            }}
-          />
-          <span className="text-2xl font-bold text-white whitespace-nowrap text-shadow-[0_0_8px_rgba(93,224,230,0.4)]">
-            Cricklytics
-          </span>
-        </div>
-          
-          {/* Empty div for balance */}
-          <div className="w-10"></div>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => navigate("/landingpage")}
+              className="flex items-center bg-[#7303c0] hover:bg-[#8a05e6] px-3 py-2 rounded-full"
+            >
+              <FaArrowLeft />
+            </button>
+            <img src={Picture3} alt="Logo" className="h-8 w-8" />
+            <span className="text-xl font-bold">Cricklytics</span>
+          </div>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-full"
+          >
+            <FaPlus /> Add Fielding Stats
+          </button>
         </div>
       </nav>
 
-      {/* Main Content */}
       <main className="pt-24 px-4 md:px-8 pb-8">
-        <motion.div 
-          className="overflow-x-auto"
-          variants={containerVariants}
+        <motion.div
+          variants={{ hidden: { opacity: 0 }, visible: { opacity: 1, staggerChildren: 0.1 } }}
           initial="hidden"
           animate="visible"
+          className="overflow-x-auto"
         >
           <table className="w-full border-collapse">
             <thead>
               <tr className="border-b border-gray-400">
-                <th className="text-left pb-4 px-2 sm:px-4 w-2/5 sm:w-2/5">Player</th>
-                <th className="text-center pb-4 px-1 sm:px-4 w-1/12">Mat</th>
-                <th className="text-center pb-4 px-1 sm:px-4 w-1/12">Dismissal</th>
-                <th className="text-center pb-4 px-1 sm:px-4 w-1/12">Catches</th>
-                <th className="text-center pb-4 px-1 sm:px-4 w-1/12">R/</th>
-                <th className="text-center pb-4 px-1 sm:px-4 w-1/12">O</th>
+                <th className="text-left p-2">Player</th>
+                <th className="text-center p-2">Mat</th>
+                <th className="text-center p-2">Dismissal</th>
+                <th className="text-center p-2">Catches</th>
+                <th className="text-center p-2">Overs</th>
+                <th className="text-center p-2">Rank</th>
               </tr>
             </thead>
             <tbody>
-              {fieldingData.map((player, index) => (
-                <motion.tr 
-                  key={index} 
-                  className="border-b border-gray-700 hover:bg-gray-800/50 transition-colors"
-                  variants={rowVariants}
-                  whileHover={{ scale: 1.01 }}
+              {stats.map((p) => (
+                <motion.tr
+                  key={p.id}
+                  className="border-b border-gray-700 hover:bg-gray-800/50"
+                  variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
                 >
-                  <td className="py-4 px-2 sm:px-4 w-2/5 sm:w-2/5 font-medium flex items-center gap-3">
+                  <td className="p-2 flex items-center gap-3">
                     <div className="relative">
-                      <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-full overflow-hidden bg-gray-700 border-2 border-purple-400">
-                        <img 
-                          src={player.image} 
-                          alt={player.name}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            e.target.onerror = null;
-                            e.target.src = "/default-player.jpg";
-                          }}
+                      {p.avatar ? (
+                        <img
+                          src={p.avatar}
+                          alt={p.name}
+                          className="w-10 h-10 rounded-full object-cover bg-gray-700 flex items-center justify-center text-white uppercase"
+                          onError={(e) => { e.currentTarget.src = ""; }}
                         />
-                      </div>
-                      {player.isPro && (
-                        <div className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 bg-gradient-to-r from-yellow-400 to-yellow-600 rounded-full p-1 flex items-center justify-center">
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center text-white uppercase font-bold text-lg">
+                          {p.name?.[0]?.toUpperCase() || '?'}
+                        </div>
+                      )}
+                      {p.isPro && (
+                        <div className="absolute -top-1 -right-1 bg-yellow-400 rounded-full p-1">
                           <FaCrown className="text-xs text-white" />
                         </div>
                       )}
                     </div>
-                    <div className="overflow-hidden">
-                      <div className="flex items-center gap-1">
-                        <span className="truncate text-sm sm:text-base">{player.name.split(' ')[0]}</span>
-                        {player.isPro && (
-                          <span className="text-xs bg-gradient-to-r from-yellow-400 to-yellow-600 text-black px-2 py-0.5 rounded-full flex items-center">
-                            PRO
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center mt-1">
-                        {[...Array(5)].map((_, i) => (
-                          <FaStar 
-                            key={i} 
-                            className={`text-xs ${i < Math.floor(index % 3 + 3) ? 'text-yellow-400' : 'text-gray-500'}`} 
-                          />
+                    <div>
+                      <div className="font-medium">{p.name}</div>
+                      <div className="flex items-center">
+                        {Array.from({ length: p.stars }).map((_, i) => (
+                          <FaStar key={i} className="text-yellow-400 text-xs" />
                         ))}
                       </div>
                     </div>
                   </td>
-                  <td className="py-4 px-1 sm:px-4 w-1/12 text-center text-sm sm:text-base">{player.matches}</td>
-                  <td className="py-4 px-1 sm:px-4 w-1/12 text-center font-bold text-purple-300 text-sm sm:text-base">{player.dismissals}</td>
-                  <td className="py-4 px-1 sm:px-4 w-1/12 text-center text-sm sm:text-base">{player.catches}</td>
-                  <td className="py-4 px-1 sm:px-4 w-1/12 text-center font-bold text-yellow-400 text-sm sm:text-base">{player.rank}</td>
-                  <td className="py-4 px-1 sm:px-4 w-1/12 text-center text-sm sm:text-base">{player.other}</td>
+                  <td className="p-2 text-center">{p.matches}</td>
+                  <td className="p-2 text-center">{p.dismissals}</td>
+                  <td className="p-2 text-center">{p.catches}</td>
+                  <td className="p-2 text-center">{p.overs}</td>
+                  <td className="p-2 text-center font-bold text-yellow-400">{p.rank}</td>
                 </motion.tr>
               ))}
             </tbody>
           </table>
         </motion.div>
-
-        {/* Floating Trophy Animation */}
-        <motion.div
-          className="fixed bottom-8 right-8 text-yellow-400 text-4xl"
-          animate={{
-            y: [0, -10, 0],
-            rotate: [0, 10, -10, 0]
-          }}
-          transition={{
-            repeat: Infinity,
-            repeatType: "reverse",
-            duration: 3
-          }}
-        >
-          <FaCrown />
-        </motion.div>
       </main>
+
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 overflow-auto">
+          <div className="bg-gray-800 rounded-lg p-6 max-w-md w-full space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center sticky top-0 bg-gray-800 py-2 z-20">
+              <h3 className="text-xl font-bold">Add Fielding Stats</h3>
+              <button onClick={() => setShowAddModal(false)} className="text-gray-400 text-2xl">&times;</button>
+            </div>
+            <form onSubmit={handleSubmit} className="space-y-3">
+              {["name", "matches", "dismissals", "catches", "overs", "rank"].map((key) => (
+                <div key={key}>
+                  <label className="block text-white mb-1 capitalize">{key}</label>
+                  <input
+                    name={key}
+                    value={formData[key]}
+                    onChange={handleChange}
+                    required
+                    className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white"
+                  />
+                </div>
+              ))}
+
+              <div>
+                <label className="block text-white mb-1">Stars (1–5)</label>
+                <input
+                  name="stars"
+                  type="number"
+                  min="1"
+                  max="5"
+                  value={formData.stars}
+                  onChange={handleChange}
+                  required
+                  className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white"
+                />
+              </div>
+
+              <div className="text-white mb-2">Select Avatar Input Type:</div>
+              <div className="flex gap-4 mb-4 text-white">
+                <label className="flex items-center gap-1 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="avatarInputType"
+                    value="url"
+                    checked={formData.avatarInputType === 'url'}
+                    onChange={handleChange}
+                  />
+                  URL
+                </label>
+                <label className="flex items-center gap-1 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="avatarInputType"
+                    value="file"
+                    checked={formData.avatarInputType === 'file'}
+                    onChange={handleChange}
+                  />
+                  Upload
+                </label>
+              </div>
+
+              {formData.avatarInputType === 'url' ? (
+                <div>
+                  <label className="block text-white mb-1">Avatar URL (optional)</label>
+                  <input
+                    name="avatarUrl"
+                    type="text"
+                    value={formData.avatarUrl}
+                    onChange={handleChange}
+                    placeholder="Enter image URL"
+                    className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white"
+                  />
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-white mb-1">Upload Avatar Image (optional)</label>
+                  <input
+                    name="avatarFile"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleChange}
+                    className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white"
+                  />
+                  {formData.avatarBase64 && (
+                    <img src={formData.avatarBase64} alt="Preview" className="mt-2 w-20 h-20 rounded-full object-cover" />
+                  )}
+                </div>
+              )}
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  name="isPro"
+                  checked={formData.isPro}
+                  onChange={handleChange}
+                  id="isPro"
+                />
+                <label htmlFor="isPro" className="text-white">Pro (show crown?)</label>
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  className="bg-gray-600 px-4 py-2 rounded"
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="bg-blue-600 px-4 py-2 rounded text-white">
+                  Add
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      <motion.div
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ repeat: Infinity, repeatType: 'reverse', duration: 2 }}
+        className="fixed bottom-4 right-4 text-yellow-400 text-4xl"
+      >
+        <FaCrown />
+      </motion.div>
     </div>
   );
 };

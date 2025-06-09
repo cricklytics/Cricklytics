@@ -1,11 +1,19 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import logo from '../../../assets/pawan/PlayerProfile/picture-312.png';
-import backButton from '../../../assets/kumar/right-chevron.png'
+import backButton from '../../../assets/kumar/right-chevron.png';
+import { db, auth } from "../../../firebase";
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc } from "firebase/firestore";
+
 const Insights = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("batting");
   const [activeSubOption, setActiveSubOption] = useState("high-score");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [insightsData, setInsightsData] = useState({});
+  const [formData, setFormData] = useState({ value: "" });
+  const [editingEntryId, setEditingEntryId] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const tabs = [
     { id: "batting", label: "Batting" },
@@ -61,152 +69,284 @@ const Insights = () => {
     overall: [],
   };
 
-  // Dummy content for sub-options (scalable)
-  const subOptionContent = {
-    batting: {
-      "high-score": { title: "High Score", content: <p>92* vs Australia, 2025</p> },
-      win: { title: "Wins", content: <p>85 matches won</p> },
-      lose: { title: "Losses", content: <p>45 matches lost</p> },
-      matches: { title: "Matches", content: <p>150 matches played</p> },
-      innings: { title: "Innings", content: <p>140 innings batted</p> },
-      "strike-rate": { title: "Strike Rate", content: <p>135.2</p> },
-      "30s": { title: "30's", content: <p>25 scores of 30+</p> },
-      "50s": { title: "50's", content: <p>15 half-centuries</p> },
-      "100s": { title: "100's", content: <p>8 centuries</p> },
-      "4s": { title: "4's", content: <p>350 fours</p> },
-      "6s": { title: "6's", content: <p>120 sixes</p> },
-      ducks: { title: "Ducks", content: <p>5 ducks</p> },
-    },
-    bowling: {
-      "best-bowl": { title: "Best Bowling", content: <p>4/25 vs England, 2024</p> },
-      match: { title: "Matches", content: <p>50 matches bowled</p> },
-      innings: { title: "Innings", content: <p>48 innings bowled</p> },
-      overs: { title: "Overs", content: <p>180 overs</p> },
-      maiden: { title: "Maidens", content: <p>10 maiden overs</p> },
-      runs: { title: "Runs Conceded", content: <p>1,200 runs</p> },
-      wickets: { title: "Wickets", content: <p>65 wickets</p> },
-      "3-wickets": { title: "3 Wickets", content: <p>8 instances</p> },
-      "5-wickets": { title: "5 Wickets", content: <p>2 instances</p> },
-      economy: { title: "Economy Rate", content: <p>6.67</p> },
-      average: { title: "Average", content: <p>18.46</p> },
-      wide: { title: "Wides", content: <p>30 wides</p> },
-      "no-balls": { title: "No Balls", content: <p>5 no balls</p> },
-      dots: { title: "Dot Balls", content: <p>400 dot balls</p> },
-      "4s": { title: "4's Conceded", content: <p>100 fours</p> },
-      "6s": { title: "6's Conceded", content: <p>25 sixes</p> },
-    },
-    fielding: {
-      matches: { title: "Matches", content: <p>150 matches</p> },
-      catch: { title: "Catches", content: <p>70 catches</p> },
-      stumping: { title: "Stumpings", content: <p>0 stumpings</p> },
-      "run-out": { title: "Run Outs", content: <p>15 run outs</p> },
-      "catch-and-bowl": { title: "Catch and Bowl", content: <p>5 catch and bowl</p> },
-    },
-    captain: {
-      "matches-captained": { title: "Matches Captained", content: <p>Captain for 40 matches</p> },
-    },
-    overall: {
-      default: {
-        title: "Overall Stats",
-        content: (
-          <div className="space-y-4">
-            <p><strong>Matches Played:</strong> 150</p>
-            <p><strong>Runs Scored:</strong> 4,200</p>
-            <p><strong>Wickets Taken:</strong> 65</p>
-            <p><strong>Catches:</strong> 70</p>
-            <p><strong>Captaincy:</strong> 40 matches</p>
-          </div>
-        ),
-      },
-    },
+  // Fetch insights data from Firestore
+  useEffect(() => {
+    if (!auth.currentUser) return;
+
+    const unsubscribe = onSnapshot(collection(db, 'PlayerInsights'), (snapshot) => {
+      const data = snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter(entry => entry.userId === auth.currentUser.uid)
+        .reduce((acc, entry) => {
+          const { tab, subOption } = entry;
+          if (!acc[tab]) acc[tab] = {};
+          if (!acc[tab][subOption]) acc[tab][subOption] = [];
+          acc[tab][subOption].push(entry);
+          return acc;
+        }, {});
+      setInsightsData(data);
+    }, (error) => {
+      console.error("Error fetching insights:", error);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Calculate overall stats
+  const calculateOverallStats = () => {
+    const battingMatches = insightsData.batting?.matches?.[0]?.value || 0;
+    const runs = (insightsData.batting?.["100s"]?.[0]?.value || 0) * 100 +
+                 (insightsData.batting?.["50s"]?.[0]?.value || 0) * 50 +
+                 (insightsData.batting?.["30s"]?.[0]?.value || 0) * 30;
+    const wickets = insightsData.bowling?.wickets?.[0]?.value || 0;
+    const catches = insightsData.fielding?.catch?.[0]?.value || 0;
+    const matchesCaptained = insightsData.captain?.["matches-captained"]?.[0]?.value || 0;
+
+    return {
+      title: "Overall Stats",
+      content: (
+        <div className="space-y-4">
+          <p><strong>Matches Played:</strong> {battingMatches}</p>
+          <p><strong>Runs Scored:</strong> {runs}</p>
+          <p><strong>Wickets Taken:</strong> {wickets}</p>
+          <p><strong>Catches:</strong> {catches}</p>
+          <p><strong>Captaincy:</strong> {matchesCaptained} matches</p>
+        </div>
+      ),
+    };
+  };
+
+  // Handle saving or updating data
+  const handleSaveData = async () => {
+    if (!formData.value.trim()) {
+      alert("Please enter a value!");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const entryData = {
+        tab: activeTab,
+        subOption: activeSubOption,
+        value: isNaN(formData.value) ? formData.value : parseFloat(formData.value),
+        userId: auth.currentUser.uid,
+        timestamp: new Date().toISOString(),
+      };
+
+      if (editingEntryId) {
+        await updateDoc(doc(db, 'PlayerInsights', editingEntryId), entryData);
+      } else {
+        await addDoc(collection(db, 'PlayerInsights'), entryData);
+      }
+
+      setFormData({ value: '' });
+      setEditingEntryId(null);
+      setIsModalOpen(false);
+    } catch (err) {
+      console.error("Error saving data:", err);
+      alert("Failed to save data. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle deleting data
+  const handleDeleteData = async (entryId) => {
+    if (!window.confirm("Are you sure you want to delete this entry?")) return;
+
+    try {
+      await deleteDoc(doc(db, 'PlayerInsights', entryId));
+    } catch (err) {
+      console.error("Error deleting entry:", err);
+      alert("Failed to delete data. Please try again.");
+    }
+  };
+
+  // Handle editing data
+  const handleEditData = (entry) => {
+    setFormData({ value: entry.value.toString() });
+    setEditingEntryId(entry.id);
+    setIsModalOpen(true);
   };
 
   return (
-    <div className="min-h-full bg-fixed text-white p-5"
-    style={{
-      backgroundImage: 'linear-gradient(140deg,#080006 15%,#FF0077)',
-      backgroundRepeat: 'no-repeat',
-      backgroundSize: 'cover',
-      backgroundPosition: 'center',
-    }}>
-      {/* Top Navigation Bar */}
-     <div className="flex flex-col mt-0">
-             <div className="flex items-start">
-               <img 
-                 src={logo}
-                 alt="Cricklytics Logo"
-                 className="h-7 w-7 md:h-10 object-contain block select-none"
-                 onError={(e) => {
-                   e.target.onerror = null;
-                   e.target.src = "/images/Picture3 2.png";
-                 }}
-               />
-               <span className="p-2 text-2xl font-bold text-white whitespace-nowrap text-shadow-[0_0_8px_rgba(93,224,230,0.4)]">
-                 Cricklytics
-               </span>
-             </div>
-             </div>
-             <div className="md:absolute flex items-center gap-4">
-               <img 
-                 src={backButton}
-                 alt="Back"
-                 className="h-8 w-8 cursor-pointer -scale-x-100"
-                 onClick={() => window.history.back()}
-               />
-           </div>
-      {/* Horizontal Navigation Bar */}
-      <div className="max-w-5xl mx-auto">
-      <div className="flex overflow-x-auto justify-center whitespace-nowrap gap-4 border-b border-white/20 mb-10 px-4">
-  {tabs.map((tab) => (
-    <button
-      key={tab.id}
-      className={`px-4 py-2 text-lg font-['Alegreya'] transition-all duration-300 ${
-        activeTab === tab.id
-          ? "text-cyan-300 border-b-2 border-cyan-300"
-          : "text-gray-300 hover:text-white"
-      }`}
-      onClick={() => {
-        setActiveTab(tab.id);
-        setActiveSubOption(tab.id === "overall" ? "default" : subOptions[tab.id][0].id);
+    <div
+      className="min-h-full bg-fixed text-white p-5"
+      style={{
+        backgroundImage: 'linear-gradient(140deg,#080006 15%,#FF0077)',
+        backgroundRepeat: 'no-repeat',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
       }}
     >
-      {tab.label}
-    </button>
-  ))}
-</div>
+      {/* Top Navigation Bar */}
+      <div className="flex flex-col mt-0">
+        <div className="flex items-start">
+          <img
+            src={logo}
+            alt="Cricklytics Logo"
+            className="h-7 w-7 md:h-10 object-cover block select-none"
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.src = "/images/photo3.jpg";
+            }}
+          />
+          <span className="p-2 text-2xl font-bold text-white whitespace-nowrap shadow-[1px_1px_10px_rgba(255,255,255,0.5)]">
+            Cricklytics
+          </span>
+        </div>
+      </div>
+      <div className="md:absolute flex items-center gap-4">
+        <img
+          src={backButton}
+          alt="Back"
+          className="h-8 w-8 cursor-pointer -scale-x-100"
+          onClick={() => window.history.back()}
+        />
+      </div>
 
+      {/* Horizontal Navigation Bar */}
+      <div className="max-w-5xl mx-auto">
+        <div className="flex overflow-x-auto justify-center whitespace-nowrap gap-4 border-b border-white/20 mb-10 px-4">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              className={`px-4 py-2 text-lg font-['Alegreya'] transition-all duration-300 ${
+                activeTab === tab.id
+                  ? "text-cyan-300 border-b-2 border-cyan-300"
+                  : "text-gray-300 hover:text-white"
+              }`}
+              onClick={() => {
+                setActiveTab(tab.id);
+                setActiveSubOption(tab.id === "overall" ? "default" : subOptions[tab.id][0].id);
+              }}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
 
         {/* Content Area */}
         <div className="p-8 rounded-xl border border-white/20 shadow-[0_15px_40px_rgba(0,0,0,0.9)] hover:-translate-y-2 transition duration-300">
           {activeTab !== "overall" && subOptions[activeTab].length > 0 && (
             <div>
-              <h2 className="text-4xl font-bold text-center mb-6 font-['Alegreya']">{tabs.find(tab => tab.id === activeTab).label}</h2>
+              <h2 className="text-4xl font-bold text-center mb-6 font-['Alegreya']">
+                {tabs.find((tab) => tab.id === activeTab).label}
+              </h2>
+              <div className="flex justify-center mb-6">
+                <button
+                  onClick={() => {
+                    setFormData({ value: "" });
+                    setEditingEntryId(null);
+                    setIsModalOpen(true);
+                  }}
+                  className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+                >
+                  Add Data
+                </button>
+              </div>
               <div className="flex overflow-x-auto space-x-4 p-4 scrollbar-thin scrollbar-thumb-cyan-300 scrollbar-track-transparent">
-  {subOptions[activeTab].map((option) => (
-    <button
-      key={option.id}
-      className={`flex-shrink-0 px-6 py-3 rounded-lg text-base font-['Alegreya'] transition-all duration-300 shadow-[0_10px_30px_rgba(0,0,0,0.8)] ${
-        activeSubOption === option.id
-          ? "text-white bg-blue-500"
-          : " text-white hover:bg-[blue] hover:text-cyan-300"
-      }`}
-      onClick={() => setActiveSubOption(option.id)}
-    >
-      {option.label}
-    </button>
-  ))}
-</div>
-
+                {subOptions[activeTab].map((option) => (
+                  <button
+                    key={option.id}
+                    className={`flex-shrink-0 px-6 py-3 rounded-lg text-base font-['Alegreya'] transition-all duration-300 shadow-[0_10px_30px_rgba(0,0,0,0.8)] ${
+                      activeSubOption === option.id
+                        ? "text-white bg-blue-500"
+                        : "text-white hover:bg-blue-600 hover:text-cyan-300"
+                    }`}
+                    onClick={() => setActiveSubOption(option.id)}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
           <div className="mt-6">
             <h3 className="text-xl font-bold mb-4 font-['Alegreya']">
-              {subOptionContent[activeTab][activeSubOption]?.title || "Overall Stats"}
+              {subOptions[activeTab].find((opt) => opt.id === activeSubOption)?.label || "Overall Stats"}
             </h3>
-            {subOptionContent[activeTab][activeSubOption]?.content || subOptionContent.overall.default.content}
+            {activeTab === "overall" ? (
+              calculateOverallStats().content
+            ) : (
+              <div>
+                {insightsData[activeTab]?.[activeSubOption]?.length > 0 ? (
+                  insightsData[activeTab][activeSubOption].map((entry) => (
+                    <div key={entry.id} className="flex justify-between items-center mb-2 p-2 border-b border-gray-600">
+                      <p>{entry.value}</p>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleEditData(entry)}
+                          className="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600 transition"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteData(entry.id)}
+                          className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 transition"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-gray-300">No data available. Add some data!</p>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
+
+      {/* Modal for Adding/Editing Data */}
+      {isModalOpen && (
+        <div className="border-2 border-white fixed inset-0 bg-black bg-opacity-90 flex justify-center items-center z-50">
+          <div
+            className="w-96 rounded-lg p-6 shadow-lg max-h-[80vh] overflow-y-auto"
+            style={{
+              background: 'linear-gradient(140deg, rgba(8,0,6,0.85) 15%, rgba(255,0,119,0.85))',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.75)',
+            }}
+          >
+            <h2 className="text-xl font-bold mb-4 text-white text-center">
+              {editingEntryId ? "Edit Data" : "Add Data"}
+            </h2>
+            <label className="block mb-1 text-white font-semibold" htmlFor="value">
+              {subOptions[activeTab].find((opt) => opt.id === activeSubOption)?.label}
+            </label>
+            <input
+              id="value"
+              type={["matches", "innings", "strike-rate", "30s", "50s", "100s", "4s", "6s", "ducks", "overs", "maiden", "runs", "wickets", "3-wickets", "5-wickets", "economy", "average", "wide", "no-balls", "dots", "catch", "stumping", "run-out", "catch-and-bowl", "matches-captained"].includes(activeSubOption) ? "number" : "text"}
+              placeholder={`Enter ${subOptions[activeTab].find((opt) => opt.id === activeSubOption)?.label}`}
+              value={formData.value}
+              onChange={(e) => setFormData({ value: e.target.value })}
+              className="w-full mb-4 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+              disabled={isLoading}
+            />
+            <div className="flex justify-between">
+              <button
+                onClick={() => {
+                  setIsModalOpen(false);
+                  setEditingEntryId(null);
+                  setFormData({ value: "" });
+                }}
+                className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded transition"
+                disabled={isLoading}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveData}
+                className="bg-pink-600 hover:bg-pink-700 text-white px-4 py-2 rounded transition"
+                disabled={isLoading}
+              >
+                {isLoading ? "Saving..." : "Save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,104 +1,168 @@
-import React, { useState } from 'react';
-import { FiStar, FiMessageSquare, FiUser, FiCalendar, FiMapPin, FiArrowLeft } from 'react-icons/fi';
+import React, { useState, useEffect } from 'react';
+import { FiStar, FiMessageSquare, FiUser, FiCalendar, FiMapPin, FiArrowLeft, FiEdit, FiTrash2 } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import cuslogo from "../../assets/yogesh/communityimg/cuslogo.png";
-import backButton from '../../assets/kumar/right-chevron.png'
+import backButton from '../../assets/kumar/right-chevron.png';
+import { db, auth } from "../../firebase"; // Adjust path as needed
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc } from "firebase/firestore";
 
 const UmpiresPage = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('all');
   const [selectedUmpire, setSelectedUmpire] = useState(null);
+  const [umpiresData, setUmpiresData] = useState([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    rating: '',
+    matches: '',
+    location: '',
+    experience: '',
+    image: '',
+    bio: '',
+    availability: 'Available',
+  });
+  const [editingId, setEditingId] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const umpires = [
-    {
-      id: 1,
-      name: 'David Shepherd',
-      rating: 4.9,
-      matches: 172,
-      location: 'London, UK',
-      experience: '15 years',
-      image: cuslogo,
-      bio: 'ICC Elite Panel Umpire with extensive international experience. Specializes in Test matches.',
-      available: true
-    },
-    {
-      id: 2,
-      name: 'Aleem Dar',
-      rating: 4.8,
-      matches: 210,
-      location: 'Lahore, Pakistan',
-      experience: '20 years',
-      image: cuslogo,
-      bio: 'Most experienced umpire in ICC history. Known for excellent decision-making under pressure.',
-      available: true
-    },
-    {
-      id: 3,
-      name: 'Simon Taufel',
-      rating: 4.7,
-      matches: 185,
-      location: 'Sydney, Australia',
-      experience: '12 years',
-      image: cuslogo,
-      bio: 'Five-time ICC Umpire of the Year. Now trains new umpires worldwide.',
-      available: false
-    },
-    {
-      id: 4,
-      name: 'Kumar Dharmasena',
-      rating: 4.6,
-      matches: 150,
-      location: 'Colombo, Sri Lanka',
-      experience: '10 years',
-      image: cuslogo,
-      bio: 'Former international cricketer turned elite umpire. Brings player perspective to decisions.',
-      available: true
-    },
-    {
-      id: 5,
-      name: 'Marais Erasmus',
-      rating: 4.8,
-      matches: 195,
-      location: 'Cape Town, South Africa',
-      experience: '14 years',
-      image: cuslogo,
-      bio: 'Consistently top-rated umpire known for calm demeanor and accurate decisions.',
-      available: true
-    },
-    {
-      id: 6,
-      name: 'Annie Jones',
-      rating: 4.5,
-      matches: 85,
-      location: 'Melbourne, Australia',
-      experience: '6 years',
-      image: cuslogo,
-      bio: 'Rising star in women\'s cricket umpiring. Officiated in 3 World Cups.',
-      available: false
-    }
-  ];
+  // Fetch umpire data from Firestore
+  useEffect(() => {
+    if (!auth.currentUser) return;
 
-  const filteredUmpires = umpires.filter(umpire => {
+    const unsubscribe = onSnapshot(collection(db, 'Umpires'), (snapshot) => {
+      const data = snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter(entry => entry.userId === auth.currentUser.uid);
+      setUmpiresData(data);
+    }, (error) => {
+      console.error("Error fetching umpires:", error);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Filter umpires based on search and active tab
+  const filteredUmpires = umpiresData.filter(umpire => {
     const matchesSearch = umpire.name.toLowerCase().includes(searchTerm.toLowerCase());
-    if (activeTab === 'available') return matchesSearch && umpire.available;
+    if (activeTab === 'available') return matchesSearch && (umpire.availability === 'Available' || umpire.availability === 'Booked');
     if (activeTab === 'elite') return matchesSearch && umpire.rating >= 4.7;
     return matchesSearch;
   });
+
+  // Calculate community stats
+  const calculateCommunityStats = () => {
+    const totalUmpires = umpiresData.length;
+    const availableUmpires = umpiresData.filter(u => u.availability === 'Available' || u.availability === 'Booked').length;
+    const totalMatches = umpiresData.reduce((acc, umpire) => acc + (umpire.matches || 0), 0);
+    const countries = [...new Set(umpiresData.map(u => u.location.split(',').pop().trim()))].length;
+
+    return { totalUmpires, availableUmpires, totalMatches, countries };
+  };
+
+  const { totalUmpires, availableUmpires, totalMatches, countries } = calculateCommunityStats();
+
+  // Handle saving or updating umpire data
+  const handleSaveData = async () => {
+    if (!formData.name.trim() || !formData.rating || !formData.matches || !formData.location.trim() || !formData.experience.trim() || !formData.bio.trim()) {
+      alert("Please fill all required fields!");
+      return;
+    }
+    if (isNaN(formData.rating) || formData.rating < 0 || formData.rating > 5) {
+      alert("Rating must be between 0 and 5!");
+      return;
+    }
+    if (isNaN(formData.matches) || formData.matches < 0) {
+      alert("Matches must be a non-negative number!");
+      return;
+    }
+    if (formData.image && !formData.image.match(/\.(jpg|jpeg|png|gif)$/i)) {
+      alert("Please provide a valid image URL (jpg, jpeg, png, gif)!");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const entryData = {
+        name: formData.name,
+        rating: parseFloat(formData.rating),
+        matches: parseInt(formData.matches),
+        location: formData.location,
+        experience: formData.experience,
+        image: formData.image || cuslogo,
+        bio: formData.bio,
+        availability: formData.availability,
+        userId: auth.currentUser.uid,
+        timestamp: new Date().toISOString(),
+      };
+
+      if (editingId) {
+        await updateDoc(doc(db, 'Umpires', editingId), entryData);
+      } else {
+        await addDoc(collection(db, 'Umpires'), entryData);
+      }
+
+      setFormData({
+        name: '',
+        rating: '',
+        matches: '',
+        location: '',
+        experience: '',
+        image: '',
+        bio: '',
+        availability: 'Available',
+      });
+      setEditingId(null);
+      setIsModalOpen(false);
+    } catch (err) {
+      console.error("Error saving data:", err);
+      alert("Failed to save data. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle deleting umpire data
+  const handleDeleteData = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this umpire?")) return;
+
+    try {
+      await deleteDoc(docRef(db, 'Umpires', id));
+    } catch (err) {
+      console.error("Error deleting data:", err);
+      alert("Failed to delete data. Please try again.");
+    }
+  };
+
+  // Handle editing umpire data
+  const handleEditData = async (umpire) => {
+    setFormData({
+      name: umpire.name,
+      rating: umpire.rating.toString(),
+      matches: umpire.matches.toString(),
+      location: umpire.location,
+      experience: umpire.experience,
+      image: umpire.image === cuslogo ? '' : umpire.image,
+      bio: umpire.bio,
+      availability: umpire.availability,
+    });
+    setEditingId(umpire.id);
+    setIsModalOpen(true);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0b0f28] to-[#06122e] text-white p-4 md:px-8">
       <div className="max-w-7xl mx-auto">
         <div className="mb-8 flex justify-between items-center">
-        <div className="md:absolute flex items-center gap-4">
-          <img
-          src={backButton}
-          alt="Back"
-          className="h-8 w-8 cursor-pointer -scale-x-100"
-          onClick={() => window.history.back()}
-          />
-          </div>      
-        <div className="text-center flex-grow">
+          <div className="md:absolute flex items-center gap-4">
+            <img
+              src={backButton}
+              alt="Back"
+              className="h-8 w-8 cursor-pointer -scale-x-100"
+              onClick={() => window.history.back()}
+            />
+          </div>
+          <div className="text-center flex-grow">
             <h1 className="text-3xl md:text-4xl font-bold mb-2">Umpires</h1>
             <p className="text-blue-300">Find and connect with professional cricket umpires worldwide</p>
           </div>
@@ -108,7 +172,52 @@ const UmpiresPage = () => {
         </div>
 
         <div className="mb-6 flex flex-col md:flex-row gap-4">
-          {/* Search and filter components can go here if needed */}
+          <input
+            type="text"
+            placeholder="Search umpires by name..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full md:w-1/3 bg-[#0b1a3b] border border-blue-600/50 rounded-lg p-2 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <div className="flex gap-2">
+            <button
+              className={`px-4 py-2 rounded-lg ${activeTab === 'all' ? 'bg-blue-600' : 'bg-[#0b1a3b] border border-blue-600/50'} hover:bg-blue-700 transition-colors`}
+              onClick={() => setActiveTab('all')}
+            >
+              All
+            </button>
+            <button
+              className={`px-4 py-2 rounded-lg ${activeTab === 'available' ? 'bg-blue-600' : 'bg-[#0b1a3b] border border-blue-600/50'} hover:bg-blue-700 transition-colors`}
+              onClick={() => setActiveTab('available')}
+            >
+              Available
+            </button>
+            <button
+              className={`px-4 py-2 rounded-lg ${activeTab === 'elite' ? 'bg-blue-600' : 'bg-[#0b1a3b] border border-blue-600/50'} hover:bg-blue-700 transition-colors`}
+              onClick={() => setActiveTab('elite')}
+            >
+              Elite
+            </button>
+          </div>
+          <button
+            onClick={() => {
+              setFormData({
+                name: '',
+                rating: '',
+                matches: '',
+                location: '',
+                experience: '',
+                image: '',
+                bio: '',
+                availability: 'Available',
+              });
+              setEditingId(null);
+              setIsModalOpen(true);
+            }}
+            className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+          >
+            Add Umpire
+          </button>
         </div>
 
         {selectedUmpire ? (
@@ -126,10 +235,11 @@ const UmpiresPage = () => {
                   src={selectedUmpire.image}
                   alt={selectedUmpire.name}
                   className="w-full h-auto rounded-lg object-cover"
+                  onError={(e) => { e.target.src = cuslogo; }}
                 />
                 <div className="mt-4 flex justify-between items-center">
-                  <span className={`px-3 py-1 rounded-full text-sm ${selectedUmpire.available ? 'bg-green-900 text-green-300' : 'bg-red-900 text-red-300'}`}>
-                    {selectedUmpire.available ? 'Available' : 'Not Available'}
+                  <span className={`px-3 py-1 rounded-full text-sm ${selectedUmpire.availability === 'Available' || selectedUmpire.availability === 'Booked' ? 'bg-green-900 text-green-300' : 'bg-red-900 text-red-300'}`}>
+                    {selectedUmpire.availability}
                   </span>
                   <div className="flex items-center text-yellow-400">
                     <FiStar className="mr-1" />
@@ -139,7 +249,19 @@ const UmpiresPage = () => {
               </div>
 
               <div className="md:w-2/3">
-                <h2 className="text-2xl font-bold mb-2">{selectedUmpire.name}</h2>
+                <div className="flex justify-between items-center mb-2">
+                  <h2 className="text-2xl font-bold">{selectedUmpire.name}</h2>
+                  <div className="flex gap-2">
+                    <FiEdit
+                      className="text-yellow-500 cursor-pointer hover:text-yellow-600"
+                      onClick={() => handleEditData(selectedUmpire)}
+                    />
+                    <FiTrash2
+                      className="text-red-500 cursor-pointer hover:text-red-600"
+                      onClick={() => handleDeleteData(selectedUmpire.id)}
+                    />
+                  </div>
+                </div>
                 <div className="flex flex-wrap gap-4 mb-4">
                   <div className="flex items-center text-blue-300">
                     <FiMapPin className="mr-2" />
@@ -168,9 +290,10 @@ const UmpiresPage = () => {
                 </div>
               </div>
             </div>
-          </div>) : (
+          </div>
+        ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredUmpires.map(umpire => (
+            {filteredUmpires.length > 0 ? filteredUmpires.map(umpire => (
               <div
                 key={umpire.id}
                 className="bg-[#0b1a3b] border border-blue-600/50 rounded-xl p-4 hover:border-blue-400 transition-all cursor-pointer hover:shadow-lg"
@@ -181,6 +304,7 @@ const UmpiresPage = () => {
                     src={umpire.image}
                     alt={umpire.name}
                     className="w-16 h-16 rounded-full object-cover border-2 border-blue-500"
+                    onError={(e) => { e.target.src = cuslogo; }}
                   />
                   <div>
                     <h3 className="font-bold">{umpire.name}</h3>
@@ -196,12 +320,14 @@ const UmpiresPage = () => {
                 </div>
                 <div className="mt-3 flex justify-between items-center">
                   <span className="text-gray-400 text-sm">{umpire.matches} matches</span>
-                  <span className={`text-xs px-2 py-1 rounded-full ${umpire.available ? 'bg-green-900 text-green-300' : 'bg-red-900 text-red-300'}`}>
-                    {umpire.available ? 'Available' : 'Booked'}
+                  <span className={`text-xs px-2 py-1 rounded-full ${umpire.availability === 'Available' || umpire.availability === 'Booked' ? 'bg-green-900 text-green-300' : 'bg-red-900 text-red-300'}`}>
+                    {umpire.availability}
                   </span>
                 </div>
               </div>
-            ))}
+            )) : (
+              <p className="text-center text-gray-400 col-span-3">No umpires found. Add an umpire to get started!</p>
+            )}
           </div>
         )}
 
@@ -210,20 +336,168 @@ const UmpiresPage = () => {
             <h2 className="text-xl font-bold mb-4">Umpiring Community Stats</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="bg-[#0b1a3b] border border-blue-600/30 rounded-lg p-4 text-center">
-                <p className="text-3xl font-bold text-blue-400">{umpires.length}+</p>
+                <p className="text-3xl font-bold text-blue-400">{totalUmpires}+</p>
                 <p className="text-gray-400">Registered Umpires</p>
               </div>
               <div className="bg-[#0b1a3b] border border-blue-600/30 rounded-lg p-4 text-center">
-                <p className="text-3xl font-bold text-blue-400">{umpires.filter(u => u.available).length}</p>
+                <p className="text-3xl font-bold text-blue-400">{availableUmpires}</p>
                 <p className="text-gray-400">Available Now</p>
               </div>
               <div className="bg-[#0b1a3b] border border-blue-600/30 rounded-lg p-4 text-center">
-                <p className="text-3xl font-bold text-blue-400">{umpires.reduce((acc, umpire) => acc + umpire.matches, 0)}+</p>
+                <p className="text-3xl font-bold text-blue-400">{totalMatches}+</p>
                 <p className="text-gray-400">Matches Officiated</p>
               </div>
               <div className="bg-[#0b1a3b] border border-blue-600/30 rounded-lg p-4 text-center">
-                <p className="text-3xl font-bold text-blue-400">20+</p>
+                <p className="text-3xl font-bold text-blue-400">{countries}+</p>
                 <p className="text-gray-400">Countries</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal for Adding/Editing Umpire */}
+        {isModalOpen && (
+          <div className="border-2 border-white fixed inset-0 bg-black bg-opacity-90 flex justify-center items-center z-50">
+            <div
+              className="w-96 rounded-lg p-6 shadow-lg max-h-[80vh] overflow-y-auto"
+              style={{
+                background: 'linear-gradient(140deg, rgba(8,0,6,0.85) 15%, rgba(255,0,119,0.85))',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.75)',
+              }}
+            >
+              <h2 className="text-xl font-bold mb-4 text-white text-center">
+                {editingId ? 'Edit Umpire' : 'Add Umpire'}
+              </h2>
+              <label className="block mb-1 text-white font-semibold" htmlFor="name">
+                Name
+              </label>
+              <input
+                id="name"
+                type="text"
+                placeholder="Enter umpire name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="w-full mb-4 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                disabled={isLoading}
+              />
+              <label className="block mb-1 text-white font-semibold" htmlFor="rating">
+                Rating (0-5)
+              </label>
+              <input
+                id="rating"
+                type="number"
+                placeholder="Enter rating"
+                value={formData.rating}
+                onChange={(e) => setFormData({ ...formData, rating: e.target.value })}
+                className="w-full mb-4 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                min="0"
+                max="5"
+                step="0.1"
+                disabled={isLoading}
+              />
+              <label className="block mb-1 text-white font-semibold" htmlFor="matches">
+                Matches Officiated
+              </label>
+              <input
+                id="matches"
+                type="number"
+                placeholder="Enter matches officiated"
+                value={formData.matches}
+                onChange={(e) => setFormData({ ...formData, matches: e.target.value })}
+                className="w-full mb-4 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                min="0"
+                disabled={isLoading}
+              />
+              <label className="block mb-1 text-white font-semibold" htmlFor="location">
+                Location
+              </label>
+              <input
+                id="location"
+                type="text"
+                placeholder="Enter location (e.g., London, UK)"
+                value={formData.location}
+                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                className="w-full mb-4 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                disabled={isLoading}
+              />
+              <label className="block mb-1 text-white font-semibold" htmlFor="experience">
+                Experience
+              </label>
+              <input
+                id="experience"
+                type="text"
+                placeholder="Enter experience (e.g., 15 years)"
+                value={formData.experience}
+                onChange={(e) => setFormData({ ...formData, experience: e.target.value })}
+                className="w-full mb-4 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                disabled={isLoading}
+              />
+              <label className="block mb-1 text-white font-semibold" htmlFor="image">
+                Image URL (Optional)
+              </label>
+              <input
+                id="image"
+                type="text"
+                placeholder="Enter image URL"
+                value={formData.image}
+                onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+                className="w-full mb-4 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                disabled={isLoading}
+              />
+              <label className="block mb-1 text-white font-semibold" htmlFor="bio">
+                Bio
+              </label>
+              <textarea
+                id="bio"
+                placeholder="Enter umpire bio"
+                value={formData.bio}
+                onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+                className="w-full mb-4 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                rows={3}
+                disabled={isLoading}
+              />
+              <label className="block mb-1 text-white font-semibold" htmlFor="availability">
+                Availability
+              </label>
+              <select
+                id="availability"
+                value={formData.availability}
+                onChange={(e) => setFormData({ ...formData, availability: e.target.value })}
+                className="w-full mb-4 p-2 rounded border border-gray-600 bg-transparent text-white focus:outline-none focus:ring-2 focus:ring-pink-500"
+                disabled={isLoading}
+              >
+                <option className='text-black' value="Available">Available</option>
+                <option className='text-black' value="Not Available">Not Available</option>
+                <option className='text-black' value="Booked">Booked</option>
+              </select>
+              <div className="flex justify-between">
+                <button
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    setEditingId(null);
+                    setFormData({
+                      name: '',
+                      rating: '',
+                      matches: '',
+                      location: '',
+                      experience: '',
+                      image: '',
+                      bio: '',
+                      availability: 'Available',
+                    });
+                  }}
+                  className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded transition"
+                  disabled={isLoading}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveData}
+                  className="bg-pink-600 hover:bg-pink-700 text-white px-4 py-2 rounded transition"
+                  disabled={isLoading}
+                >
+                  {isLoading ? 'Saving...' : 'Save'}
+                </button>
               </div>
             </div>
           </div>

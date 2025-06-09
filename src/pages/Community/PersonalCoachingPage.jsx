@@ -1,143 +1,209 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaStar, FaRegStar, FaUserTie, FaVideo, FaChartLine, FaCalendarAlt, FaComments, FaPhoneAlt, FaArrowLeft } from 'react-icons/fa';
-import PriyaPatel from "../../assets/yogesh/communityimg/PriyaPatel.png" 
-import RahulSharma from "../../assets/yogesh/communityimg/RahulSharma.jpg" 
-import VikramSingh from "../../assets/yogesh/communityimg/VikramSingh.jpg" 
-import SanjayKumar from "../../assets/yogesh/communityimg/SanjayKumar.png"
-import AmitPatel from "../../assets/yogesh/communityimg/AmitPatel.png"
-import NehaGupta from "../../assets/yogesh/communityimg/NehaGupta.png"
-import RajeshIyer from "../../assets/yogesh/communityimg/RajeshIyer.png"
-import AnjaliMehta from "../../assets/yogesh/communityimg/AnjaliMehta.png"
-import backButton from '../../assets/kumar/right-chevron.png'
+import { Edit, Trash2 } from 'lucide-react';
+import backButton from '../../assets/kumar/right-chevron.png';
+import { db, auth, storage } from "../../firebase"; // Adjust path as needed
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 const PersonalCoachingPage = () => {
-  const [activeTab, setActiveTab] = useState('batting');
-  const [selectedCoach, setSelectedCoach] = useState(null);
-  const [rating, setRating] = useState(0);
-  const [hoverRating, setHoverRating] = useState(0);
   const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState('all');
+  const [selectedCoach, setSelectedCoach] = useState(null);
+  const [coaches, setCoaches] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    specialty: '',
+    experience: '',
+    rating: '',
+    sessions: '',
+    image: '',
+    bio: '',
+    category: '',
+    sessionTypes: [],
+    imageSource: 'url',
+    imageFile: null
+  });
+  const [editingId, setEditingId] = useState(null);
 
-  const coaches = [
-    {
-      id: 1,
-      name: "Rahul Sharma",
-      specialty: "Batting Technique",
-      experience: "10+ years",
-      rating: 4.8,
-      sessions: 250,
-      image: RahulSharma,
-      bio: "Former first-class cricketer specializing in batting techniques. Helped 50+ players improve their averages.",
-      category: "batting"
-    },
-    {
-      id: 2,
-      name: "Amit Patel",
-      specialty: "Power Hitting",
-      experience: "7 years",
-      rating: 4.6,
-      sessions: 180,
-      image: SanjayKumar,
-      bio: "Specialist in power hitting techniques and improving strike rates. Worked with T20 specialists.",
-      category: "batting"
-    },
-    {
-      id: 3,
-      name: "Priya Patel",
-      specialty: "Spin Bowling",
-      experience: "8 years",
-      rating: 4.9,
-      sessions: 180,
-      image: PriyaPatel,
-      bio: "International spin bowling consultant with expertise in finger and wrist spin variations.",
-      category: "bowling"
-    },
-    {
-      id: 4,
-      name: "Vikram Singh",
-      specialty: "Fast Bowling",
-      experience: "12 years",
-      rating: 4.7,
-      sessions: 320,
-      image: VikramSingh,
-      bio: "Pace bowling specialist with focus on speed, swing, and injury prevention techniques.",
-      category: "bowling"
-    },
-    {
-      id: 5,
-      name: "Sanjay Kumar",
-      specialty: "Fielding & Wicketkeeping",
-      experience: "9 years",
-      rating: 4.5,
-      sessions: 210,
-      image: AmitPatel,
-      bio: "Fielding coach with expertise in ground fielding, catching, and wicketkeeping techniques.",
-      category: "fielding"
-    },
-    {
-      id: 6,
-      name: "Neha Gupta",
-      specialty: "Agility & Reflex Training",
-      experience: "6 years",
-      rating: 4.4,
-      sessions: 150,
-      image: NehaGupta,
-      bio: "Specializes in improving fielding reflexes, agility, and reaction times.",
-      category: "fielding"
-    },
-    {
-      id: 7,
-      name: "Rajesh Iyer",
-      specialty: "Cricket Fitness",
-      experience: "11 years",
-      rating: 4.7,
-      sessions: 290,
-      image: RajeshIyer,
-      bio: "Strength and conditioning specialist for cricketers. Focus on injury prevention and performance enhancement.",
-      category: "fitness"
-    },
-    {
-      id: 8,
-      name: "Dr. Anjali Mehta",
-      specialty: "Sports Psychology",
-      experience: "15 years",
-      rating: 4.9,
-      sessions: 175,
-      image: AnjaliMehta,
-      bio: "Sports psychologist helping players with performance anxiety, focus, and mental toughness.",
-      category: "mental"
+  const categories = ['batting', 'bowling', 'fielding', 'fitness', 'mental'];
+
+  // Fetch coach data from Firestore
+  useEffect(() => {
+    if (!auth.currentUser) {
+      setIsLoading(false);
+      return;
     }
-  ];
 
-  const testimonials = [
-    {
-      id: 1,
-      name: "Arjun Mehta",
-      role: "U19 State Player",
-      text: "Coach Rahul transformed my batting stance and footwork. My average improved by 35% in just 3 months!",
-      rating: 5
-    },
-    {
-      id: 2,
-      name: "Neha Gupta",
-      role: "Club Cricketer",
-      text: "Priya's spin bowling sessions helped me develop a deadly googly that's become my wicket-taking ball.",
-      rating: 5
-    },
-    {
-      id: 3,
-      name: "Rohan Desai",
-      role: "College Team Captain",
-      text: "Vikram's fast bowling program increased my pace by 12km/h while reducing my injury frequency.",
-      rating: 4
+    const unsubscribe = onSnapshot(collection(db, 'PersonalCoaches'), (snapshot) => {
+      const data = snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter(entry => entry.userId === auth.currentUser.uid);
+      setCoaches(data);
+      setIsLoading(false);
+    }, (error) => {
+      console.error("Error fetching coaches:", error);
+      setIsLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Handle saving or updating coach data
+  const handleSaveData = async () => {
+    if (!formData.name.trim() || !formData.specialty.trim() || !formData.experience.trim() || 
+        !formData.rating || !formData.sessions || !formData.bio.trim() || !formData.category) {
+      alert("Please fill all required fields!");
+      return;
     }
-  ];
+    if (isNaN(formData.rating) || formData.rating < 0 || formData.rating > 5) {
+      alert("Rating must be between 0 and 5!");
+      return;
+    }
+    if (isNaN(formData.sessions) || formData.sessions < 0) {
+      alert("Number of sessions must be a non-negative number!");
+      return;
+    }
+    if (!categories.includes(formData.category)) {
+      alert("Please select a valid category!");
+      return;
+    }
+    if (formData.imageSource === 'url' && formData.image && !formData.image.match(/\.(jpg|jpeg|png|gif)$/i)) {
+      alert("Please provide a valid image URL (jpg, jpeg, png, gif)!");
+      return;
+    }
+    if (formData.imageSource === 'file' && !formData.imageFile) {
+      alert("Please select an image file!");
+      return;
+    }
+    if (formData.imageSource === 'file' && formData.imageFile && !formData.imageFile.type.match(/image\/(jpg|jpeg|png|gif)/i)) {
+      alert("Please select a valid image file (jpg, jpeg, png, gif)!");
+      return;
+    }
+    if (formData.sessionTypes.length === 0) {
+      alert("Please add at least one session type!");
+      return;
+    }
 
-  const renderStars = (count) => {
-    return Array(5).fill(0).map((_, i) => (
-      i < count ? <FaStar key={i} className="text-yellow-400" /> : <FaRegStar key={i} className="text-gray-300" />
-    ));
+    setIsLoading(true);
+    try {
+      let imageUrl = formData.image;
+      if (formData.imageSource === 'file' && formData.imageFile) {
+        const storageRef = ref(storage, `personal-coaches/${auth.currentUser.uid}/${formData.imageFile.name}`);
+        await uploadBytes(storageRef, formData.imageFile);
+        imageUrl = await getDownloadURL(storageRef);
+      }
+
+      const entryData = {
+        name: formData.name,
+        specialty: formData.specialty,
+        experience: formData.experience,
+        rating: parseFloat(formData.rating),
+        sessions: parseInt(formData.sessions),
+        image: imageUrl || '',
+        bio: formData.bio,
+        category: formData.category,
+        sessionTypes: formData.sessionTypes.map(session => ({
+          id: session.id || Date.now() + Math.random().toString(36).substr(2, 9),
+          name: session.name,
+          description: session.description,
+          price: parseInt(session.price)
+        })),
+        userId: auth.currentUser.uid,
+        timestamp: new Date().toISOString(),
+      };
+
+      if (editingId) {
+        await updateDoc(doc(db, 'PersonalCoaches', editingId), entryData);
+      } else {
+        await addDoc(collection(db, 'PersonalCoaches'), entryData);
+      }
+
+      setFormData({
+        name: '',
+        specialty: '',
+        experience: '',
+        rating: '',
+        sessions: '',
+        image: '',
+        bio: '',
+        category: '',
+        sessionTypes: [],
+        imageSource: 'url',
+        imageFile: null
+      });
+      setEditingId(null);
+      setIsModalOpen(false);
+    } catch (err) {
+      console.error("Error saving data:", err);
+      alert("Failed to save data. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  // Handle deleting coach data
+  const handleDeleteData = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this coach?")) return;
+
+    try {
+      await deleteDoc(doc(db, 'PersonalCoaches', id));
+    } catch (err) {
+      console.error("Error deleting data:", err);
+      alert("Failed to delete data. Please try again.");
+    }
+  };
+
+  // Handle editing coach data
+  const handleEditData = (coach) => {
+    setFormData({
+      name: coach.name,
+      specialty: coach.specialty,
+      experience: coach.experience,
+      rating: coach.rating.toString(),
+      sessions: coach.sessions.toString(),
+      image: coach.image,
+      bio: coach.bio,
+      category: coach.category,
+      sessionTypes: coach.sessionTypes || [],
+      imageSource: coach.image ? 'url' : 'none',
+      imageFile: null
+    });
+    setEditingId(coach.id);
+    setIsModalOpen(true);
+  };
+
+  // Add session type
+  const addSessionType = () => {
+    const name = prompt("Enter session type name (e.g., 1-Hour Technical Session):");
+    const description = prompt("Enter session description (e.g., In-person or virtual):");
+    const price = prompt("Enter session price (e.g., 1500):");
+    if (name && description && price && !isNaN(price) && price > 0) {
+      setFormData({
+        ...formData,
+        sessionTypes: [...formData.sessionTypes, { name, description, price: parseInt(price) }]
+      });
+    } else {
+      alert("Invalid session details! Ensure name and description are provided, and price is a positive number.");
+    }
+  };
+
+  // Remove session type
+  const removeSessionType = (index) => {
+    setFormData({ ...formData, sessionTypes: formData.sessionTypes.filter((_, i) => i !== index) });
+  };
+
+  const renderStars = (rating) => (
+    Array(5)
+      .fill(0)
+      .map((_, i) => (
+        i < Math.floor(rating) ? <FaStar key={i" className="text-yellow-500"} />
+        : <FaRegStar key={i} className="text-gray-300" />
+      ))
+  );
 
   const filteredCoaches = activeTab === 'all' 
     ? coaches 
@@ -145,21 +211,43 @@ const PersonalCoachingPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0b0f28] to-[#06122e]">
-      
-
       {/* Coaching Categories */}
       <section className="py-16 px-4">
         <div className="container mx-auto">
           {/* Centered Title */}
-          <div className="text-center mb-8">
-          <img
-      src={backButton}
-      alt="Back"
-      className="h-8 w-8 cursor-pointer -scale-x-100"
-      onClick={() => window.history.back()}
-      />
-            <h2 className="text-3xl font-bold text-white">Specialized Coaching Areas</h2>
-            <p className="text-blue-300 mt-2">Find expert coaches for every aspect of your game</p>
+          <div className="flex justify-between items-center mb-8">
+            <img
+              src={backButton}
+              alt="Back"
+              className="h-8 w-8 cursor-pointer -scale-x-100"
+              onClick={() => window.history.back()}
+            />
+            <div className="text-center flex-1">
+              <h2 className="text-3xl font-bold text-white">Specialized Coaching Areas</h2>
+              <p className="text-blue-300 mt-2">Find expert coaches for every aspect of your game</p>
+            </div>
+            <button
+              onClick={() => {
+                setFormData({
+                  name: '',
+                  specialty: '',
+                  experience: '',
+                  rating: '',
+                  sessions: '',
+                  image: '',
+                  bio: '',
+                  category: '',
+                  sessionTypes: [],
+                  imageSource: 'url',
+                  imageFile: null
+                });
+                setEditingId(null);
+                setIsModalOpen(true);
+              }}
+              className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+            >
+              Add Coach
+            </button>
           </div>
           
           <div className="flex flex-wrap justify-center mb-8 border-b border-gray-700">
@@ -169,84 +257,292 @@ const PersonalCoachingPage = () => {
             >
               All Coaches
             </button>
-            <button 
-              onClick={() => setActiveTab('batting')}
-              className={`px-6 py-3 font-medium ${activeTab === 'batting' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-gray-300'}`}
-            >
-              Batting
-            </button>
-            <button 
-              onClick={() => setActiveTab('bowling')}
-              className={`px-6 py-3 font-medium ${activeTab === 'bowling' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-gray-300'}`}
-            >
-              Bowling
-            </button>
-            <button 
-              onClick={() => setActiveTab('fielding')}
-              className={`px-6 py-3 font-medium ${activeTab === 'fielding' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-gray-300'}`}
-            >
-              Fielding
-            </button>
-            <button 
-              onClick={() => setActiveTab('fitness')}
-              className={`px-6 py-3 font-medium ${activeTab === 'fitness' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-gray-300'}`}
-            >
-              Fitness
-            </button>
-            <button 
-              onClick={() => setActiveTab('mental')}
-              className={`px-6 py-3 font-medium ${activeTab === 'mental' ? 'text-blue-400 border-b-2 border-blue-400' : 'text-gray-300'}`}
-            >
-              Mental Game
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredCoaches.map(coach => (
-              <div 
-                key={coach.id} 
-                className="bg-[#0b1a3b] border border-blue-600/30 rounded-xl shadow-md overflow-hidden hover:shadow-lg hover:border-blue-400 transition-all duration-300 cursor-pointer"
-                onClick={() => setSelectedCoach(coach)}
+            {categories.map(category => (
+              <button 
+                key={category}
+                onClick={() => setActiveTab(category)}
+                className={`px-6 py-3 font-medium ${activeTab === category ? 'text-blue-400 border-b-2 border-blue-400' : 'text-gray-300'}`}
               >
-                <div className="relative">
-                  <img 
-                    src={coach.image} 
-                    alt={coach.name} 
-                    className="w-full h-48 object-contain"
-                  />
-                  <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-4">
-                    <h3 className="text-white text-xl font-bold">{coach.name}</h3>
-                    <p className="text-blue-300">{coach.specialty}</p>
-                  </div>
-                </div>
-                <div className="p-6">
-                  <div className="flex justify-between items-center mb-2">
-                    <div className="flex items-center">
-                      {renderStars(coach.rating)}
-                      <span className="ml-2 text-gray-300">{coach.rating.toFixed(1)}</span>
-                    </div>
-                    <span className="text-sm text-gray-400">{coach.sessions}+ sessions</span>
-                  </div>
-                  <p className="text-gray-400 mb-4">{coach.experience} experience</p>
-                  <button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-medium">
-                    View Profile
-                  </button>
-                </div>
-              </div>
+                {category.charAt(0).toUpperCase() + category.slice(1)}
+              </button>
             ))}
           </div>
+
+          {/* Loading State */}
+          {isLoading && (
+            <div className="flex justify-center items-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+            </div>
+          )}
+
+          {/* Coaches Grid */}
+          {!isLoading && (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {filteredCoaches.map(coach => (
+                <div 
+                  key={coach.id} 
+                  className="bg-[#0b1a3b] border border-blue-600/30 rounded-xl shadow-md overflow-hidden hover:shadow-lg hover:border-blue-400 transition-all duration-300 cursor-pointer relative"
+                >
+                  <div className="absolute top-2 right-2 flex flex-col gap-1 z-10">
+                    <Edit
+                      className="text-yellow-500 cursor-pointer hover:text-yellow-600"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEditData(coach);
+                      }}
+                    />
+                    <Trash2
+                      className="text-red-500 cursor-pointer hover:text-red-600"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteData(coach.id);
+                      }}
+                    />
+                  </div>
+                  <div className="relative">
+                    <img 
+                      src={coach.image || 'https://via.placeholder.com/150'} 
+                      alt={coach.name} 
+                      className="w-full h-48 object-contain"
+                      onError={(e) => { e.target.src = 'https://via.placeholder.com/150'; }}
+                    />
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-4">
+                      <h3 className="text-white text-xl font-bold">{coach.name}</h3>
+                      <p className="text-blue-300">{coach.specialty}</p>
+                    </div>
+                  </div>
+                  <div className="p-6">
+                    <div className="flex justify-between items-center mb-2">
+                      <div className="flex items-center">
+                        {renderStars(coach.rating)}
+                        <span className="ml-2 text-gray-300">{coach.rating.toFixed(1)}</span>
+                      </div>
+                      <span className="text-sm text-gray-400">{coach.sessions}+ sessions</span>
+                    </div>
+                    <p className="text-gray-400 mb-4">{coach.experience} experience</p>
+                    <button 
+                      onClick={() => setSelectedCoach(coach)}
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-medium"
+                    >
+                      View Profile
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {!isLoading && filteredCoaches.length === 0 && (
+            <div className="text-center py-12">
+              <h3 className="text-lg font-medium text-gray-400 mb-2">No coaches found</h3>
+              <p className="text-sm text-gray-500">Try selecting a different category</p>
+            </div>
+          )}
         </div>
       </section>
 
-      {/* Coach Modal */}
+      {/* Coach Input Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50">
+          <div
+            className="w-96 rounded-lg p-6 shadow-lg max-h-[80vh] overflow-y-auto"
+            style={{
+              background: 'linear-gradient(140deg, rgba(8,0,6,0.85) 15%, rgba(255,0,119,0.85))',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+            }}
+          >
+            <h2 className="text-xl font-bold mb-4 text-white text-center font-semibold">
+              {editingId ? 'Edit Coach' : 'Add Coach'}
+            </h2>
+            <label className="block mb-1 text-white font-semibold">Name</label>
+            <input
+              type="text"
+              placeholder="Enter coach name"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+              disabled={isLoading}
+            />
+            <label className="block mb-1 text-white font-semibold">Specialty</label>
+            <input
+              type="text"
+              placeholder="Enter specialty (e.g., Batting Technique)"
+              value={formData.specialty}
+              onChange={(e) => setFormData({ ...formData, specialty: e.target.value })}
+              className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+              disabled={isLoading}
+            />
+            <label className="block mb-1 text-white font-semibold">Experience</label>
+            <input
+              type="text"
+              placeholder="Enter experience (e.g., 10+ years)"
+              value={formData.experience}
+              onChange={(e) => setFormData({ ...formData, experience: e.target.value })}
+              className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+              disabled={isLoading}
+            />
+            <label className="block mb-1 text-white font-semibold">Rating (0-5)</label>
+            <input
+              type="number"
+              placeholder="Enter rating"
+              value={formData.rating}
+              onChange={(e) => setFormData({ ...formData, rating: e.target.value })}
+              className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+              min="0"
+              max="5"
+              step="0.1"
+              disabled={isLoading}
+            />
+            <label className="block mb-1 text-white font-semibold">Sessions</label>
+            <input
+              type="number"
+              placeholder="Enter number of sessions"
+              value={formData.sessions}
+              onChange={(e) => setFormData({ ...formData, sessions: e.target.value })}
+              className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+              min="0"
+              disabled={isLoading}
+            />
+            <label className="block mb-1 text-white font-semibold">Image Source</label>
+            <div className="flex gap-4 mb-3">
+              <label className="flex items-center text-white">
+                <input
+                  type="radio"
+                  name="imageSource"
+                  value="url"
+                  checked={formData.imageSource === 'url'}
+                  onChange={(e) => setFormData({ ...formData, imageSource: e.target.value, image: '', imageFile: null })}
+                  className="mr-2"
+                  disabled={isLoading}
+                />
+                URL
+              </label>
+              <label className="flex items-center text-white">
+                <input
+                  type="radio"
+                  name="imageSource"
+                  value="file"
+                  checked={formData.imageSource === 'file'}
+                  onChange={(e) => setFormData({ ...formData, imageSource: e.target.value, image: '', imageFile: null })}
+                  className="mr-2"
+                  disabled={isLoading}
+                />
+                Local File
+              </label>
+            </div>
+            {formData.imageSource === 'url' ? (
+              <>
+                <label className="block mb-1 text-white font-semibold">Image URL (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="Enter image URL"
+                  value={formData.image}
+                  onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+                  className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                  disabled={isLoading}
+                />
+              </>
+            ) : (
+              <>
+                <label className="block mb-1 text-white font-semibold">Image File (Optional)</label>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/gif"
+                  onChange={(e) => setFormData({ ...formData, imageFile: e.target.files[0] })}
+                  className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                  disabled={isLoading}
+                />
+              </>
+            )}
+            <label className="block mb-1 text-white font-semibold">Bio</label>
+            <textarea
+              placeholder="Enter coach bio"
+              value={formData.bio}
+              onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+              className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+              rows="4"
+              disabled={isLoading}
+            />
+            <label className="block mb-1 text-white font-semibold">Category</label>
+            <select
+              value={formData.category}
+              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+              className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+              disabled={isLoading}
+            >
+              <option value="">Select a category</option>
+              {categories.map(category => (
+                <option key={category} value={category}>{category.charAt(0).toUpperCase() + category.slice(1)}</option>
+              ))}
+            </select>
+            <label className="block mb-1 text-white font-semibold">Session Types</label>
+            <div className="mb-3">
+              {formData.sessionTypes.map((session, index) => (
+                <div key={index} className="flex items-center gap-2 mb-1">
+                  <span className="text-gray-300">{session.name} ({session.description}) - ₹{session.price}</span>
+                  <button
+                    onClick={() => removeSessionType(index)}
+                    className="text-red-500 hover:text-red-600"
+                    disabled={isLoading}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+              <button
+                onClick={addSessionType}
+                className="text-blue-400 hover:text-blue-500 text-sm"
+                disabled={isLoading}
+              >
+                + Add Session Type
+              </button>
+            </div>
+            <div className="flex justify-between">
+              <button
+                onClick={() => {
+                  setIsModalOpen(false);
+                  setEditingId(null);
+                  setFormData({
+                    name: '',
+                    specialty: '',
+                    experience: '',
+                    rating: '',
+                    sessions: '',
+                    image: '',
+                    bio: '',
+                    category: '',
+                    sessionTypes: [],
+                    imageSource: 'url',
+                    imageFile: null
+                  });
+                }}
+                className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded transition"
+                disabled={isLoading}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveData}
+                className="bg-pink-600 hover:bg-pink-700 text-white px-4 py-2 rounded transition"
+                disabled={isLoading}
+              >
+                {isLoading ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Coach Profile Modal */}
       {selectedCoach && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-[#0b1a3b] border border-blue-600/30 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="relative">
               <img 
-                src={selectedCoach.image} 
+                src={selectedCoach.image || 'https://via.placeholder.com/150'} 
                 alt={selectedCoach.name} 
                 className="w-full h-64 object-contain"
+                onError={(e) => { e.target.src = 'https://via.placeholder.com/150'; }}
               />
               <button 
                 onClick={() => setSelectedCoach(null)}
@@ -272,6 +568,7 @@ const PersonalCoachingPage = () => {
               <div className="mb-6">
                 <h3 className="text-xl font-semibold mb-2 text-white">About Coach</h3>
                 <p className="text-gray-300">{selectedCoach.bio}</p>
+                <p className="text-gray-400 mt-2">{selectedCoach.experience} experience</p>
               </div>
 
               <div className="grid grid-cols-2 gap-4 mb-6">
@@ -300,27 +597,15 @@ const PersonalCoachingPage = () => {
               <div className="mb-6">
                 <h3 className="text-xl font-semibold mb-4 text-white">Session Types</h3>
                 <div className="space-y-3">
-                  <div className="flex justify-between items-center p-3 border border-blue-600/30 rounded-lg bg-[#0b1a3b]/50">
-                    <div>
-                      <h4 className="font-medium text-white">1-Hour Technical Session</h4>
-                      <p className="text-sm text-gray-400">In-person or virtual</p>
+                  {selectedCoach.sessionTypes.map((session, index) => (
+                    <div key={index} className="flex justify-between items-center p-3 border border-blue-600/30 rounded-lg bg-[#0b1a3b]/50">
+                      <div>
+                        <h4 className="font-medium text-white">{session.name}</h4>
+                        <p className="text-sm text-gray-400">{session.description}</p>
+                      </div>
+                      <span className="font-bold text-white">₹{session.price}</span>
                     </div>
-                    <span className="font-bold text-white">₹1,500</span>
-                  </div>
-                  <div className="flex justify-between items-center p-3 border border-blue-600/30 rounded-lg bg-[#0b1a3b]/50">
-                    <div>
-                      <h4 className="font-medium text-white">3-Session Package</h4>
-                      <p className="text-sm text-gray-400">10% discount</p>
-                    </div>
-                    <span className="font-bold text-white">₹4,050</span>
-                  </div>
-                  <div className="flex justify-between items-center p-3 border border-blue-600/30 rounded-lg bg-[#0b1a3b]/50">
-                    <div>
-                      <h4 className="font-medium text-white">Month-Long Program</h4>
-                      <p className="text-sm text-gray-400">8 sessions + analysis</p>
-                    </div>
-                    <span className="font-bold text-white">₹10,000</span>
-                  </div>
+                  ))}
                 </div>
               </div>
 
