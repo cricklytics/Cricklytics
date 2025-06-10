@@ -1,12 +1,16 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { db } from '../../../firebase';
-import { collection, addDoc, serverTimestamp, doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { useClub } from './ClubContext';
 
-const AddDetailsModal = ({ onClose, onDetailsAdded, currentDetails, currentUserId, clubId, clubName }) => {
+const AddDetailsModal = ({ onClose, onDetailsAdded, currentDetails, currentUserId, clubId, clubName: propClubName }) => {
+  const { clubName } = useClub(); // Get clubName from ClubContext
+  const effectiveClubName = clubName || propClubName || ''; // Fallback to prop if context is empty
+
   const [details, setDetails] = useState({
-    heroTitle: currentDetails?.heroTitle || clubName || '',
+    heroTitle: currentDetails?.heroTitle || effectiveClubName || '',
     heroSubtitle: currentDetails?.heroSubtitle || '',
     storyText1: currentDetails?.storyText1 || '',
     storyText2: currentDetails?.storyText2 || '',
@@ -68,17 +72,29 @@ const AddDetailsModal = ({ onClose, onDetailsAdded, currentDetails, currentUserI
 
   const uploadImage = async (imageFile) => {
     if (!imageFile) return null;
-    
+    console.log('Uploading image:', imageFile.name); // Debug
     const storage = getStorage();
     const storageRef = ref(storage, `pageDetails/${imageFile.name}_${Date.now()}`);
     await uploadBytes(storageRef, imageFile);
-    return await getDownloadURL(storageRef);
+    const url = await getDownloadURL(storageRef);
+    console.log('Image uploaded, URL:', url); // Debug
+    return url;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
+
+    console.log('Submitting form with effectiveClubName:', effectiveClubName); // Debug
+    console.log('Current details:', currentDetails); // Debug
+    console.log('Form details:', details); // Debug
+
+    if (!effectiveClubName) {
+      setError('No club selected. Please select a club first.');
+      setLoading(false);
+      return;
+    }
 
     if (!details.heroTitle || !details.heroSubtitle || !details.storyText1 || !details.storyText2) {
       setError('Please fill in all required fields (Hero Title, Subtitle, Story Paragraphs).');
@@ -91,8 +107,8 @@ const AddDetailsModal = ({ onClose, onDetailsAdded, currentDetails, currentUserI
         ? await uploadImage(details.storyImageFile) 
         : details.storyImage;
       
-      const trophyImageUrl = details.trophyImageFile 
-        ? await uploadImage(details.trophyImageFile) 
+      const trophyImageUrl = details.trophyImageFile
+        ? await uploadImage(details.trophyImageFile)
         : details.trophyImage;
 
       const updatedTeamMembers = await Promise.all(
@@ -110,6 +126,8 @@ const AddDetailsModal = ({ onClose, onDetailsAdded, currentDetails, currentUserI
       );
 
       const detailsData = {
+        name: effectiveClubName,
+        userId: currentUserId,
         heroTitle: details.heroTitle,
         heroSubtitle: details.heroSubtitle,
         storyText1: details.storyText1,
@@ -135,22 +153,29 @@ const AddDetailsModal = ({ onClose, onDetailsAdded, currentDetails, currentUserI
         updatedBy: currentUserId,
       };
 
-      const docRef = doc(db, "aboutPage", "content");
+      console.log('Saving detailsData:', detailsData); // Debug
 
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
+      let docId;
+      if (currentDetails?.id) {
+        console.log('Updating document with ID:', currentDetails.id); // Debug
+        const docRef = doc(db, 'aboutPage', currentDetails.id);
         await updateDoc(docRef, detailsData);
+        docId = currentDetails.id;
       } else {
-        await setDoc(docRef, {
+        console.log('Creating new document in aboutPage'); // Debug
+        const docRef = await addDoc(collection(db, 'aboutPage'), {
           ...detailsData,
           createdAt: serverTimestamp(),
           createdBy: currentUserId,
         });
+        docId = docRef.id;
+        console.log('New document created with ID:', docId); // Debug
       }
 
-      onDetailsAdded(detailsData);
+      console.log('Calling onDetailsAdded with:', { ...detailsData, id: docId }); // Debug
+      onDetailsAdded({ ...detailsData, id: docId });
     } catch (err) {
-      console.error("Error saving details:", err);
+      console.error('Error saving details:', err); // Debug
       setError('Failed to save details: ' + err.message);
     } finally {
       setLoading(false);
@@ -181,6 +206,13 @@ const AddDetailsModal = ({ onClose, onDetailsAdded, currentDetails, currentUserI
           {currentDetails?.id ? 'Edit Page Details' : 'Add Page Details'}
         </h2>
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Club Name Label */}
+          <div>
+            <label className="block text-sm font-medium text-gray-300">Club Name</label>
+            <p className="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-white p-2">
+              {effectiveClubName || 'No club selected'}
+            </p>
+          </div>
           {/* Club ID */}
           <div>
             <label className="block text-sm font-medium text-gray-300">Club ID</label>
@@ -214,7 +246,6 @@ const AddDetailsModal = ({ onClose, onDetailsAdded, currentDetails, currentUserI
               required
             />
           </div>
-
           {/* Story Section */}
           <div>
             <label className="block text-sm font-medium text-gray-300">Story Paragraph 1</label>
@@ -249,7 +280,6 @@ const AddDetailsModal = ({ onClose, onDetailsAdded, currentDetails, currentUserI
               <img src={details.storyImage} alt="Story preview" className="mt-2 w-32 h-32 object-cover rounded" />
             )}
           </div>
-
           {/* Mission and Values */}
           <div>
             <label className="block text-sm font-medium text-gray-300">Mission 1 Icon (Emoji)</label>
@@ -341,7 +371,6 @@ const AddDetailsModal = ({ onClose, onDetailsAdded, currentDetails, currentUserI
               className="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-white p-2"
             />
           </div>
-
           {/* Tournament Highlights */}
           <div>
             <label className="block text-sm font-medium text-gray-300">Tournament Growth Milestones</label>
@@ -399,7 +428,6 @@ const AddDetailsModal = ({ onClose, onDetailsAdded, currentDetails, currentUserI
               <img src={details.trophyImage} alt="Trophy preview" className="mt-2 w-32 h-32 object-cover rounded" />
             )}
           </div>
-
           {/* Team Members */}
           <div>
             <label className="block text-sm font-medium text-gray-300">Add Team Member</label>
@@ -456,9 +484,7 @@ const AddDetailsModal = ({ onClose, onDetailsAdded, currentDetails, currentUserI
               </div>
             )}
           </div>
-
           {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
-
           <div className="flex justify-end gap-4 mt-6">
             <button
               type="button"

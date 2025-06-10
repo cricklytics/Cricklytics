@@ -81,6 +81,7 @@ import StartMatchPlayersRR from './pages/RoundRobin/StartMatchPlayersRR';
 import StartMatchPlayersKO from './pages/KnouckOut/StartMatchPlayersKO';
 import Selection from './components/kumar/selection';
 import Selection1 from './components/kumar/Selection1';
+import Selection2 from './components/kumar/selection2';
 import Flowchart from './components/kumar/flowchart';
 
 
@@ -255,6 +256,7 @@ function App() {
           <Route path="/StartMatchPlayersRR" element={<StartMatchPlayersRR />} />
           <Route path='/selection' element={<Selection />} />
           <Route path='/selection1' element={<Selection1 />} />
+          <Route path='/selection2' element={<Selection2 />} />
           <Route path='/flowchart' element={<Flowchart />} />
 
 

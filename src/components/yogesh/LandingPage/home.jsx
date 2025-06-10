@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { FiArrowLeft, FiMapPin, FiUsers, FiCalendar, FiStar, FiMail, FiGlobe } from 'react-icons/fi';
-import { db } from '../../../firebase';
+import { db, auth } from '../../../firebase';
 import { doc, getDoc } from 'firebase/firestore';
-import AddDetailsModal from './AddDetailsModal'; // Import AddDetailsModal
+import { onAuthStateChanged } from 'firebase/auth';
+import AddDetailsModal from './AddDetailsModal';
+import { useClub } from './ClubContext'; // Import the context hook
 
 const ClubDetail = () => {
   const { id } = useParams();
@@ -11,42 +13,65 @@ const ClubDetail = () => {
   const [club, setClub] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false); // State for modal
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [user, setUser] = useState(null);
+  const { setClubName } = useClub(); // Use context to set club name
 
   useEffect(() => {
-    const fetchClubDetails = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const clubDocRef = doc(db, 'clubs', id);
-        const docSnap = await getDoc(clubDocRef);
-
-        if (docSnap.exists()) {
-          setClub({ id: docSnap.id, ...docSnap.data() });
-        } else {
-          setError("Club not found.");
-          setClub(null);
-        }
-      } catch (err) {
-        console.error("Error fetching club details:", err);
-        setError("Failed to load club details. Please try again.");
-        setClub(null);
-      } finally {
+    // Set up authentication listener
+    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      if (currentUser) {
+        fetchClubDetails(currentUser.uid);
+      } else {
         setLoading(false);
+        setError("You must be logged in to view club details.");
+        setClub(null);
+        setClubName(''); // Clear club name if not logged in
       }
-    };
+    });
 
-    if (id) {
-      fetchClubDetails();
-    } else {
+    return () => unsubscribeAuth();
+  }, [id, setClubName]);
+
+  const fetchClubDetails = async (userId) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const clubDocRef = doc(db, 'clubs', id);
+      const docSnap = await getDoc(clubDocRef);
+
+      if (docSnap.exists()) {
+        const clubData = { id: docSnap.id, ...docSnap.data() };
+        // Check if the club's userId matches the logged-in user's userId
+        if (clubData.userId === userId) {
+          setClub(clubData);
+          setClubName(clubData.name); // Set club name in context
+        } else {
+          setError("You are not authorized to view this club.");
+          setClub(null);
+          setClubName('');
+        }
+      } else {
+        setError("Club not found.");
+        setClub(null);
+        setClubName('');
+      }
+    } catch (err) {
+      console.error("Error fetching club details:", err);
+      setError("Failed to load club details. Please try again.");
+      setClub(null);
+      setClubName('');
+    } finally {
       setLoading(false);
-      setError("No club ID provided.");
     }
-  }, [id]);
+  };
 
   const handleDetailsAdded = (detailsData) => {
-    setIsModalOpen(false); // Close modal after saving
-    // Optionally, you can update the UI or state if needed
+    setIsModalOpen(false);
+    if (user) {
+      fetchClubDetails(user.uid);
+    }
   };
 
   if (loading) {
@@ -112,7 +137,7 @@ const ClubDetail = () => {
             <div className="md:col-span-1">
               <div className="flex flex-col items-center mb-4 md:mb-6">
                 <img
-                  src={club.logo || 'https://via.placeholder.com/150'}
+                  src={club.logo || 'https://via.placeholder.com/center'}
                   alt={`${club.name} logo`}
                   className="w-32 h-32 md:w-48 md:h-48 object-cover rounded-full border-4 border-blue-100 mb-3 md:mb-4"
                 />
@@ -176,14 +201,16 @@ const ClubDetail = () => {
                   </div>
                 )}
                 {/* Add Details Button */}
-                <div className="p-3 md:p-4 bg-gray-50 rounded-lg">
-                  <button
-                    onClick={() => setIsModalOpen(true)}
-                    className="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
-                  >
-                    Add About Details
-                  </button>
-                </div>
+                {user && (
+                  <div className="p-3 md:p-4 bg-gray-50 rounded-lg">
+                    <button
+                      onClick={() => setIsModalOpen(true)}
+                      className="w-full bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
+                    >
+                      Add About Details
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -195,7 +222,7 @@ const ClubDetail = () => {
                   <p className="text-gray-700 text-sm md:text-base">{club.description}</p>
                   <div className="mt-2 text-sm md:text-base">
                     <span className="font-medium text-gray-800">Club ID: </span>
-                    <span className="text-gray-500">{club.clubId}</span>
+                    <span className="text-gray-500">{club.tournamentId}</span>
                   </div>
                 </div>
               )}
@@ -238,7 +265,7 @@ const ClubDetail = () => {
                     {club.achievements.map((achievement, index) => (
                       <li key={index} className="flex items-center text-sm md:text-base">
                         <FiStar className="text-yellow-500 mt-1 mr-2 flex-shrink-0" />
-                        <span className='text-gray-500'>{achievement}</span>
+                        <span className="text-gray-500">{achievement}</span>
                       </li>
                     ))}
                   </ul>
@@ -250,13 +277,13 @@ const ClubDetail = () => {
       </main>
 
       {/* Add Details Modal */}
-      {isModalOpen && (
+      {isModalOpen && user && (
         <AddDetailsModal
           onClose={() => setIsModalOpen(false)}
           onDetailsAdded={handleDetailsAdded}
-          currentDetails={null} // Pass null or existing details if needed
-          currentUserId={club.userId || ''} // Assuming userId is stored in club
-          clubId={club.clubId}
+          currentDetails={null}
+          currentUserId={user.uid}
+          clubId={club.tournamentId}
           clubName={club.name}
         />
       )}

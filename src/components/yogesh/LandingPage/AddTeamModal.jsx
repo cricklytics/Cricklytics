@@ -1,8 +1,8 @@
-// src/LandingPage/AddTeamModal.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { db } from '../../../firebase'; // Adjust path as per your firebase.js location
-import { collection, addDoc } from 'firebase/firestore';
+import { db, auth } from '../../../firebase';
+import { collection, addDoc, query, where, onSnapshot } from 'firebase/firestore';
+import { onAuthStateChanged } from 'firebase/auth';
 
 const AddTeamModal = ({ onClose, onTeamAdded }) => {
   const [teamName, setTeamName] = useState('');
@@ -12,25 +12,73 @@ const AddTeamModal = ({ onClose, onTeamAdded }) => {
   const [losses, setLosses] = useState(0);
   const [points, setPoints] = useState(0);
   const [lastMatchResult, setLastMatchResult] = useState('');
-  const [players, setPlayers] = useState([{ name: '', role: '', runs: 0, wickets: 0 }]);
+  const [tournaments, setTournaments] = useState([]);
+  const [selectedTournamentId, setSelectedTournamentId] = useState('');
+  const [currentUserId, setCurrentUserId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [tournamentsLoading, setTournamentsLoading] = useState(true);
+  const [tournamentsError, setTournamentsError] = useState(null);
 
-  const handleAddPlayer = () => {
-    setPlayers([...players, { name: '', role: '', runs: 0, wickets: 0 }]);
-  };
+  // Fetch current user ID
+  useEffect(() => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setCurrentUserId(user.uid);
+      } else {
+        setCurrentUserId(null);
+        setTournaments([]);
+        setTournamentsError('You must be logged in to add a team.');
+      }
+      setAuthLoading(false);
+    });
 
-  const handlePlayerChange = (index, field, value) => {
-    const newPlayers = [...players];
-    newPlayers[index][field] = value;
-    setPlayers(newPlayers);
-  };
+    return () => unsubscribeAuth();
+  }, []);
 
-  const handleRemovePlayer = (index) => {
-    const newPlayers = players.filter((_, i) => i !== index);
-    setPlayers(newPlayers);
-  };
+  // Fetch tournaments for the current user
+  useEffect(() => {
+    if (!currentUserId) {
+      setTournamentsLoading(false);
+      setTournaments([]);
+      return;
+    }
+
+    setTournamentsLoading(true);
+    setTournamentsError(null);
+
+    const q = query(
+      collection(db, 'tournaments'),
+      where('userId', '==', currentUserId)
+    );
+
+    const unsubscribeSnapshot = onSnapshot(q, (querySnapshot) => {
+      if (!querySnapshot.empty) {
+        const fetchedTournaments = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          name: doc.data().name
+        }));
+        setTournaments(fetchedTournaments);
+        // Set the first tournament as default if none selected
+        if (fetchedTournaments.length > 0 && !selectedTournamentId) {
+          setSelectedTournamentId(fetchedTournaments[0].id);
+        }
+      } else {
+        setTournaments([]);
+        setSelectedTournamentId('');
+        setTournamentsError('No tournaments found. Please create a tournament first.');
+      }
+      setTournamentsLoading(false);
+    }, (err) => {
+      console.error('Error fetching tournaments:', err);
+      setTournamentsError('Failed to load tournaments: ' + err.message);
+      setTournamentsLoading(false);
+    });
+
+    return () => unsubscribeSnapshot();
+  }, [currentUserId]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -38,34 +86,39 @@ const AddTeamModal = ({ onClose, onTeamAdded }) => {
     setError(null);
     setSuccess(false);
 
-    // Basic validation
-    if (!teamName || !captainName) {
-      setError('Team Name and Captain are required.');
+    // Validation
+    if (!teamName || !captainName || !selectedTournamentId) {
+      setError('Team Name, Captain, and Tournament are required.');
       setLoading(false);
       return;
     }
 
     try {
+      // Find the selected tournament to get its name
+      const selectedTournament = tournaments.find(t => t.id === selectedTournamentId);
+      if (!selectedTournament) {
+        setError('Selected tournament not found.');
+        setLoading(false);
+        return;
+      }
+
       const newTeam = {
-        name: teamName,
+        teamName: teamName,
         captain: captainName,
         matches: parseInt(matchesPlayed),
         wins: parseInt(wins),
         losses: parseInt(losses),
         points: parseInt(points),
         lastMatch: lastMatchResult,
-        players: players.map(player => ({
-          name: player.name,
-          role: player.role,
-          runs: parseInt(player.runs),
-          wickets: parseInt(player.wickets),
-        })),
-        createdAt: new Date(), // Add a timestamp
+        tournamentId: selectedTournamentId,
+        tournamentName: selectedTournament.name, // Add tournamentName to the team data
+        createdBy: currentUserId,
+        createdAt: new Date(),
       };
 
       await addDoc(collection(db, 'clubTeams'), newTeam);
       setSuccess(true);
-      // Clear form after successful submission
+      // Clear form
       setTeamName('');
       setCaptainName('');
       setMatchesPlayed(0);
@@ -73,17 +126,30 @@ const AddTeamModal = ({ onClose, onTeamAdded }) => {
       setLosses(0);
       setPoints(0);
       setLastMatchResult('');
-      setPlayers([{ name: '', role: '', runs: 0, wickets: 0 }]);
-      
-      onTeamAdded(); // Notify parent component that a team was added
-      setTimeout(onClose, 1500); // Close after a short delay to show success
+      setSelectedTournamentId(tournaments.length > 0 ? tournaments[0].id : '');
+
+      onTeamAdded();
+      setTimeout(onClose, 1500);
     } catch (err) {
-      console.error("Error adding team: ", err);
-      setError("Failed to add team: " + err.message);
+      console.error('Error adding team:', err);
+      setError('Failed to add team: ' + err.message);
     } finally {
       setLoading(false);
     }
   };
+
+  if (authLoading || tournamentsLoading) {
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+      >
+        <div className="text-white text-lg">Loading...</div>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div
@@ -96,7 +162,7 @@ const AddTeamModal = ({ onClose, onTeamAdded }) => {
         initial={{ y: -50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: -50, opacity: 0 }}
-        className="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-2xl border border-gray-700 max-h-[90vh] overflow-y-auto"
+        className="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-md border border-gray-700 max-h-[90vh] overflow-y-auto"
       >
         <h2 className="text-2xl font-bold text-white mb-4 border-b border-gray-700 pb-2">Add New Team</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -121,6 +187,28 @@ const AddTeamModal = ({ onClose, onTeamAdded }) => {
               onChange={(e) => setCaptainName(e.target.value)}
               required
             />
+          </div>
+          <div>
+            <label htmlFor="tournament" className="block text-sm font-medium text-gray-300">Tournament</label>
+            <select
+              id="tournament"
+              className="mt-1 block w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-md text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500"
+              value={selectedTournamentId}
+              onChange={(e) => setSelectedTournamentId(e.target.value)}
+              required
+              disabled={tournaments.length === 0}
+            >
+              {tournaments.length === 0 ? (
+                <option value="">No tournaments available</option>
+              ) : (
+                tournaments.map(tournament => (
+                  <option key={tournament.id} value={tournament.id}>
+                    {tournament.name}
+                  </option>
+                ))
+              )}
+            </select>
+            {tournamentsError && <p className="text-red-500 text-xs mt-1">{tournamentsError}</p>}
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -179,82 +267,6 @@ const AddTeamModal = ({ onClose, onTeamAdded }) => {
             />
           </div>
 
-          <h3 className="text-lg font-bold text-gray-200 mt-6 mb-2">Players</h3>
-          {players.map((player, index) => (
-            <div key={index} className="grid grid-cols-1 md:grid-cols-5 gap-2 bg-gray-700 p-3 rounded-md border border-gray-600">
-              <div className="col-span-2">
-                <label htmlFor={`playerName-${index}`} className="block text-xs font-medium text-gray-400">Name</label>
-                <input
-                  type="text"
-                  id={`playerName-${index}`}
-                  className="mt-1 block w-full px-2 py-1 bg-gray-900 border border-gray-600 rounded-md text-white text-sm"
-                  value={player.name}
-                  onChange={(e) => handlePlayerChange(index, 'name', e.target.value)}
-                  required
-                />
-              </div>
-              <div>
-                <label htmlFor={`playerRole-${index}`} className="block text-xs font-medium text-gray-400">Role</label>
-                <select
-                  id={`playerRole-${index}`}
-                  className="mt-1 block w-full px-2 py-1 bg-gray-900 border border-gray-600 rounded-md text-white text-sm"
-                  value={player.role}
-                  onChange={(e) => handlePlayerChange(index, 'role', e.target.value)}
-                  required
-                >
-                  <option value="">Select Role</option>
-                  <option value="Batsman">Batsman</option>
-                  <option value="Bowler">Bowler</option>
-                  <option value="All-rounder">All-rounder</option>
-                  <option value="Wicketkeeper">Wicketkeeper</option>
-                </select>
-              </div>
-              <div>
-                <label htmlFor={`playerRuns-${index}`} className="block text-xs font-medium text-gray-400">Runs</label>
-                <input
-                  type="number"
-                  id={`playerRuns-${index}`}
-                  className="mt-1 block w-full px-2 py-1 bg-gray-900 border border-gray-600 rounded-md text-white text-sm"
-                  value={player.runs}
-                  onChange={(e) => handlePlayerChange(index, 'runs', e.target.value)}
-                  min="0"
-                />
-              </div>
-              <div className="flex items-end justify-between">
-                <div>
-                  <label htmlFor={`playerWickets-${index}`} className="block text-xs font-medium text-gray-400">Wickets</label>
-                  <input
-                    type="number"
-                    id={`playerWickets-${index}`}
-                    className="mt-1 block w-full px-2 py-1 bg-gray-900 border border-gray-600 rounded-md text-white text-sm"
-                    value={player.wickets}
-                    onChange={(e) => handlePlayerChange(index, 'wickets', e.target.value)}
-                    min="0"
-                  />
-                </div>
-                {players.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => handleRemovePlayer(index)}
-                    className="p-1 text-red-400 hover:text-red-600 transition"
-                    title="Remove player"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm6 0a1 1 0 11-2 0v6a1 1 0 112 0V8z" clipRule="evenodd" />
-                    </svg>
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
-          <button
-            type="button"
-            onClick={handleAddPlayer}
-            className="w-full py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-          >
-            Add Another Player
-          </button>
-
           {error && <p className="text-red-500 text-sm mt-2">{error}</p>}
           {success && <p className="text-green-500 text-sm mt-2">Team added successfully!</p>}
 
@@ -270,7 +282,7 @@ const AddTeamModal = ({ onClose, onTeamAdded }) => {
             <button
               type="submit"
               className="px-5 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={loading}
+              disabled={loading || tournaments.length === 0}
             >
               {loading ? 'Adding Team...' : 'Add Team'}
             </button>

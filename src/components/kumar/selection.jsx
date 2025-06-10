@@ -41,8 +41,15 @@ const Selection = () => {
   const [tournamentWinner, setTournamentWinner] = useState(null);
   const [groupStageResults, setGroupStageResults] = useState({});
   const [groups, setGroups] = useState([]);
-  const [teamStats, setTeamStats] = useState({}); // Tracks wins, losses, points
+  const [teamStats, setTeamStats] = useState({});
   const [roundWinners, setRoundWinners] = useState({});
+
+  // Automatically select Knockout format on component mount
+  useEffect(() => {
+    if (teams.length >= 2 && !format) {
+      handleFormatSelection('knockout');
+    }
+  }, [teams, format]);
 
   useEffect(() => {
     console.log('useEffect: location.state', location.state);
@@ -134,25 +141,20 @@ const Selection = () => {
       const n = teams.length;
       let groupConfig, superStage, totalRounds;
 
-      // Determine group structure based on team count
       if (n >= 15) {
-        // 3 groups of 5 for Super Eight or Super Ten
         groupConfig = divideIntoGroups(shuffled, 5);
-        totalRounds = 5 % 2 === 0 ? 5 - 1 : 5; // 4 rounds for 5 teams
+        totalRounds = 5 % 2 === 0 ? 5 - 1 : 5;
         superStage = n >= 15 ? 'Super Eight' : 'Super Ten';
       } else if (n >= 11) {
-        // 2 groups of ~6 for Super Six
         const groupSize = Math.ceil(n / 2);
         groupConfig = divideIntoGroups(shuffled, groupSize);
         totalRounds = groupSize % 2 === 0 ? groupSize - 1 : groupSize;
         superStage = 'Super Six';
       } else if (n >= 9) {
-        // Single group or pre-quarter for playoffs
         groupConfig = [{ id: 'Group 1', teams: shuffled }];
         totalRounds = n % 2 === 0 ? n - 1 : n;
         superStage = 'Playoffs';
       } else {
-        // Single group, direct to Super Four or Super Three
         groupConfig = [{ id: 'Group 1', teams: shuffled }];
         totalRounds = n % 2 === 0 ? n - 1 : n;
         superStage = n <= 12 ? 'Super Four' : 'Super Three';
@@ -160,7 +162,6 @@ const Selection = () => {
 
       setGroups(groupConfig);
 
-      // Generate League Stage matches
       groupConfig.forEach((group, groupIndex) => {
         let teamList = [...group.teams];
         if (teamList.length % 2 !== 0) {
@@ -194,12 +195,10 @@ const Selection = () => {
             stage: 'League Stage',
             groupId: group.id
           });
-          // Rotate teams for next round
           teamList = [teamList[0], teamList[teamList.length - 1], ...teamList.slice(1, -1)];
         }
       });
 
-      // Initialize playoff placeholders
       const playoffMatches = [
         { id: 'qualifier1', round: totalRounds, team1: null, team2: null, winner: null, stage: 'Qualifier 1' },
         { id: 'eliminator', round: totalRounds, team1: null, team2: null, winner: null, stage: 'Eliminator' },
@@ -214,7 +213,6 @@ const Selection = () => {
         { name: 'Final', matches: ['final'], roundNumber: totalRounds + 2, stage: 'Final' }
       );
 
-      // Initialize pre-quarter for 9 teams
       if (n === 9) {
         const preQuarterMatch = {
           id: 'pqf-0',
@@ -241,7 +239,6 @@ const Selection = () => {
       setTournamentWinner(null);
       setRoundWinners({});
     } else {
-      // Knockout (unchanged)
       let currentTeams = [...shuffled];
       let roundNumber = 0;
       while (currentTeams.length >= 2) {
@@ -409,12 +406,12 @@ const Selection = () => {
         teamList = [teamList[0], teamList[teamList.length - 1], ...teamList.slice(1, -1)];
       }
     } else if (stage === 'Super Four') {
-      totalRounds = 3; // Mini-league, each team plays 3 matches
+      totalRounds = 3;
       const teamList = [...teams];
       const matchups = [
-        [0, 1], [2, 3], // Round 1: 1 vs 2, 3 vs 4
-        [0, 2], [1, 3], // Round 2: 1 vs 3, 2 vs 4
-        [0, 3], [1, 2]  // Round 3: 1 vs 4, 2 vs 3
+        [0, 1], [2, 3],
+        [0, 2], [1, 3],
+        [0, 3], [1, 2]
       ];
 
       matchups.forEach((roundMatches, round) => {
@@ -451,7 +448,6 @@ const Selection = () => {
       });
     }
 
-    // Add playoff matches
     const playoffMatches = [
       { id: 'qualifier1', round: prevRoundNumber + totalRounds + 1, team1: null, team2: null, winner: null, stage: 'Qualifier 1' },
       { id: 'eliminator', round: prevRoundNumber + totalRounds + 1, team1: null, team2: null, winner: null, stage: 'Eliminator' },
@@ -544,25 +540,21 @@ const Selection = () => {
           const n = teams.length;
 
           if (n >= 15) {
-            // Super Eight: Top 2 per group (6) + best 2 third-place
             const groupRankings = groups.map(g => rankTeams(teamStats, g.id));
             advancingTeams = groupRankings.flatMap(g => g.slice(0, 2));
             const thirdPlaceTeams = getBestThirdPlaceTeams(rankedTeams, groups, 2);
             advancingTeams = [...advancingTeams, ...thirdPlaceTeams];
             initializeSuperStage(advancingTeams, 'Super Eight', rounds.filter(r => r.stage === 'League Stage').length);
           } else if (n >= 11) {
-            // Super Six: Top 6 teams
             advancingTeams = rankedTeams.slice(0, 6);
             initializeSuperStage(advancingTeams, 'Super Six', rounds.filter(r => r.stage === 'League Stage').length);
           } else if (n === 9) {
-            // Pre-Quarter Finals completed, advance top 8 to playoffs
             if (updatedMatches.some(m => m.id === 'pqf-0' && m.winner)) {
               const preQuarterWinner = updatedMatches.find(m => m.id === 'pqf-0').winner;
               advancingTeams = rankedTeams.slice(0, 7).concat(teams.find(t => t.name === preQuarterWinner));
               initializePlayoffs(advancingTeams.slice(0, 4), rounds.filter(r => r.stage === 'Pre-Quarter Finals').length);
             }
           } else if (n <= 12) {
-            // Super Four or Super Three
             advancingTeams = rankedTeams.slice(0, n <= 12 ? 4 : 3);
             initializeSuperStage(advancingTeams, n <= 12 ? 'Super Four' : 'Super Three', rounds.filter(r => r.stage === 'League Stage').length);
           }
@@ -615,7 +607,6 @@ const Selection = () => {
             setCurrentGroupRound(rounds.find(r => r.stage === 'Qualifier 2').roundNumber);
           }
         } else if (currentStage === 'Eliminator') {
-          // Wait for Qualifier 1
         } else if (currentStage === 'Qualifier 2') {
           const q2Match = updatedMatches.find(m => m.id === 'qualifier2');
           if (q2Match.winner) {
@@ -641,7 +632,6 @@ const Selection = () => {
         }
       }
     } else {
-      // Knockout (unchanged)
       const currentRoundIndex = rounds.findIndex(r => r.stage === currentStage);
       const currentRoundMatches = updatedMatches.filter(m => m.stage === currentStage);
       const allCompleted = currentRoundMatches.every(m => m.winner !== null || m.team1?.isBye || m.team2?.isBye);
@@ -1083,14 +1073,14 @@ const Selection = () => {
               Select Tournament Format
             </h2>
             <div className="flex justify-center space-x-4">
-              <button
+              {/* <button
                 onClick={() => handleFormatSelection('roundRobin')}
                 className={`px-6 py-3 rounded-lg text-white ${
                   format === 'roundRobin' ? 'bg-blue-700' : 'bg-blue-600 hover:bg-blue-700'
                 }`}
               >
                 Round Robin
-              </button>
+              </button> */}
               <button
                 onClick={() => handleFormatSelection('knockout')}
                 className={`px-6 py-3 rounded-lg text-white ${
@@ -1101,12 +1091,6 @@ const Selection = () => {
               </button>
             </div>
           </div>
-
-          {!format && (
-            <div className="text-center text-gray-600">
-              Please select a tournament format.
-            </div>
-          )}
 
           {format && (
             <>

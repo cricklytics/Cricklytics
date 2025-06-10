@@ -764,7 +764,7 @@ const TournamentBracket = () => {
                     {match.team1?.name || 'TBD'}
                   </span>
                   <span className="mx-2 text-purple-400">vs</span>
-                  <span className={match.winner === mock.test2?.id ? 'text-green-400 font-bold' : 'text-gray-300'}>
+                  <span className={match.winner === match.team2?.id ? 'text-green-400 font-bold' : 'text-gray-300'}>
                     {match.team2?.name || 'TBD'}
                   </span>
                 </div>
@@ -859,24 +859,24 @@ const TournamentBracket = () => {
           <div className="text-center">
             <h1 className="text-4xl font-bold mb-8 text-purple-400">Select Tournament Format</h1>
             <div className="flex justify-center gap-6">
-              <button
+              {/* <button
                 onClick={() => initializeTournament('roundRobin')}
                 className="px-8 py-4 bg-purple-600 hover:bg-purple-700 rounded-xl text-xl transform transition-all duration-300 hover:scale-110"
               >
                 Round Robin League
-              </button>
+              </button> */}
               <button
                 onClick={() => initializeTournament('knockout')}
                 className="px-8 py-4 bg-purple-600 hover:bg-purple-700 rounded-xl text-xl transform transition-all duration-300 hover:scale-110"
               >
                 Knockout Bracket
               </button>
-              <button
+              {/* <button
                 onClick={() => initializeTournament('test')}
                 className="px-8 py-4 bg-purple-600 hover:bg-purple-700 rounded-xl text-xl transform transition-all duration-300 hover:scale-110"
               >
                 Test Series
-              </button>
+              </button> */}
             </div>
           </div>
         ) : (

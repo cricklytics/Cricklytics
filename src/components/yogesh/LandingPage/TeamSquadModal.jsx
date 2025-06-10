@@ -46,7 +46,7 @@ const TeamSquadModal = ({ team, onClose }) => {
                   />
                   <div>
                     <h3 className="text-lg font-semibold text-white">{player.name}</h3>
-                    <p className="text-gray-300 text-sm">Role: {player.role || 'N/A'}</p>
+                    <p className="text-gray-300 text-sm">Role1: {player.role || 'N/A'}</p>
                     {player.runs > 0 && (
                       <p className="text-purple-300 text-xs">Runs: {player.runs}</p>
                     )}

@@ -1,10 +1,9 @@
-// src/pages/Matches.jsx (updated)
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import RoleSelectionModal from '../LandingPage/RoleSelectionModal';
-import AddMatchModal from '../LandingPage/AddMatchModal'; // New component for adding matches
+import AddMatchModal from '../LandingPage/AddMatchModal';
 import { db, auth } from '../../../firebase';
-import { collection, query, getDocs, onSnapshot } from 'firebase/firestore';
+import { collection, query, onSnapshot, where } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 
 const Matches = () => {
@@ -21,12 +20,12 @@ const Matches = () => {
   const [currentUserId, setCurrentUserId] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
 
-  const [activeFilter, setActiveFilter] = useState('all'); // <-- THIS IS KEY
+  const [activeFilter, setActiveFilter] = useState('all');
 
-
-  const [tournamentsFromDb, setTournamentsFromDb] = useState([]); // Stores tournament data from Firestore
-  const [selectedTournamentId, setSelectedTournamentId] = useState(null); // The ID of the currently displayed tournament
-  const [matchesData, setMatchesData] = useState([]); // Stores matches for the selected tournament
+  const [tournamentsFromDb, setTournamentsFromDb] = useState([]);
+  const [selectedTournamentId, setSelectedTournamentId] = useState(null);
+  const [selectedTournamentName, setSelectedTournamentName] = useState('');
+  const [matchesData, setMatchesData] = useState([]);
   const [loadingMatches, setLoadingMatches] = useState(true);
   const [matchesError, setMatchesError] = useState(null);
 
@@ -44,6 +43,9 @@ const Matches = () => {
         setCurrentUserId(user.uid);
       } else {
         setCurrentUserId(null);
+        setTournamentsFromDb([]);
+        setMatchesData([]);
+        setMatchesError('Please log in to view matches.');
       }
       setAuthLoading(false);
     });
@@ -51,31 +53,43 @@ const Matches = () => {
     return () => unsubscribeAuth();
   }, []);
 
-  // Effect to fetch all tournaments from DB to populate dropdown
+  // Effect to fetch tournaments from DB for the current user
   useEffect(() => {
-    const fetchTournaments = async () => {
-      try {
-        const q = query(collection(db, "tournaments"));
-        const querySnapshot = await getDocs(q);
-        const fetchedTournaments = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          name: doc.data().name // Assuming 'name' is the field for tournament name
-        }));
-        setTournamentsFromDb(fetchedTournaments);
-        // Automatically select the first tournament if available
-        if (fetchedTournaments.length > 0) {
-          setSelectedTournamentId(fetchedTournaments[0].id);
-        }
-      } catch (err) {
-        console.error("Error fetching tournaments for dropdown:", err);
-      }
-    };
-    fetchTournaments();
-  }, []);
+    if (!currentUserId) {
+      setTournamentsFromDb([]);
+      return;
+    }
 
-  // Effect to fetch matches for the selected tournament (real-time listener)
+    const q = query(
+      collection(db, 'tournaments'),
+      where('userId', '==', currentUserId)
+    );
+
+    const unsubscribeSnapshot = onSnapshot(q, (querySnapshot) => {
+      const fetchedTournaments = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        name: doc.data().name
+      }));
+      setTournamentsFromDb(fetchedTournaments);
+      // Automatically select the first tournament if available
+      if (fetchedTournaments.length > 0 && !selectedTournamentId) {
+        setSelectedTournamentId(fetchedTournaments[0].id);
+        setSelectedTournamentName(fetchedTournaments[0].name);
+      } else if (fetchedTournaments.length === 0) {
+        setSelectedTournamentId(null);
+        setSelectedTournamentName('');
+      }
+    }, (err) => {
+      console.error("Error fetching tournaments for dropdown:", err);
+      setTournamentsFromDb([]);
+    });
+
+    return () => unsubscribeSnapshot();
+  }, [currentUserId, selectedTournamentId]);
+
+  // Effect to fetch matches for the selected tournament
   useEffect(() => {
-    if (!selectedTournamentId) {
+    if (!currentUserId || !selectedTournamentName) {
       setMatchesData([]);
       setLoadingMatches(false);
       return;
@@ -84,15 +98,17 @@ const Matches = () => {
     setLoadingMatches(true);
     setMatchesError(null);
 
-    // Query matches where 'tournamentId' field matches selectedTournamentId
-    const q = query(collection(db, "tournamentMatches"));
+    const q = query(
+      collection(db, 'tournamentMatches'),
+      where('tournamentName', '==', selectedTournamentName),
+      where('createdBy', '==', currentUserId)
+    );
+
     const unsubscribeSnapshot = onSnapshot(q, (querySnapshot) => {
-      const fetchedMatches = querySnapshot.docs
-        .filter(doc => doc.data().tournamentId === selectedTournamentId) // Filter by tournamentId
-        .map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+      const fetchedMatches = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
       setMatchesData(fetchedMatches);
       setLoadingMatches(false);
     }, (err) => {
@@ -101,24 +117,31 @@ const Matches = () => {
       setLoadingMatches(false);
     });
 
-    return () => unsubscribeSnapshot(); // Clean up snapshot listener
-  }, [selectedTournamentId]); // Re-run when selectedTournamentId changes
+    return () => unsubscribeSnapshot();
+  }, [currentUserId, selectedTournamentName]);
 
-  // Filter tabs (keeping the same structure, but actual filtering will happen on fetched data)
+  // Handle tournament selection change
+  const handleTournamentChange = (e) => {
+    const tournamentId = e.target.value;
+    setSelectedTournamentId(tournamentId);
+    const selectedTournament = tournamentsFromDb.find(t => t.id === tournamentId);
+    setSelectedTournamentName(selectedTournament ? selectedTournament.name : '');
+  };
+
+  // Filter tabs
   const filterTabs = [
-    { id: 'all', label: 'ALL' }, // Added 'all' filter for now
+    { id: 'all', label: 'ALL' },
     { id: 'live', label: 'LIVE' },
     { id: 'upcoming', label: 'UPCOMING' },
     { id: 'past', label: 'PAST' },
   ];
 
-  // Function to filter matches based on activeFilter (adjust as needed for real-time status)
+  // Function to filter matches based on activeFilter
   const filteredMatches = matchesData.filter(match => {
     if (activeFilter === 'all') {
       return true;
     }
-    // Assuming 'status' field exists in your match data for live, upcoming, past
-    return match.status.toLowerCase() === activeFilter;
+    return match.status && match.status.toLowerCase() === activeFilter;
   });
 
   if (authLoading) {
@@ -129,7 +152,6 @@ const Matches = () => {
     );
   }
 
-  // If admin is not logged in, show a message for admin-only features
   if (!currentUserId && userRole === 'admin') {
     return (
       <div className="bg-gray-900 min-h-screen flex items-center justify-center text-white text-xl">
@@ -137,8 +159,6 @@ const Matches = () => {
       </div>
     );
   }
-
-  const selectedTournamentName = tournamentsFromDb.find(t => t.id === selectedTournamentId)?.name || "Select a Tournament";
 
   return (
     <div className="bg-gray-900 p-4 min-h-screen text-gray-100">
@@ -155,7 +175,7 @@ const Matches = () => {
         )}
       </AnimatePresence>
 
-      {userRole && ( // Only render content if a role is selected
+      {userRole && (
         <>
           {/* Tournament Selection and Add Match Button */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 bg-gray-800 p-4 rounded-lg border border-gray-700">
@@ -165,9 +185,10 @@ const Matches = () => {
                 <select
                   id="tournament-select"
                   value={selectedTournamentId || ''}
-                  onChange={(e) => setSelectedTournamentId(e.target.value)}
+                  onChange={handleTournamentChange}
                   className="bg-gray-700 border border-gray-600 text-gray-100 rounded-md py-2 px-3 focus:outline-none focus:ring-2 focus:ring-purple-500 transition-colors"
                 >
+                  <option value="" disabled>Select a Tournament</option>
                   {tournamentsFromDb.map(tournament => (
                     <option key={tournament.id} value={tournament.id}>
                       {tournament.name}
@@ -179,7 +200,7 @@ const Matches = () => {
               <p className="text-gray-400">No tournaments available. Add one from the Tournament page.</p>
             )}
 
-            {userRole === 'admin' && currentUserId && (
+            {userRole === 'admin' && currentUserId && selectedTournamentId && (
               <button
                 onClick={() => setShowAddMatchModal(true)}
                 className="mt-4 sm:mt-0 px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors self-start sm:self-center"
@@ -206,9 +227,9 @@ const Matches = () => {
             ))}
           </div>
 
-          {/* Tournaments List - Now displays selected tournament name */}
+          {/* Matches List */}
           <div className="space-y-4">
-            <h1 className="text-2xl font-bold text-purple-400 mb-4">{selectedTournamentName} Matches</h1>
+            <h1 className="text-2xl font-bold text-purple-400 mb-4">{selectedTournamentName || 'Select a Tournament'} Matches</h1>
 
             {loadingMatches ? (
               <div className="text-center text-gray-400 text-xl py-8">Loading matches...</div>
@@ -219,7 +240,7 @@ const Matches = () => {
                 <div key={match.id} className="bg-gray-800 rounded-lg shadow-lg overflow-hidden border border-gray-700 hover:border-purple-500 transition-colors">
                   <div className="p-4 border-b border-gray-700">
                     <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-                      <h2 className="text-lg font-bold text-purple-400">{selectedTournamentName}</h2> {/* Assuming match.name is tournament name for each match */}
+                      <h2 className="text-lg font-bold text-purple-400">{selectedTournamentName}</h2>
                       <span className="text-sm text-gray-400">
                         {match.location}, {match.date}, {match.overs}, {match.status}
                       </span>
@@ -259,10 +280,9 @@ const Matches = () => {
           onClose={() => setShowAddMatchModal(false)}
           onMatchAdded={() => {
             setShowAddMatchModal(false);
-            // Optionally, refresh matches data here if not using real-time listener effectively
           }}
-          tournamentId={selectedTournamentId} // Pass the ID of the currently selected tournament
-          tournamentName={selectedTournamentName} // Pass the name of the currently selected tournament
+          tournamentId={selectedTournamentId}
+          tournamentName={selectedTournamentName}
           currentUserId={currentUserId}
         />
       )}

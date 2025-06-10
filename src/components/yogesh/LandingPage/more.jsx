@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { db, auth } from '../../../firebase';
-import { doc, getDoc, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import AddDetailsModal from './AddDetailsModal';
+import { useClub } from './ClubContext';
 
 const More = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -32,6 +33,13 @@ const More = () => {
     trophyImage: '',
     teamMembers: [],
   });
+  const [noDetailsFound, setNoDetailsFound] = useState(false);
+  const { clubName } = useClub();
+
+  // Log clubName to verify it's passed
+  useEffect(() => {
+    console.log('Club Name in More.jsx:', clubName);
+  }, [clubName]);
 
   // Effect to listen for auth state changes
   useEffect(() => {
@@ -40,6 +48,8 @@ const More = () => {
         setCurrentUserId(user.uid);
       } else {
         setCurrentUserId(null);
+        setNoDetailsFound(true);
+        setLoadingDetails(false);
       }
       setAuthLoading(false);
     });
@@ -49,14 +59,26 @@ const More = () => {
 
   // Effect to fetch details from Firestore
   useEffect(() => {
-    if (authLoading) return;
+    if (authLoading || !currentUserId || !clubName) {
+      setLoadingDetails(false);
+      setNoDetailsFound(true);
+      return;
+    }
 
     setLoadingDetails(true);
-    
-    const docRef = doc(db, "aboutPage", "content");
-    const unsubscribe = onSnapshot(docRef, (docSnap) => {
-      if (docSnap.exists()) {
+    setNoDetailsFound(false);
+
+    const q = query(
+      collection(db, 'aboutPage'),
+      where('name', '==', clubName),
+      where('userId', '==', currentUserId)
+    );
+
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      if (!querySnapshot.empty) {
+        const docSnap = querySnapshot.docs[0]; // Assume one document per club per user
         const data = docSnap.data();
+        console.log('Fetched aboutPage data:', data); // Debug log
         setDetails({
           id: docSnap.id,
           heroTitle: data.heroTitle || '',
@@ -80,18 +102,46 @@ const More = () => {
           trophyImage: data.trophyImage || '',
           teamMembers: data.teamMembers || [],
         });
+      } else {
+        console.log('No matching aboutPage document found for clubName:', clubName);
+        setNoDetailsFound(true);
+        setDetails({ // Reset to default
+          id: '',
+          heroTitle: '',
+          heroSubtitle: '',
+          storyText1: '',
+          storyText2: '',
+          storyImage: '',
+          missionValue1: '',
+          missionValue2: '',
+          missionValue3: '',
+          missionIcon1: '🏆',
+          missionIcon2: '🤝',
+          missionIcon3: '🌱',
+          missionTitle1: 'Promoting Sportsmanship',
+          missionTitle2: 'Corporate Networking',
+          missionTitle3: 'Community Development',
+          tournamentGrowth: [],
+          matchesPlayed: '',
+          corporatePlayers: '',
+          seasonsCompleted: '',
+          trophyImage: '',
+          teamMembers: [],
+        });
       }
       setLoadingDetails(false);
     }, (error) => {
       console.error("Error fetching about page details:", error);
+      setNoDetailsFound(true);
       setLoadingDetails(false);
     });
 
     return () => unsubscribe();
-  }, [authLoading]);
+  }, [authLoading, currentUserId, clubName]);
 
   const handleDetailsAdded = (newDetails) => {
-    setDetails({ ...newDetails, id: 'content' });
+    setDetails({ ...newDetails, id: newDetails.id || 'content' });
+    setNoDetailsFound(false);
     setIsModalOpen(false);
   };
 
@@ -103,14 +153,30 @@ const More = () => {
     );
   }
 
+  if (!currentUserId) {
+    return (
+      <div className="bg-gray-900 min-h-screen flex items-center justify-center text-white text-xl">
+        Please log in to view about page details.
+      </div>
+    );
+  }
+
+  if (!clubName) {
+    return (
+      <div className="bg-gray-900 min-h-screen flex items-center justify-center text-white text-xl">
+        No club selected. Please view a club first.
+      </div>
+    );
+  }
+
   return (
     <div className="bg-gray-900 min-h-screen">
       {/* Hero Section */}
       <div className="relative bg-gray-800 text-white">
         <div className="absolute inset-0 bg-black opacity-70"></div>
-        <div className="relative max-w-7xl mx-auto py-24 px-4 sm:px-6 lg:px-8 text-center">
+        <div className="relative max-w-7xl mx-auto py-24 px-4 sm:px-6 lg py-4 text-center">
           <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl">
-            {details.heroTitle || 'About Jaipur Corporate Cricket'}
+            {details.heroTitle || `About ${clubName}`}
           </h1>
           <p className="mt-6 text-xl max-w-3xl mx-auto text-gray-300">
             {details.heroSubtitle || 'Enter subtitle via Add Details'}
@@ -122,12 +188,18 @@ const More = () => {
             >
               Add/Edit Details
             </button>
-          )}
+            )}
         </div>
       </div>
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {noDetailsFound && (
+          <div className="text-center text-gray-300 text-xl mb-8">
+            No details found for {clubName}. Click "Add/Edit Details" to create content.
+          </div>
+        )}
+
         {/* Our Story */}
         <div className="bg-gray-800 shadow-lg rounded-lg p-6 mb-12 border border-gray-700">
           <h2 className="text-3xl font-bold text-white mb-6 border-b border-gray-700 pb-2">Our Story</h2>
@@ -165,7 +237,7 @@ const More = () => {
               <div className="text-amber-400 text-4xl mb-4">{details.missionIcon2}</div>
               <h3 className="text-white text-xl font-bold mb-2">{details.missionTitle2}</h3>
               <p className="text-gray-300">
-                {details.missionValue2 || 'Enter description via Add Details'}
+                {details.missionValue1 || 'Enter description via Add Details'}
               </p>
             </div>
             <div className="bg-gray-700 p-6 rounded-lg border border-gray-600">
@@ -253,6 +325,7 @@ const More = () => {
           onDetailsAdded={handleDetailsAdded}
           currentDetails={details}
           currentUserId={currentUserId}
+          clubName={clubName}
         />
       )}
     </div>

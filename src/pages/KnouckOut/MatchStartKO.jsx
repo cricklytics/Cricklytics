@@ -336,7 +336,7 @@ const FixtureGenerator = () => {
     switch (activeTab) {
       case 'Knockout Brackets':
         if (location.state?.origin) {
-          navigate(location.state.origin); // Navigate to origin (e.g., /TournamentPage)
+          navigate('/landingpage'); // Navigate to origin (e.g., /TournamentPage)
         } else {
           navigate('/landingpage'); // Fallback
         }
@@ -377,7 +377,7 @@ const FixtureGenerator = () => {
   return (
     <div className="w-screen min-h-screen bg-gradient-to-br from-green-400 via-blue-400 to-blue-200 overflow-x-hidden">
       <header className="w-screen shadow-md">
-        <div className="w-full max-w-6xl py-4 flex justify-between items-center mx-auto">
+        <div className="flex justify-between items-start">
           <div className="flex flex-col items-start gap-1">
             <div className="flex items-center">
               <motion.img
@@ -396,22 +396,25 @@ const FixtureGenerator = () => {
               onClick={handleBack}
             />
           </div>
-          <div className="flex items-center overflow-x-auto mt-8 md:mt-8 -ml-20 md:-ml-20">
-            <ul className="flex gap-x-2 sm:gap-x-3 md:gap-x-4 lg:gap-x-5">
-              {allTabs.map((tab) => (
-                <li key={tab} className="flex-shrink-0">
-                  <button
-                    className={`py-2 px-3 rounded-lg transition whitespace-nowrap text-sm sm:text-base ${
-                      activeTab === tab ? 'bg-blue-600 text-white font-semibold shadow-md' : 'bg-gray-100 text-black hover:bg-gray-200'
-                    }`}
-                    onClick={() => setActiveTab(tab)}
-                  >
-                    {tab}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
+         <div className="flex items-center overflow-x-auto mt-8 md:mt-8 mx-auto">
+          <ul className="flex gap-x-2 sm:gap-x-3 md:gap-x-4 lg:gap-x-5">
+            {allTabs.map((tab) => (
+              <li key={tab} className="flex-shrink-0">
+                <button
+                  className={`py-2 px-3 rounded-lg transition whitespace-nowrap text-sm sm:text-base ${
+                    activeTab === tab
+                      ? 'bg-blue-600 text-white font-semibold shadow-md'
+                      : 'bg-gray-100 text-black hover:bg-gray-200'
+                  }`}
+                  onClick={() => setActiveTab(tab)}
+                >
+                  {tab}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+
         </div>
       </header>
 

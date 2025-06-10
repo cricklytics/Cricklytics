@@ -7,6 +7,7 @@ import Teams from "./teams";
 import Players from "./players";
 import LiveStreams from "./liveStreams";
 import More from "./more";
+import { ClubProvider } from './ClubContext'; // Import the context provider
 
 const SportsAppNavigation = () => {
   const [activeTab, setActiveTab] = useState('home');
@@ -27,33 +28,35 @@ const SportsAppNavigation = () => {
   const activeComponent = tabs.find(tab => tab.key === activeTab)?.component;
 
   return (
-    <div className="bg-gray-900 text-indigo-50 min-h-screen">
-      {/* Tab Navigation */}
-      <div className="sticky top-0 z-10">
-        <div className="flex overflow-x-auto border-b border-white scrollbar-hide bg-black">
-          {tabs.map((tab) => (
-            <button
-              key={tab.key}
-              className={`px-4 py-3 whitespace-nowrap font-medium transition-colors ${
-                activeTab === tab.key
-                  ? 'text-amber-400 border-b-2 border-amber-400'
-                  : 'text-indigo-200 hover:text-amber-300'
-              }`}
-              onClick={() => setActiveTab(tab.key)}
-            >
-              {tab.label}
-            </button>
-          ))}
+    <ClubProvider> {/* Wrap with ClubProvider */}
+      <div className="bg-gray-900 text-indigo-50 min-h-screen">
+        {/* Tab Navigation */}
+        <div className="sticky top-0 z-10">
+          <div className="flex overflow-x-auto border-b border-white scrollbar-hide bg-black">
+            {tabs.map((tab) => (
+              <button
+                key={tab.key}
+                className={`px-4 py-3 whitespace-nowrap font-medium transition-colors ${
+                  activeTab === tab.key
+                    ? 'text-amber-400 border-b-2 border-amber-400'
+                    : 'text-indigo-200 hover:text-amber-300'
+                }`}
+                onClick={() => setActiveTab(tab.key)}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        
+        {/* Tab Content */}
+        <div className="p-4">
+          <div className="rounded-lg md:p-6">
+            {activeComponent}
+          </div>
         </div>
       </div>
-      
-      {/* Tab Content - THIS WAS MISSING IN YOUR CODE */}
-      <div className="p-4">
-        <div className=" rounded-lg md:p-6">
-          {activeComponent}
-        </div>
-      </div>
-    </div>
+    </ClubProvider>
   );
 };
 
