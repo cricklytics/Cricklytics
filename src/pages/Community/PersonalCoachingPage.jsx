@@ -51,7 +51,6 @@ const PersonalCoachingPage = () => {
 
     return () => unsubscribe();
   }, []);
-
   // Handle saving or updating coach data
   const handleSaveData = async () => {
     if (!formData.name.trim() || !formData.specialty.trim() || !formData.experience.trim() || 
@@ -200,8 +199,11 @@ const PersonalCoachingPage = () => {
     Array(5)
       .fill(0)
       .map((_, i) => (
-        i < Math.floor(rating) ? <FaStar key={i" className="text-yellow-500"} />
-        : <FaRegStar key={i} className="text-gray-300" />
+        i < Math.floor(rating) ? (
+          <FaStar key={i} className="text-yellow-500" />
+        ) : (
+          <FaRegStar key={i} className="text-gray-300" />
+        )
       ))
   );
 

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { FaMapMarkerAlt, FaRegCopyright, FaTrash } from 'react-icons/fa';
 import logo from '../assets/sophita/HomePage/picture3_2.png';
 import backButton from '../assets/kumar/right-chevron.png';
-import { db } from '../firebase';
+import { db, auth } from '../firebase';
 import {
   collection,
   addDoc,
@@ -31,8 +31,12 @@ export default function TeamDetails() {
   }, [activeTab]);
 
   const fetchTeams = async () => {
+    if (!auth.currentUser) return;
+
     const querySnapshot = await getDocs(collection(db, activeTab === 'myteam' ? 'myTeams' : 'opponentTeams'));
-    const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const data = querySnapshot.docs
+      .map(doc => ({ id: doc.id, ...doc.data() }))
+      .filter(team => team.userId === auth.currentUser.uid);
     setTeams(data);
   };
 
@@ -49,6 +53,7 @@ export default function TeamDetails() {
       location: formData.location,
       captain: formData.captain,
       image: imageSrc,
+      userId: auth.currentUser.uid,
     };
 
     const collectionName = formData.teamType === 'myteam' ? 'myTeams' : 'opponentTeams';

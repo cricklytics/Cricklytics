@@ -45,17 +45,14 @@ const Stats = () => {
     return () => unsubscribe();
   }, []);
 
-  // Fetch player stats from Firestore
+  // Fetch player stats from Firestore with centric data logic
   useEffect(() => {
     if (!auth.currentUser) return;
 
     const unsubscribe = onSnapshot(collection(db, 'PlayerStats'), (snapshot) => {
       const statsData = snapshot.docs
-        .map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-        }))
-        .filter(stat => stat.userId === auth.currentUser.uid);
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter(stat => stat.userId === auth.currentUser.uid); // Filter by current user's ID
       setStats(statsData);
     }, (error) => {
       console.error("Error fetching player stats:", error);

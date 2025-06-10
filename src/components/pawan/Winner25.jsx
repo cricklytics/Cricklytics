@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { db } from '../../firebase';
-import { collection, query, where, getDocs, addDoc, orderBy } from 'firebase/firestore';
+import { db, auth } from '../../firebase';
+import { collection, query, where, getDocs, addDoc, updateDoc, deleteDoc, orderBy, doc } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'framer-motion';
+import { FaEdit, FaTrash } from 'react-icons/fa';
 import Frame1321317519 from './Frame';
 
 const Winner25 = () => {
@@ -9,6 +10,8 @@ const Winner25 = () => {
   const [showModal, setShowModal] = useState(false);
   const [players, setPlayers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editPlayerId, setEditPlayerId] = useState(null);
 
   const categories = ['Popularity', 'Batting', 'Bowling', 'Fielding', 'All Rounder'];
 
@@ -35,13 +38,24 @@ const Winner25 = () => {
   const fetchPlayers = async () => {
     setLoading(true);
     try {
-      const q = query(collection(db, 'winners2025'), orderBy('votes', 'desc'));
+      if (!auth.currentUser) {
+        setPlayers([]);
+        setLoading(false);
+        return;
+      }
+
+      const q = query(
+        collection(db, 'winners2025'),
+        where('userId', '==', auth.currentUser.uid),
+        orderBy('votes', 'desc')
+      );
       const snap = await getDocs(q);
       const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
       setPlayers(data);
     } catch (err) {
       console.error('Error fetching players:', err);
       setPlayers([]);
+      alert('Failed to fetch players');
     }
     setLoading(false);
   };
@@ -69,54 +83,145 @@ const Winner25 = () => {
       }));
     }
   };
-const handleSubmit = async (e) => {
-  e.preventDefault();
 
-  try {
-    await addDoc(collection(db, 'winners2025'), {
-      ...formData,
-      votes: formData.votes ? Number(formData.votes) : null,
-      stats: {
-        age: formData.stats?.age ? Number(formData.stats.age) : null,
-        inns: formData.stats?.inns ? Number(formData.stats.inns) : null,
-        runs: formData.stats?.runs ? Number(formData.stats.runs) : null,
-        wickets: formData.stats?.wickets ? Number(formData.stats.wickets) : null,
-        catches: formData.stats?.catches ? Number(formData.stats.catches) : null,
-        runOuts: formData.stats?.runOuts ? Number(formData.stats.runOuts) : null,
-        avg: formData.stats?.avg ? Number(formData.stats.avg) : null,
-        sr: formData.stats?.sr ? Number(formData.stats.sr) : null,
-        econ: formData.stats?.econ ? Number(formData.stats.econ) : null,
-        matches: formData.stats?.matches ? Number(formData.stats.matches) : null,
-      }
-    });
+  const handleSubmit = async (e) => {
+    e.preventDefault();
 
+    try {
+      await addDoc(collection(db, 'winners2025'), {
+        ...formData,
+        votes: formData.votes ? Number(formData.votes) : null,
+        stats: {
+          age: formData.stats?.age ? Number(formData.stats.age) : null,
+          inns: formData.stats?.inns ? Number(formData.stats.inns) : null,
+          runs: formData.stats?.runs ? Number(formData.stats.runs) : null,
+          wickets: formData.stats?.wickets ? Number(formData.stats.wickets) : null,
+          catches: formData.stats?.catches ? Number(formData.stats.catches) : null,
+          runOuts: formData.stats?.runOuts ? Number(formData.stats.runOuts) : null,
+          avg: formData.stats?.avg ? Number(formData.stats.avg) : null,
+          sr: formData.stats?.sr ? Number(formData.stats.sr) : null,
+          econ: formData.stats?.econ ? Number(formData.stats.econ) : null,
+          matches: formData.stats?.matches ? Number(formData.stats.matches) : null,
+        },
+        userId: auth.currentUser.uid
+      });
+
+      setFormData({
+        name: '',
+        category: 'Popularity',
+        votes: '',
+        location: '',
+        image: '',
+        stats: {
+          age: '',
+          inns: '',
+          runs: '',
+          wickets: '',
+          catches: '',
+          runOuts: '',
+          avg: '',
+          sr: '',
+          econ: '',
+          matches: ''
+        }
+      });
+
+      setShowModal(false);
+      fetchPlayers();
+    } catch (err) {
+      console.error('Error adding player:', err);
+      alert('Failed to add player');
+    }
+  };
+
+  const handleEditPlayer = (player) => {
     setFormData({
-      name: '',
-      category: 'Popularity',
-      votes: '',
-      location: '',
-      image: '',
+      name: player.name || '',
+      category: player.category || 'Popularity',
+      votes: player.votes || '',
+      location: player.location || '',
+      image: player.image || '',
       stats: {
-        age: '',
-        inns: '',
-        runs: '',
-        wickets: '',
-        catches: '',
-        runOuts: '',
-        avg: '',
-        sr: '',
-        econ: '',
-        matches: ''
+        age: player.stats?.age || '',
+        inns: player.stats?.inns || '',
+        runs: player.stats?.runs || '',
+        wickets: player.stats?.wickets || '',
+        catches: player.stats?.catches || '',
+        runOuts: player.stats?.runOuts || '',
+        avg: player.stats?.avg || '',
+        sr: player.stats?.sr || '',
+        econ: player.stats?.econ || '',
+        matches: player.stats?.matches || ''
       }
     });
+    setEditPlayerId(player.id);
+    setIsEditing(true);
+    setShowModal(true);
+  };
 
-    setShowModal(false);
-    fetchPlayers();
-  } catch (err) {
-    console.error('Error adding player:', err);
-  }
-};
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
 
+    try {
+      await updateDoc(doc(db, 'winners2025', editPlayerId), {
+        ...formData,
+        votes: formData.votes ? Number(formData.votes) : null,
+        stats: {
+          age: formData.stats?.age ? Number(formData.stats.age) : null,
+          inns: formData.stats?.inns ? Number(formData.stats.inns) : null,
+          runs: formData.stats?.runs ? Number(formData.stats.runs) : null,
+          wickets: formData.stats?.wickets ? Number(formData.stats.wickets) : null,
+          catches: formData.stats?.catches ? Number(formData.stats.catches) : null,
+          runOuts: formData.stats?.runOuts ? Number(formData.stats.runOuts) : null,
+          avg: formData.stats?.avg ? Number(formData.stats.avg) : null,
+          sr: formData.stats?.sr ? Number(formData.stats.sr) : null,
+          econ: formData.stats?.econ ? Number(formData.stats.econ) : null,
+          matches: formData.stats?.matches ? Number(formData.stats.matches) : null,
+        },
+        userId: auth.currentUser.uid
+      });
+
+      setFormData({
+        name: '',
+        category: 'Popularity',
+        votes: '',
+        location: '',
+        image: '',
+        stats: {
+          age: '',
+          inns: '',
+          runs: '',
+          wickets: '',
+          catches: '',
+          runOuts: '',
+          avg: '',
+          sr: '',
+          econ: '',
+          matches: ''
+        }
+      });
+
+      setShowModal(false);
+      setIsEditing(false);
+      setEditPlayerId(null);
+      fetchPlayers();
+    } catch (err) {
+      console.error('Error updating player:', err);
+      alert('Failed to update player');
+    }
+  };
+
+  const handleDeletePlayer = async (playerId) => {
+    if (!window.confirm('Are you sure you want to delete this player?')) return;
+
+    try {
+      await deleteDoc(doc(db, 'winners2025', playerId));
+      setPlayers(players.filter(player => player.id !== playerId));
+    } catch (err) {
+      console.error('Error deleting player:', err);
+      alert('Failed to delete player');
+    }
+  };
 
   // Get top 3 players per category
   const limitedPlayerData = categories.reduce((acc, category) => {
@@ -219,11 +324,11 @@ const handleSubmit = async (e) => {
       borderRadius: '0.75rem',
       overflow: 'hidden',
       boxShadow: 'rgba(0, 0, 0, 0.1) 0px 10px 15px -3px',
-      width: '300px', // Fixed width
-      height: '530px', // Fixed height
+      width: '300px',
+      height: '530px',
       display: 'flex',
       flexDirection: 'column',
-      margin: '0 auto', // Center the card
+      margin: '0 auto',
     },
     cardHeader1: {
       backgroundColor: 'rgb(37, 99, 235)',
@@ -232,6 +337,7 @@ const handleSubmit = async (e) => {
       fontWeight: 600,
       padding: '1rem',
       textAlign: 'center',
+      position: 'relative',
     },
     cardContent1: {
       padding: '1.5rem',
@@ -397,8 +503,10 @@ const handleSubmit = async (e) => {
   return (
     <div style={styles.winnerContainer1}>
       <div style={styles.winnerContent1}>
-        <h1 style={{...styles.pageTitle1, ...(isMobile ? mobileStyles.pageTitle1 : {})}}>Winners of 2025</h1>
-        
+        <h1 style={{ ...styles.pageTitle1, ...(isMobile ? mobileStyles.pageTitle1 : {}) }}>
+          Winners of 2025
+        </h1>
+
         {/* Category Tabs */}
         <div style={styles.categoryTabsContainer1}>
           <div style={styles.categoryTabs1}>
@@ -421,7 +529,7 @@ const handleSubmit = async (e) => {
 
         {/* Winner Cards */}
         {loading ? (
-          <p style={{ color: 'white', textAlign: 'center' }}>Loading players...</p>
+          <p style={{ color: 'white', textAlign: 'center' }}>Players loading...</p>
         ) : filteredPlayers.length === 0 ? (
           <p style={{ color: 'white', textAlign: 'center' }}>No players found. Add some winners!</p>
         ) : (
@@ -436,70 +544,80 @@ const handleSubmit = async (e) => {
                 transition={{ duration: 0.3, delay: index * 0.1 }}
               >
                 <div style={styles.cardHeader1}>
-                  {activeCategory === 'Popularity' ? 'Popularity' : player.category}
+                  <div className="absolute top-2 right-2 flex gap-2">
+                    <FaEdit
+                      className="text-white hover:text-yellow-400 cursor-pointer"
+                      onClick={() => handleEditPlayer(player)}
+                    />
+                    <FaTrash
+                      className="text-white hover:text-red-500 cursor-pointer"
+                      onClick={() => handleDeletePlayer(player.id)}
+                    />
+                  </div>
+                  {activeCategory === 'Popularity' ? 'Popularity' : player.category || 'Popularity'}
                 </div>
                 <div style={styles.cardContent1}>
-                  <img src={player.image} alt={player.name} style={styles.playerImage1} />
-                  <h2 style={styles.playerName1}>{player.name}</h2>
+                  <img src={player.image || ''} alt={player.name || 'Player'} style={styles.playerImage1} />
+                  <h2 style={styles.playerName1}>{player.name || 'Unknown'}</h2>
                   {activeCategory === 'Popularity' && (
-                    <p style={styles.playerVotes1}>{player.votes} Votes</p>
+                    <p style={styles.playerVotes1}>{player.votes || 0} Votes</p>
                   )}
-                  <p style={styles.playerLocation1}>{player.location}</p>
+                  <p style={styles.playerLocation1}>{player.location || 'Unknown'}</p>
                   <table style={styles.statsTable1}>
                     <tbody>
                       <tr>
                         <td style={styles.statsTableFirstChild1}>Age:</td>
-                        <td>{player.stats.age}</td>
+                        <td>{player.stats?.age || 'N/A'}</td>
                       </tr>
                       <tr>
-                        <td style={styles.statsTableFirstChild1}>Inns:</td>
-                        <td>{player.stats.inns}</td>
+                        <td style={styles.statsTableFirstChild1}>Innings:</td>
+                        <td>{player.stats?.inns || 'N/A'}</td>
                       </tr>
-                      {(player.category === 'Batting' || player.category === 'All Rounder' || (activeCategory === 'Popularity' && player.stats.runs)) && (
+                      {(player.category === 'Batting' || player.category === 'All Rounder' || (activeCategory === 'Popularity' && player.stats?.runs)) && (
                         <>
                           <tr>
                             <td style={styles.statsTableFirstChild1}>Runs:</td>
-                            <td>{player.stats.runs}</td>
+                            <td>{player.stats?.runs || 'N/A'}</td>
                           </tr>
                           <tr>
-                            <td style={styles.statsTableFirstChild1}>Avg:</td>
-                            <td>{player.stats.avg}</td>
+                            <td style={styles.statsTableFirstChild1}>Average:</td>
+                            <td>{player.stats?.avg || 'N/A'}</td>
                           </tr>
                           <tr>
-                            <td style={styles.statsTableFirstChild1}>SR:</td>
-                            <td>{player.stats.sr}</td>
+                            <td style={styles.statsTableFirstChild1}>Strike Rate:</td>
+                            <td>{player.stats?.sr || 'N/A'}</td>
                           </tr>
                         </>
                       )}
-                      {(player.category === 'Bowling' || player.category === 'All Rounder') && (
+                      {(player.category === 'Bowling' || player.category === 'All Rounder' || (activeCategory === 'Popularity' && player.stats?.wickets)) && (
                         <>
                           <tr>
                             <td style={styles.statsTableFirstChild1}>Wickets:</td>
-                            <td>{player.stats.wickets}</td>
+                            <td>{player.stats?.wickets || 'N/A'}</td>
                           </tr>
                           <tr>
-                            <td style={styles.statsTableFirstChild1}>Avg:</td>
-                            <td>{player.stats.avg}</td>
+                            <td style={styles.statsTableFirstChild1}>Average:</td>
+                            <td>{player.stats?.avg || 'N/A'}</td>
                           </tr>
                           <tr>
-                            <td style={styles.statsTableFirstChild1}>Econ:</td>
-                            <td>{player.stats.econ}</td>
+                            <td style={styles.statsTableFirstChild1}>Economy:</td>
+                            <td>{player.stats?.econ || 'N/A'}</td>
                           </tr>
                         </>
                       )}
-                      {player.category === 'Fielding' && (
+                      {(player.category === 'Fielding' || (activeCategory === 'Popularity' && (player.stats?.catches || player.stats?.runOuts))) && (
                         <>
                           <tr>
                             <td style={styles.statsTableFirstChild1}>Matches:</td>
-                            <td>{player.stats.matches}</td>
+                            <td>{player.stats?.matches || 'N/A'}</td>
                           </tr>
                           <tr>
                             <td style={styles.statsTableFirstChild1}>Catches:</td>
-                            <td>{player.stats.catches}</td>
+                            <td>{player.stats?.catches || 'N/A'}</td>
                           </tr>
                           <tr>
                             <td style={styles.statsTableFirstChild1}>Run Outs:</td>
-                            <td>{player.stats.runOuts}</td>
+                            <td>{player.stats?.runOuts || 'N/A'}</td>
                           </tr>
                         </>
                       )}
@@ -511,108 +629,66 @@ const handleSubmit = async (e) => {
             ))}
           </div>
         )}
-      </div>
 
-      {/* Add Player Button */}
-      <motion.div 
-        style={styles.addButton}
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.9 }}
-        onClick={() => setShowModal(true)}
-      >
-        +
-      </motion.div>
+        {/* Add Player Button */}
+        <motion.div
+          style={styles.addButton}
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={() => {
+            setFormData({
+              name: '',
+              category: 'Popularity',
+              votes: '',
+              location: '',
+              image: '',
+              stats: {
+                age: '',
+                inns: '',
+                runs: '',
+                wickets: '',
+                catches: '',
+                runOuts: '',
+                avg: '',
+                sr: '',
+                econ: '',
+                matches: ''
+              }
+            });
+            setIsEditing(false);
+            setShowModal(true);
+          }}
+        >
+          +
+        </motion.div>
 
-      {/* Add Player Modal */}
-      <AnimatePresence>
-        {showModal && (
-          <motion.div 
-            style={styles.modalOverlay}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setShowModal(false)}
-          >
-            <motion.div 
-              style={styles.modalContent}
-              initial={{ scale: 0.9 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0.9 }}
-              onClick={(e) => e.stopPropagation()}
+        {/* Add/Edit Player Modal */}
+        <AnimatePresence>
+          {showModal && (
+            <motion.div
+              style={styles.modalOverlay}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowModal(false)}
             >
-              <h2 style={{ color: 'white', marginBottom: '1.5rem' }}>Add New Winner</h2>
-              <form onSubmit={handleSubmit}>
-                <div style={styles.formGroup}>
-                  <label style={styles.formLabel}>Name</label>
-                  <input
-                    type="text"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    style={styles.formInput}
-                    required
-                  />
-                </div>
-
-                <div style={styles.formGroup}>
-                  <label style={styles.formLabel}>Category</label>
-                  <select
-                    name="category"
-                    value={formData.category}
-                    onChange={handleChange}
-                    style={styles.formSelect}
-                    required
-                  >
-                    {categories.map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div style={styles.formGroup}>
-                  <label style={styles.formLabel}>Votes</label>
-                  <input
-                    type="number"
-                    name="votes"
-                    value={formData.votes}
-                    onChange={handleChange}
-                    style={styles.formInput}
-                    required
-                  />
-                </div>
-
-                <div style={styles.formGroup}>
-                  <label style={styles.formLabel}>Location</label>
-                  <input
-                    type="text"
-                    name="location"
-                    value={formData.location}
-                    onChange={handleChange}
-                    style={styles.formInput}
-                    required
-                  />
-                </div>
-
-                <div style={styles.formGroup}>
-                  <label style={styles.formLabel}>Image URL</label>
-                  <input
-                    type="text"
-                    name="image"
-                    value={formData.image}
-                    onChange={handleChange}
-                    style={styles.formInput}
-                    required
-                  />
-                </div>
-
-                <h3 style={{ color: 'white', marginTop: '1.5rem' }}>Player Stats</h3>
-                <div style={styles.statsGrid}>
+              <motion.div
+                style={styles.modalContent}
+                initial={{ scale: 0.9 }}
+                animate={{ scale: 1 }}
+                exit={{ scale: 0.9 }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <h2 style={{ color: 'white', marginBottom: '1.5rem' }}>
+                  {isEditing ? 'Edit Winner' : 'Add New Winner'}
+                </h2>
+                <form onSubmit={isEditing ? handleEditSubmit : handleSubmit}>
                   <div style={styles.formGroup}>
-                    <label style={styles.formLabel}>Age</label>
+                    <label style={styles.formLabel}>Name</label>
                     <input
-                      type="number"
-                      name="stats.age"
-                      value={formData.stats.age}
+                      type="text"
+                      name="name"
+                      value={formData.name}
                       onChange={handleChange}
                       style={styles.formInput}
                       required
@@ -620,162 +696,228 @@ const handleSubmit = async (e) => {
                   </div>
 
                   <div style={styles.formGroup}>
-                    <label style={styles.formLabel}>Innings</label>
+                    <label style={styles.formLabel}>Category</label>
+                    <select
+                      name="category"
+                      value={formData.category}
+                      onChange={handleChange}
+                      style={styles.formSelect}
+                      required
+                    >
+                      {categories.map(cat => (
+                        <option key={cat} value={cat}>{cat}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div style={styles.formGroup}>
+                    <label style={styles.formLabel}>Votes</label>
                     <input
                       type="number"
-                      name="stats.inns"
-                      value={formData.stats.inns}
+                      name="votes"
+                      value={formData.votes}
                       onChange={handleChange}
                       style={styles.formInput}
                       required
                     />
                   </div>
 
-                  {(formData.category === 'Batting' || formData.category === 'All Rounder') && (
-                    <>
-                      <div style={styles.formGroup}>
-                        <label style={styles.formLabel}>Runs</label>
-                        <input
-                          type="number"
-                          name="stats.runs"
-                          value={formData.stats.runs}
-                          onChange={handleChange}
-                          style={styles.formInput}
-                          required={formData.category === 'Batting'}
-                        />
-                      </div>
+                  <div style={styles.formGroup}>
+                    <label style={styles.formLabel}>Location</label>
+                    <input
+                      type="text"
+                      name="location"
+                      value={formData.location}
+                      onChange={handleChange}
+                      style={styles.formInput}
+                      required
+                    />
+                  </div>
 
-                      <div style={styles.formGroup}>
-                        <label style={styles.formLabel}>Batting Avg</label>
-                        <input
-                          type="number"
-                          name="stats.avg"
-                          value={formData.stats.avg}
-                          onChange={handleChange}
-                          style={styles.formInput}
-                          step="0.01"
-                          required={formData.category === 'Batting'}
-                        />
-                      </div>
+                  <div style={styles.formGroup}>
+                    <label style={styles.formLabel}>Image URL</label>
+                    <input
+                      type="text"
+                      name="image"
+                      value={formData.image}
+                      onChange={handleChange}
+                      style={styles.formInput}
+                      required
+                    />
+                  </div>
 
-                      <div style={styles.formGroup}>
-                        <label style={styles.formLabel}>Strike Rate</label>
-                        <input
-                          type="number"
-                          name="stats.sr"
-                          value={formData.stats.sr}
-                          onChange={handleChange}
-                          style={styles.formInput}
-                          step="0.01"
-                          required={formData.category === 'Batting'}
-                        />
-                      </div>
-                    </>
-                  )}
+                  <h3 style={{ color: 'white', marginTop: '1.5rem' }}>Player Stats</h3>
+                  <div style={styles.statsGrid}>
+                    <div style={styles.formGroup}>
+                      <label style={styles.formLabel}>Age</label>
+                      <input
+                        type="number"
+                        name="stats.age"
+                        value={formData.stats.age}
+                        onChange={handleChange}
+                        style={styles.formInput}
+                        required
+                      />
+                    </div>
 
-                  {(formData.category === 'Bowling' || formData.category === 'All Rounder') && (
-                    <>
-                      <div style={styles.formGroup}>
-                        <label style={styles.formLabel}>Wickets</label>
-                        <input
-                          type="number"
-                          name="stats.wickets"
-                          value={formData.stats.wickets}
-                          onChange={handleChange}
-                          style={styles.formInput}
-                          required={formData.category === 'Bowling'}
-                        />
-                      </div>
+                    <div style={styles.formGroup}>
+                      <label style={styles.formLabel}>Innings</label>
+                      <input
+                        type="number"
+                        name="stats.inns"
+                        value={formData.stats.inns}
+                        onChange={handleChange}
+                        style={styles.formInput}
+                        required
+                      />
+                    </div>
 
-                      <div style={styles.formGroup}>
-                        <label style={styles.formLabel}>Bowling Avg</label>
-                        <input
-                          type="number"
-                          name="stats.avg"
-                          value={formData.stats.avg}
-                          onChange={handleChange}
-                          style={styles.formInput}
-                          step="0.01"
-                          required={formData.category === 'Bowling'}
-                        />
-                      </div>
+                    {(formData.category === 'Batting' || formData.category === 'All Rounder') && (
+                      <>
+                        <div style={styles.formGroup}>
+                          <label style={styles.formLabel}>Runs</label>
+                          <input
+                            type="number"
+                            name="stats.runs"
+                            value={formData.stats.runs}
+                            onChange={handleChange}
+                            style={styles.formInput}
+                            required={formData.category === 'Batting'}
+                          />
+                        </div>
 
-                      <div style={styles.formGroup}>
-                        <label style={styles.formLabel}>Economy</label>
-                        <input
-                          type="number"
-                          name="stats.econ"
-                          value={formData.stats.econ}
-                          onChange={handleChange}
-                          style={styles.formInput}
-                          step="0.01"
-                          required={formData.category === 'Bowling'}
-                        />
-                      </div>
-                    </>
-                  )}
+                        <div style={styles.formGroup}>
+                          <label style={styles.formLabel}>Batting Avg</label>
+                          <input
+                            type="number"
+                            name="stats.avg"
+                            value={formData.stats.avg}
+                            onChange={handleChange}
+                            style={styles.formInput}
+                            step="0.01"
+                            required={formData.category === 'Batting'}
+                          />
+                        </div>
 
-                  {formData.category === 'Fielding' && (
-                    <>
-                      <div style={styles.formGroup}>
-                        <label style={styles.formLabel}>Matches</label>
-                        <input
-                          type="number"
-                          name="stats.matches"
-                          value={formData.stats.matches}
-                          onChange={handleChange}
-                          style={styles.formInput}
-                          required
-                        />
-                      </div>
+                        <div style={styles.formGroup}>
+                          <label style={styles.formLabel}>Strike Rate</label>
+                          <input
+                            type="number"
+                            name="stats.sr"
+                            value={formData.stats.sr}
+                            onChange={handleChange}
+                            style={styles.formInput}
+                            step="0.01"
+                            required={formData.category === 'Batting'}
+                          />
+                        </div>
+                      </>
+                    )}
 
-                      <div style={styles.formGroup}>
-                        <label style={styles.formLabel}>Catches</label>
-                        <input
-                          type="number"
-                          name="stats.catches"
-                          value={formData.stats.catches}
-                          onChange={handleChange}
-                          style={styles.formInput}
-                          required
-                        />
-                      </div>
+                    {(formData.category === 'Bowling' || formData.category === 'All Rounder') && (
+                      <>
+                        <div style={styles.formGroup}>
+                          <label style={styles.formLabel}>Wickets</label>
+                          <input
+                            type="number"
+                            name="stats.wickets"
+                            value={formData.stats.wickets}
+                            onChange={handleChange}
+                            style={styles.formInput}
+                            required={formData.category === 'Bowling'}
+                          />
+                        </div>
 
-                      <div style={styles.formGroup}>
-                        <label style={styles.formLabel}>Run Outs</label>
-                        <input
-                          type="number"
-                          name="stats.runOuts"
-                          value={formData.stats.runOuts}
-                          onChange={handleChange}
-                          style={styles.formInput}
-                          required
-                        />
-                      </div>
-                    </>
-                  )}
-                </div>
+                        <div style={styles.formGroup}>
+                          <label style={styles.formLabel}>Bowling Avg</label>
+                          <input
+                            type="number"
+                            name="stats.avg"
+                            value={formData.stats.avg}
+                            onChange={handleChange}
+                            style={styles.formInput}
+                            step="0.01"
+                            required={formData.category === 'Bowling'}
+                          />
+                        </div>
 
-                <div style={styles.buttonGroup}>
-                  <button
-                    type="button"
-                    onClick={() => setShowModal(false)}
-                    style={styles.cancelButton}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    style={styles.submitButton}
-                  >
-                    Add Player
-                  </button>
-                </div>
-              </form>
+                        <div style={styles.formGroup}>
+                          <label style={styles.formLabel}>Economy</label>
+                          <input
+                            type="number"
+                            name="stats.econ"
+                            value={formData.stats.econ}
+                            onChange={handleChange}
+                            style={styles.formInput}
+                            step="0.01"
+                            required={formData.category === 'Bowling'}
+                          />
+                        </div>
+                      </>
+                    )}
+
+                    {formData.category === 'Fielding' && (
+                      <>
+                        <div style={styles.formGroup}>
+                          <label style={styles.formLabel}>Matches</label>
+                          <input
+                            type="number"
+                            name="stats.matches"
+                            value={formData.stats.matches}
+                            onChange={handleChange}
+                            style={styles.formInput}
+                            required
+                          />
+                        </div>
+
+                        <div style={styles.formGroup}>
+                          <label style={styles.formLabel}>Catches</label>
+                          <input
+                            type="number"
+                            name="stats.catches"
+                            value={formData.stats.catches}
+                            onChange={handleChange}
+                            style={styles.formInput}
+                            required
+                          />
+                        </div>
+
+                        <div style={styles.formGroup}>
+                          <label style={styles.formLabel}>Run Outs</label>
+                          <input
+                            type="number"
+                            name="stats.runOuts"
+                            value={formData.stats.runOuts}
+                            onChange={handleChange}
+                            style={styles.formInput}
+                            required
+                          />
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  <div style={styles.buttonGroup}>
+                    <button
+                      type="button"
+                      onClick={() => setShowModal(false)}
+                      style={styles.cancelButton}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      style={styles.submitButton}
+                    >
+                      {isEditing ? 'Update Player' : 'Add Player'}
+                    </button>
+                  </div>
+                </form>
+              </motion.div>
             </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 };

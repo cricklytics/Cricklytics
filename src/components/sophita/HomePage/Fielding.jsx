@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Picture3 from '../../../assets/sophita/HomePage/Picture3.png';
 import { motion } from 'framer-motion';
-import { FaCrown, FaArrowLeft, FaPlus, FaStar } from 'react-icons/fa';
-import { collection, getDocs, doc, setDoc } from "firebase/firestore";
-import { db } from '../../../firebase';
+import { FaCrown, FaChevronLeft, FaPlus, FaStar, FaTrash } from 'react-icons/fa';
+import { collection, getDocs, doc, setDoc, deleteDoc } from "firebase/firestore";
+import { db, auth } from '../../../firebase';
 
 const FieldingStatsPage = () => {
   const [stats, setStats] = useState([]);
@@ -18,7 +18,7 @@ const FieldingStatsPage = () => {
     rank: '',
     stars: '',
     isPro: false,
-    avatarInputType: 'url', // 'url' or 'file'
+    avatarInputType: 'url',
     avatarUrl: '',
     avatarFile: null,
     avatarBase64: ''
@@ -28,8 +28,17 @@ const FieldingStatsPage = () => {
 
   useEffect(() => {
     (async () => {
-      const snap = await getDocs(collection(db, "fieldingStats"));
-      setStats(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      try {
+        if (!auth.currentUser) return;
+
+        const snap = await getDocs(collection(db, "fieldingStats"));
+        const statsList = snap.docs
+          .map(doc => ({ id: doc.id, ...doc.data() }))
+          .filter(stat => stat.userId === auth.currentUser.uid);
+        setStats(statsList);
+      } catch (error) {
+        console.error("Error fetching fielding stats:", error);
+      }
     })();
   }, [showAddModal]);
 
@@ -64,38 +73,56 @@ const FieldingStatsPage = () => {
     }
   };
 
+  const handleDeleteStat = async (statId) => {
+    if (!window.confirm("Are you sure you want to delete this player's fielding stats?")) return;
+
+    try {
+      await deleteDoc(doc(db, "fieldingStats", statId));
+      setStats(stats.filter(stat => stat.id !== statId));
+    } catch (err) {
+      console.error("Error deleting fielding stat:", err);
+      alert("Failed to delete fielding stat");
+    }
+  };
+
   const handleSubmit = async e => {
     e.preventDefault();
     const id = formData.name.toLowerCase().replace(/\s+/g, '_');
     const avatarToSave = formData.avatarBase64 || formData.avatarUrl || '';
 
-    await setDoc(doc(db, "fieldingStats", id), {
-      name: formData.name,
-      matches: formData.matches,
-      dismissals: formData.dismissals,
-      catches: formData.catches,
-      overs: formData.overs,
-      rank: formData.rank,
-      stars: Number(formData.stars),
-      isPro: Boolean(formData.isPro),
-      avatar: avatarToSave,
-    });
+    try {
+      await setDoc(doc(db, "fieldingStats", id), {
+        name: formData.name,
+        matches: formData.matches,
+        dismissals: formData.dismissals,
+        catches: formData.catches,
+        overs: formData.overs,
+        rank: formData.rank,
+        stars: Number(formData.stars),
+        isPro: Boolean(formData.isPro),
+        avatar: avatarToSave,
+        userId: auth.currentUser.uid
+      });
 
-    setFormData({
-      name: '',
-      matches: '',
-      dismissals: '',
-      catches: '',
-      overs: '',
-      rank: '',
-      stars: '',
-      isPro: false,
-      avatarInputType: 'url',
-      avatarUrl: '',
-      avatarFile: null,
-      avatarBase64: ''
-    });
-    setShowAddModal(false);
+      setFormData({
+        name: '',
+        matches: '',
+        dismissals: '',
+        catches: '',
+        overs: '',
+        rank: '',
+        stars: '',
+        isPro: false,
+        avatarInputType: 'url',
+        avatarUrl: '',
+        avatarFile: null,
+        avatarBase64: ''
+      });
+      setShowAddModal(false);
+    } catch (err) {
+      console.error("Error adding fielding stat:", err);
+      alert("Failed to add fielding stat");
+    }
   };
 
   return (
@@ -107,7 +134,7 @@ const FieldingStatsPage = () => {
               onClick={() => navigate("/landingpage")}
               className="flex items-center bg-[#7303c0] hover:bg-[#8a05e6] px-3 py-2 rounded-full"
             >
-              <FaArrowLeft />
+              <FaChevronLeft className="text-xl" />
             </button>
             <img src={Picture3} alt="Logo" className="h-8 w-8" />
             <span className="text-xl font-bold">Cricklytics</span>
@@ -137,6 +164,7 @@ const FieldingStatsPage = () => {
                 <th className="text-center p-2">Catches</th>
                 <th className="text-center p-2">Overs</th>
                 <th className="text-center p-2">Rank</th>
+                <th className="text-center p-2">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -180,6 +208,12 @@ const FieldingStatsPage = () => {
                   <td className="p-2 text-center">{p.catches}</td>
                   <td className="p-2 text-center">{p.overs}</td>
                   <td className="p-2 text-center font-bold text-yellow-400">{p.rank}</td>
+                  <td className="p-2 text-center">
+                    <FaTrash
+                      className="text-white hover:text-red-500 cursor-pointer"
+                      onClick={() => handleDeleteStat(p.id)}
+                    />
+                  </td>
                 </motion.tr>
               ))}
             </tbody>
@@ -192,7 +226,7 @@ const FieldingStatsPage = () => {
           <div className="bg-gray-800 rounded-lg p-6 max-w-md w-full space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center sticky top-0 bg-gray-800 py-2 z-20">
               <h3 className="text-xl font-bold">Add Fielding Stats</h3>
-              <button onClick={() => setShowAddModal(false)} className="text-gray-400 text-2xl">&times;</button>
+              <button onClick={() => setShowAddModal(false)} className="text-gray-400 text-2xl">×</button>
             </div>
             <form onSubmit={handleSubmit} className="space-y-3">
               {["name", "matches", "dismissals", "catches", "overs", "rank"].map((key) => (

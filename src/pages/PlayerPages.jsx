@@ -2,8 +2,8 @@ import React, { useEffect, useState } from 'react';
 import Frame1321317519 from '../components/pawan/Frame';
 import PlayerCard from '../components/pawan/PlayerCard';
 import Leaderboard from '../components/pawan/Leaderboard';
-import { collection, getDocs, doc, setDoc } from "firebase/firestore";
-import { db } from '../firebase';
+import { collection, getDocs, doc, addDoc, deleteDoc } from "firebase/firestore";
+import { db, auth } from '../firebase';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 function PlayerPages() {
@@ -12,6 +12,7 @@ function PlayerPages() {
   const [teamFilter, setTeamFilter] = useState('');
   const [battingStyleFilter, setBattingStyleFilter] = useState('');
   const [audio, setAudio] = useState(null);
+  const [currentAudioUrl, setCurrentAudioUrl] = useState(null);
   const [showAddPlayerModal, setShowAddPlayerModal] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -29,23 +30,53 @@ function PlayerPages() {
   const storage = getStorage();
 
   const handlePlayAudio = (url) => {
-    if (audio) {
-      audio.pause();
-      audio.currentTime = 0;
+    if (!url) {
+      console.warn("No audio URL provided");
+      return;
     }
-    const newAudio = new Audio(url);
-    newAudio.play().catch((err) => console.warn("Playback failed:", err));
-    setAudio(newAudio);
+
+    if (audio && currentAudioUrl === url) {
+      if (!audio.paused) {
+        audio.pause();
+      } else {
+        audio.play().catch((err) => console.warn("Playback failed:", err));
+      }
+    } else {
+      if (audio) {
+        audio.pause();
+        audio.currentTime = 0;
+      }
+      const newAudio = new Audio(url);
+      newAudio.play().catch((err) => console.warn("Playback failed:", err));
+      setAudio(newAudio);
+      setCurrentAudioUrl(url);
+    }
+  };
+
+  const handleDeletePlayer = async (playerId) => {
+    if (!window.confirm("Are you sure you want to delete this player?")) return;
+
+    try {
+      await deleteDoc(doc(db, "players", playerId));
+      setPlayers(players.filter(player => player.id !== playerId));
+    } catch (err) {
+      console.error("Error deleting player:", err);
+      alert("Failed to delete player");
+    }
   };
 
   useEffect(() => {
     const fetchPlayersFromFirestore = async () => {
       try {
+        if (!auth.currentUser) return;
+
         const playersSnapshot = await getDocs(collection(db, "players"));
-        const playersList = playersSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+        const playersList = playersSnapshot.docs
+          .map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          }))
+          .filter(player => player.userId === auth.currentUser.uid);
         setPlayers(playersList);
       } catch (error) {
         console.error("Error fetching players:", error);
@@ -70,22 +101,26 @@ function PlayerPages() {
       }
 
       const playerData = {
-        ...formData,
+        name: formData.name,
+        role: formData.role,
         battingAvg: parseFloat(formData.battingAvg),
         bowlingAvg: formData.bowlingAvg ? parseFloat(formData.bowlingAvg) : null,
+        battingStyle: formData.battingStyle,
+        team: formData.team,
         recentMatches: formData.recentMatches.split(',').map(Number),
-        photoMode: undefined,
-        photoFile: undefined
+        photoUrl: formData.photoUrl,
+        userId: auth.currentUser.uid
       };
 
-      const playerId = playerData.name.toLowerCase().replace(/\s+/g, "_");
-      await setDoc(doc(db, "players", playerId), playerData);
+      await addDoc(collection(db, "players"), playerData);
 
       const playersSnapshot = await getDocs(collection(db, "players"));
-      const playersList = playersSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
+      const playersList = playersSnapshot.docs
+        .map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }))
+        .filter(player => player.userId === auth.currentUser.uid);
       setPlayers(playersList);
 
       setFormData({
@@ -197,7 +232,7 @@ function PlayerPages() {
         {filteredPlayers.length > 0 ? (
           filteredPlayers.map((player, index) => (
             <div key={player.id || index} className="flex justify-center">
-              <PlayerCard player={player} onPlay={handlePlayAudio} />
+              <PlayerCard player={player} onPlay={handlePlayAudio} onDelete={handleDeletePlayer} />
             </div>
           ))
         ) : (
@@ -219,7 +254,7 @@ function PlayerPages() {
                 onClick={() => setShowAddPlayerModal(false)}
                 className="text-gray-400 hover:text-white"
               >
-                &times;
+                ×
               </button>
             </div>
             <form onSubmit={handleSubmit} className="space-y-4 text-white">
@@ -234,7 +269,7 @@ function PlayerPages() {
               ].map(({ label, key, type = "text", example }) => (
                 <div key={key}>
                   <p className="text-sm text-gray-300 mb-1">{example}</p>
-                  <label className="block mb-1 text-white">{label}</label>
+                  <label className="block text-white mb-1">{label}</label>
                   <input
                     type={type}
                     name={key}

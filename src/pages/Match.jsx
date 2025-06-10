@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import logo from '../assets/pawan/PlayerProfile/picture-312.png';
 import backButton from '../assets/kumar/right-chevron.png';
-import { db } from '../firebase';
+import { db, auth } from '../firebase';
 import { collection, onSnapshot, addDoc, deleteDoc, doc } from 'firebase/firestore';
 
 const Match = () => {
@@ -45,14 +45,20 @@ const Match = () => {
     { id: "mvp", label: "MVP" },
   ];
 
-  // Fetch data from Firebase
+  // Fetch data from Firebase with user-centric filtering
   useEffect(() => {
+    if (!auth.currentUser) return;
+
     const unsubscribe = onSnapshot(collection(db, 'Matches'), (snapshot) => {
-      const matchesData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+      const matchesData = snapshot.docs
+        .map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+        }))
+        .filter(match => match.userId === auth.currentUser.uid);
       setMatches(matchesData);
+    }, (error) => {
+      console.error("Error fetching matches:", error);
     });
 
     return () => unsubscribe();
@@ -96,6 +102,7 @@ const Match = () => {
         ...formData,
         tabCategory: activeTab,
         subCategory: modalType === "sub-option" ? activeSubOption : null,
+        userId: auth.currentUser.uid,
       });
       setFormData({
         teams: "",

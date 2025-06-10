@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FaMapMarkerAlt, FaRegCopyright, FaTrashAlt } from 'react-icons/fa';
 import logo from '../assets/sophita/HomePage/picture3_2.png';
 import backButton from '../assets/kumar/right-chevron.png';
-import { db } from '../firebase';
+import { db, auth } from '../firebase';
 import { collection, onSnapshot, addDoc, deleteDoc, doc } from 'firebase/firestore';
 
 export default function TournamentList() {
@@ -18,12 +18,18 @@ export default function TournamentList() {
   });
 
   useEffect(() => {
+    if (!auth.currentUser) return;
+
     const unsubscribe = onSnapshot(collection(db, 'Tournaments'), (snapshot) => {
-      const tournaments = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+      const tournaments = snapshot.docs
+        .map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+        }))
+        .filter(tournament => tournament.userId === auth.currentUser.uid);
       setTournamentList(tournaments);
+    }, (error) => {
+      console.error("Error fetching tournaments:", error);
     });
 
     return () => unsubscribe();
@@ -36,7 +42,10 @@ export default function TournamentList() {
       formData.location &&
       formData.tabCategory
     ) {
-      await addDoc(collection(db, 'Tournaments'), formData);
+      await addDoc(collection(db, 'Tournaments'), {
+        ...formData,
+        userId: auth.currentUser.uid,
+      });
       setFormData({
         tournamentName: '',
         organiserName: '',
@@ -265,8 +274,8 @@ export default function TournamentList() {
               className="w-full mb-6 p-2 rounded border border-gray-600 bg-transparent text-white focus:outline-none focus:ring-2 focus:ring-pink-500"
             >
               <option className='text-black' value="myTournament">My Tournament</option>
-              <option  className='text-black' value="following">Following</option>
-              <option   className='text-black' value="all">All</option>
+              <option className='text-black' value="following">Following</option>
+              <option className='text-black' value="all">All</option>
             </select>
 
             {/* Buttons */}

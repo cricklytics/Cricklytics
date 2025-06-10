@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaArrowLeft, FaChartLine } from 'react-icons/fa';
+import { FaChevronLeft, FaChartLine, FaTrash } from 'react-icons/fa';
+import logo from './../assets/kumar/logo.png';
 import { motion, AnimatePresence } from 'framer-motion';
-import { db } from '../firebase'; // Adjust this path to your firebase config
+import { db, auth } from '../firebase';
 import {
   collection,
   query,
   where,
   getDocs,
   addDoc,
-  orderBy
+  deleteDoc,
+  orderBy,
+  doc
 } from 'firebase/firestore';
 
 const Tabletoppers = () => {
@@ -34,20 +37,43 @@ const Tabletoppers = () => {
   const fetchTeams = async () => {
     setLoading(true);
     try {
+      if (!auth.currentUser) {
+        setTeams([]);
+        setLoading(false);
+        return;
+      }
+
       const q = query(
         collection(db, collectionName),
         where('ballType', '==', activeTab),
+        where('userId', '==', auth.currentUser.uid),
         orderBy('rank')
       );
       const snap = await getDocs(q);
-      const data = snap.docs.map((d) => d.data());
+      const data = snap.docs.map((d) => ({
+        id: d.id,
+        ...d.data()
+      }));
       console.log(`Fetched teams for "${activeTab}":`, data);
       setTeams(data);
     } catch (err) {
       console.error('Error fetching teams:', err);
       setTeams([]);
+      alert('Failed to fetch teams');
     }
     setLoading(false);
+  };
+
+  const handleDeleteTeam = async (teamId) => {
+    if (!window.confirm('Are you sure you want to delete this team?')) return;
+
+    try {
+      await deleteDoc(doc(db, collectionName, teamId));
+      setTeams(teams.filter(team => team.id !== teamId));
+    } catch (err) {
+      console.error('Error deleting team:', err);
+      alert('Failed to delete team');
+    }
   };
 
   useEffect(() => {
@@ -83,23 +109,29 @@ const Tabletoppers = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    await addDoc(collection(db, collectionName), {
-      ...formData,
-      matches: Number(formData.matches),
-      wins: Number(formData.wins),
-      ballType: activeTab
-    });
-    setFormData({
-      rank: '',
-      team: '',
-      since: '',
-      matches: '',
-      wins: '',
-      dominance: '',
-      streak: ''
-    });
-    setShowModal(false);
-    fetchTeams();
+    try {
+      await addDoc(collection(db, collectionName), {
+        ...formData,
+        matches: Number(formData.matches),
+        wins: Number(formData.wins),
+        ballType: activeTab,
+        userId: auth.currentUser.uid
+      });
+      setFormData({
+        rank: '',
+        team: '',
+        since: '',
+        matches: '',
+        wins: '',
+        dominance: '',
+        streak: ''
+      });
+      setShowModal(false);
+      fetchTeams();
+    } catch (err) {
+      console.error('Error adding team:', err);
+      alert('Failed to add team');
+    }
   };
 
   const fadeIn = { hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } };
@@ -110,23 +142,25 @@ const Tabletoppers = () => {
     <div className="min-h-screen bg-gradient-to-br from-[#03001e] via-[#7303c0] to-[#ec38bc] text-white">
       {/* Header */}
       <motion.header initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="max-w-6xl mx-auto px-4 pt-6 pb-2">
-        <div className="flex justify-between items-center bg-black/30 rounded-lg p-4 mb-5">
-          <div className="flex items-center gap-4">
-            <img
-              src="/images/Picture3.png"
-              alt="Cricklytics"
-              className="h-10 w-10 md:h-12 md:w-12"
-            />
-            <span className="text-2xl font-bold text-shadow-[0_0_8px_rgba(93,224,230,0.4)]">
-              Cricklytics
-            </span>
-          </div>
-          <motion.button onClick={() => navigate(-1)} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }} className="text-white/80 hover:text-white flex items-center gap-1 text-sm">
-            <FaArrowLeft />
-            <span>Back</span>
-          </motion.button>
-        </div>
-      </motion.header>
+  <div className="flex items-center gap-4 bg-black/30 rounded-lg p-4 mb-5">
+    <motion.button
+      onClick={() => navigate(-1)}
+      whileHover={{ scale: 1.1 }}
+      whileTap={{ scale: 0.9 }}
+      className="text-white/80 hover:text-white text-2xl p-2"
+    >
+      <FaChevronLeft />
+    </motion.button>
+    <img
+      src={logo}
+      alt="Cricklytics"
+      className="h-10 w-10 md:h-12 md:w-12"
+    />
+    <span className="text-2xl font-bold text-shadow-[0_0_8px_rgba(93,224,230,0.4)]">
+      Cricklytics
+    </span>
+  </div>
+</motion.header>
 
       {/* Tabs and Add Button */}
       <div className="max-w-6xl mx-auto px-4 flex justify-between items-center mb-3">
@@ -180,7 +214,7 @@ const Tabletoppers = () => {
 
         {/* Teams List */}
         {!loading && teams.length === 0 && (
-          <p className="text-center text-lg">No teams available. Click “Add Team.”</p>
+          <p className="text-center text-lg">No teams available. Click "Add Team."</p>
         )}
 
         {!loading && teams.length > 0 && (
@@ -188,7 +222,7 @@ const Tabletoppers = () => {
             <motion.div key={activeTab} initial="hidden" animate="visible" exit="hidden" variants={tabVariants} className="space-y-6">
               {teams.map((item, idx) => (
                 <motion.div
-                  key={item.rank + item.team}
+                  key={item.id}
                   variants={itemVariants}
                   whileHover={{ scale: 1.02 }}
                   transition={{ type: 'spring', stiffness: 300 }}
@@ -203,40 +237,46 @@ const Tabletoppers = () => {
                       CHAMPIONS
                     </div>
                   )}
-                  <div className="flex items-start">
-                    <div
-                      className={`flex items-center justify-center w-12 h-12 rounded-full mr-4 ${
-                        idx === 0
-                          ? 'bg-yellow-400 text-black'
-                          : idx === 1
-                          ? 'bg-gray-300 text-black'
-                          : idx === 2
-                          ? 'bg-amber-600 text-white'
-                          : 'bg-white/10 text-white'
-                      }`}
-                    >
-                      <span className="text-xl font-bold">{item.rank}</span>
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex justify-between items-start">
-                        <h3 className="text-xl font-semibold">{item.team}</h3>
-                        <div
-                          className={`px-2 py-1 text-xs rounded-full ${
-                            item.streak.startsWith('W')
-                              ? 'bg-green-500/30 text-green-300'
-                              : 'bg-red-500/30 text-red-300'
-                          }`}
-                        >
-                          {item.streak}
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start">
+                      <div
+                        className={`flex items-center justify-center w-12 h-12 rounded-full mr-4 ${
+                          idx === 0
+                            ? 'bg-yellow-400 text-black'
+                            : idx === 1
+                            ? 'bg-gray-300 text-black'
+                            : idx === 2
+                            ? 'bg-amber-600 text-white'
+                            : 'bg-white/10 text-white'
+                        }`}
+                      >
+                        <span className="text-xl font-bold">{item.rank}</span>
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex justify-between items-start">
+                          <h3 className="text-xl font-semibold">{item.team}</h3>
+                          <div
+                            className={`px-2 py-1 text-xs rounded-full ${
+                              item.streak.startsWith('W')
+                                ? 'bg-green-500/30 text-green-300'
+                                : 'bg-red-500/30 text-red-300'
+                            }`}
+                          >
+                            {item.streak}
+                          </div>
+                        </div>
+                        <p className="text-sm text-gray-300">Since {item.since}</p>
+                        <div className="mt-2 grid grid-cols-3 gap-4 text-sm text-gray-100">
+                          <div>Matches: <span className="font-semibold">{item.matches}</span></div>
+                          <div>Wins: <span className="font-semibold">{item.wins}</span></div>
+                          <div>Dominance: <span className="font-semibold">{item.dominance}</span></div>
                         </div>
                       </div>
-                      <p className="text-sm text-gray-300">Since {item.since}</p>
-                      <div className="mt-2 grid grid-cols-3 gap-4 text-sm text-gray-100">
-                        <div>Matches: <span className="font-semibold">{item.matches}</span></div>
-                        <div>Wins: <span className="font-semibold">{item.wins}</span></div>
-                        <div>Dominance: <span className="font-semibold">{item.dominance}</span></div>
-                      </div>
                     </div>
+                    <FaTrash
+                      className="text-white hover:text-red-500 cursor-pointer"
+                      onClick={() => handleDeleteTeam(item.id)}
+                    />
                   </div>
                 </motion.div>
               ))}
@@ -248,55 +288,70 @@ const Tabletoppers = () => {
       {/* Add Team Modal */}
       <AnimatePresence>
         {showModal && (
-          <motion.div className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center p-4 z-50"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            onClick={() => setShowModal(false)}>
-            <motion.div className="bg-[#1a1a2e] rounded-lg max-w-lg w-full p-6 overflow-auto max-h-[90vh]"
-              initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }}
+          <motion.div
+            className="fixed inset-0 bg-black bg-opacity-70 flex justify-center items-center p-4 z-50"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowModal(false)}
+          >
+            <motion.div
+              className="bg-[#1a1a2e] rounded-lg max-w-lg w-full p-6 overflow-auto max-h-[90vh]"
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.9 }}
               onClick={(e) => e.stopPropagation()}
             >
               <h2 className="text-2xl font-bold mb-4">
                 Add {activeTab === 'leather' ? 'Leather' : 'Tennis'} Ball Team
               </h2>
               <form onSubmit={handleSubmit} className="space-y-4 text-white">
-                {['rank','team','since','matches','wins','dominance','streak'].map((key) => (
+                {[
+                  { key: 'rank', label: 'Rank', example: 'e.g., 1' },
+                  { key: 'team', label: 'Team', example: 'e.g., India' },
+                  { key: 'since', label: 'Since', example: 'e.g., 2023' },
+                  { key: 'matches', label: 'Matches', example: 'e.g., 50' },
+                  { key: 'wins', label: 'Wins', example: 'e.g., 30' },
+                  { key: 'dominance', label: 'Dominance', example: 'e.g., 60%' },
+                  { key: 'streak', label: 'Streak', example: 'e.g., W5' }
+                ].map(({ key, label, example }) => (
                   <div key={key}>
                     <label className="block mb-1 font-semibold">
-                      {key.charAt(0).toUpperCase() + key.slice(1)}
+                      {label}
                     </label>
+                    <p className="text-sm text-gray-300 mb-1">{example}</p>
                     <input
                       name={key}
                       value={formData[key]}
                       onChange={handleChange}
-                                         required
-                    className="w-full px-3 py-2 rounded bg-[#222244] border border-gray-600 focus:outline-none focus:ring-2 focus:ring-yellow-400"
-                    placeholder={`Enter ${key}`}
-                  />
+                      required
+                      className="w-full px-3 py-2 rounded bg-[#222244] border border-gray-600 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                      placeholder={`Enter ${key}`}
+                    />
+                  </div>
+                ))}
+                <div className="flex justify-end mt-6 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowModal(false)}
+                    className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold px-4 py-2 rounded-md"
+                  >
+                    Submit
+                  </button>
                 </div>
-              ))}
-              <div className="flex justify-end mt-6 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold px-4 py-2 rounded-md"
-                >
-                  Submit
-                </button>
-              </div>
-            </form>
+              </form>
+            </motion.div>
           </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  </div>
-);
+        )}
+      </AnimatePresence>
+    </div>
+  );
 };
 
 export default Tabletoppers;
-

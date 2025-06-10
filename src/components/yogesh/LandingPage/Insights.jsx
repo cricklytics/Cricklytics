@@ -69,7 +69,7 @@ const Insights = () => {
     overall: [],
   };
 
-  // Fetch insights data from Firestore
+  // Fetch insights data from Firestore with centric data logic
   useEffect(() => {
     if (!auth.currentUser) return;
 
@@ -236,7 +236,8 @@ const Insights = () => {
               <div className="flex justify-center mb-6">
                 <button
                   onClick={() => {
-                    setFormData({ value: "" });
+                    console.log("Button clicked"); // Debugging
+                    setFormData({ value: "", label: "Add Data" });
                     setEditingEntryId(null);
                     setIsModalOpen(true);
                   }}
@@ -249,7 +250,7 @@ const Insights = () => {
                 {subOptions[activeTab].map((option) => (
                   <button
                     key={option.id}
-                    className={`flex-shrink-0 px-6 py-3 rounded-lg text-base font-['Alegreya'] transition-all duration-300 shadow-[0_10px_30px_rgba(0,0,0,0.8)] ${
+                    className={`flex-shrink-0 px-6 py-3 rounded-lg text-base font-['Alegreya'] transition-all duration-300 shadow-[0_10px_30px_rgba(0,0,0,0.8)]} ${
                       activeSubOption === option.id
                         ? "text-white bg-blue-500"
                         : "text-white hover:bg-blue-600 hover:text-cyan-300"
@@ -263,7 +264,7 @@ const Insights = () => {
             </div>
           )}
           <div className="mt-6">
-            <h3 className="text-xl font-bold mb-4 font-['Alegreya']">
+            <h3 className="text-xl font-bold mb-4 font-['sm']">
               {subOptions[activeTab].find((opt) => opt.id === activeSubOption)?.label || "Overall Stats"}
             </h3>
             {activeTab === "overall" ? (
@@ -276,7 +277,7 @@ const Insights = () => {
                       <p>{entry.value}</p>
                       <div className="flex gap-2">
                         <button
-                          onClick={() => handleEditData(entry)}
+                          onClick={() => handleEditData(entry.id)}
                           className="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600 transition"
                         >
                           Edit
