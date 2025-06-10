@@ -3,7 +3,7 @@ import { FiSearch, FiFilter, FiStar, FiMessageSquare, FiUser, FiCalendar, FiMapP
 import cuslogo from "../../assets/yogesh/communityimg/cuslogo.png";
 import { useNavigate } from 'react-router-dom';
 import backButton from '../../assets/kumar/right-chevron.png';
-import { db, auth } from "../../firebase"; // Adjust path as needed
+import { db, auth } from "../../firebase";
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc } from "firebase/firestore";
 
 const CommentatorsPage = () => {
@@ -25,14 +25,14 @@ const CommentatorsPage = () => {
     bio: '',
     available: true,
     experience: '',
+    imageSource: 'url',
+    imageFile: null,
   });
   const [editingId, setEditingId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Available language options
   const languageOptions = ['English', 'Hindi', 'Urdu', 'Kannada', 'Tamil', 'Telugu', 'Spanish', 'French'];
 
-  // Fetch commentator data from Firestore
   useEffect(() => {
     if (!auth.currentUser) return;
 
@@ -48,7 +48,6 @@ const CommentatorsPage = () => {
     return () => unsubscribe();
   }, []);
 
-  // Filter commentators based on search and active tab
   const filteredCommentators = commentatorsData.filter(commentator => {
     const matchesSearch = commentator.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       commentator.location.toLowerCase().includes(searchTerm.toLowerCase());
@@ -58,7 +57,6 @@ const CommentatorsPage = () => {
     return matchesSearch;
   });
 
-  // Calculate community stats
   const calculateCommunityStats = () => {
     const totalCommentators = commentatorsData.length;
     const availableCommentators = commentatorsData.filter(c => c.available).length;
@@ -70,7 +68,17 @@ const CommentatorsPage = () => {
 
   const { totalCommentators, availableCommentators, totalMatches, languagesCovered } = calculateCommunityStats();
 
-  // Handle saving or updating commentator data
+  const handleImageFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData({ ...formData, image: reader.result, imageFile: file });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSaveData = async () => {
     if (!formData.name.trim() || !formData.location.trim() || !formData.matches || !formData.rating || !formData.reviews || !formData.languages.length || !formData.bio.trim() || !formData.experience.trim()) {
       alert("Please fill all required fields!");
@@ -88,7 +96,7 @@ const CommentatorsPage = () => {
       alert("Reviews must be a non-negative number!");
       return;
     }
-    if (formData.image && !formData.image.match(/\.(jpg|jpeg|png|gif)$/i)) {
+    if (formData.imageSource === 'url' && formData.image && !formData.image.match(/\.(jpg|jpeg|png|gif)$/i)) {
       alert("Please provide a valid image URL (jpg, jpeg, png, gif)!");
       return;
     }
@@ -129,6 +137,8 @@ const CommentatorsPage = () => {
         bio: '',
         available: true,
         experience: '',
+        imageSource: 'url',
+        imageFile: null,
       });
       setEditingId(null);
       setIsModalOpen(false);
@@ -140,7 +150,6 @@ const CommentatorsPage = () => {
     }
   };
 
-  // Handle deleting commentator data
   const handleDeleteData = async (id) => {
     if (!window.confirm("Are you sure you want to delete this commentator?")) return;
 
@@ -152,7 +161,6 @@ const CommentatorsPage = () => {
     }
   };
 
-  // Handle editing commentator data
   const handleEditData = (commentator) => {
     setFormData({
       name: commentator.name,
@@ -166,6 +174,8 @@ const CommentatorsPage = () => {
       bio: commentator.bio,
       available: commentator.available,
       experience: commentator.experience,
+      imageSource: 'url',
+      imageFile: null,
     });
     setEditingId(commentator.id);
     setIsModalOpen(true);
@@ -174,7 +184,6 @@ const CommentatorsPage = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0b0f28] to-[#06122e] text-white p-4 md:p-8">
       <div className="max-w-7xl mx-auto">
-        {/* Header with back button in top left and centered title */}
         <div className="mb-8 relative">
           <div className="md:absolute flex items-center gap-4">
             <img
@@ -226,6 +235,8 @@ const CommentatorsPage = () => {
                 bio: '',
                 available: true,
                 experience: '',
+                imageSource: 'url',
+                imageFile: null,
               });
               setEditingId(null);
               setIsModalOpen(true);
@@ -323,7 +334,7 @@ const CommentatorsPage = () => {
             {filteredCommentators.length > 0 ? filteredCommentators.map(commentator => (
               <div
                 key={commentator.id}
-                className="bg-[#0b1a3b] border border-blue-600/50 rounded-xl p-4 hover:border-blue-400 transition-all cursor-pointer hover:shadow-lg"
+                className="relative bg-[#0b1a3b] border border-blue-600/50 rounded-xl p-4 hover:border-blue-400 transition-all cursor-pointer hover:shadow-lg"
                 onClick={() => setSelectedCommentator(commentator)}
               >
                 <div className="flex items-start gap-4">
@@ -358,6 +369,17 @@ const CommentatorsPage = () => {
                     </span>
                   </div>
                 )}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteData(commentator.id);
+                  }}
+                  className="absolute top-2 right-2 text-red-500 hover:text-red-600 transition"
+                  aria-label="Delete Commentator"
+                  title="Delete Commentator"
+                >
+                  <FiTrash2 size={20} />
+                </button>
               </div>
             )) : (
               <p className="text-center text-gray-400 col-span-3">No commentators found. Add a commentator to get started!</p>
@@ -389,7 +411,6 @@ const CommentatorsPage = () => {
           </div>
         )}
 
-        {/* Modal for Adding/Editing Commentator */}
         {isModalOpen && (
           <div className="border-2 border-white fixed inset-0 bg-black bg-opacity-90 flex justify-center items-center z-50">
             <div
@@ -482,18 +503,65 @@ const CommentatorsPage = () => {
                   <option key={lang} value={lang}>{lang}</option>
                 ))}
               </select>
-              <label className="block mb-1 text-white font-semibold" htmlFor="image">
-                Image URL (Optional)
-              </label>
-              <input
-                id="image"
-                type="text"
-                placeholder="Enter image URL"
-                value={formData.image}
-                onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                className="w-full mb-4 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
-                disabled={isLoading}
-              />
+              <div className="mb-4">
+                <label className="block mb-1 text-white font-semibold">Image Source</label>
+                <div className="flex gap-4">
+                  <label className="flex items-center text-white">
+                    <input
+                      type="radio"
+                      name="imageSource"
+                      value="url"
+                      checked={formData.imageSource === 'url'}
+                      onChange={() => setFormData({ ...formData, imageSource: 'url', image: '', imageFile: null })}
+                      className="mr-2"
+                      disabled={isLoading}
+                    />
+                    URL
+                  </label>
+                  <label className="flex items-center text-white">
+                    <input
+                      type="radio"
+                      name="imageSource"
+                      value="local"
+                      checked={formData.imageSource === 'local'}
+                      onChange={() => setFormData({ ...formData, imageSource: 'local', image: '', imageFile: null })}
+                      className="mr-2"
+                      disabled={isLoading}
+                    />
+                    Local File
+                  </label>
+                </div>
+              </div>
+              {formData.imageSource === 'url' ? (
+                <>
+                  <label className="block mb-1 text-white font-semibold" htmlFor="image">
+                    Image URL (Optional)
+                  </label>
+                  <input
+                    id="image"
+                    type="text"
+                    placeholder="Enter image URL"
+                    value={formData.image}
+                    onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+                    className="w-full mb-4 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                    disabled={isLoading}
+                  />
+                </>
+              ) : (
+                <>
+                  <label className="block mb-1 text-white font-semibold" htmlFor="imageFile">
+                    Upload Image (Optional)
+                  </label>
+                  <input
+                    id="imageFile"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageFileChange}
+                    className="w-full mb-4 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                    disabled={isLoading}
+                  />
+                </>
+              )}
               <label className="block mb-1 text-white font-semibold" htmlFor="featured">
                 Featured
               </label>
@@ -557,6 +625,8 @@ const CommentatorsPage = () => {
                       bio: '',
                       available: true,
                       experience: '',
+                      imageSource: 'url',
+                      imageFile: null,
                     });
                   }}
                   className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded transition"

@@ -21,6 +21,7 @@ const Winner25 = () => {
     votes: '',
     location: '',
     image: '',
+    imageSource: 'url',
     stats: {
       age: '',
       inns: '',
@@ -67,7 +68,13 @@ const Winner25 = () => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     
-    if (name.includes('stats.')) {
+    if (name === 'imageSource') {
+      setFormData(prev => ({
+        ...prev,
+        imageSource: value,
+        image: ''
+      }));
+    } else if (name.includes('stats.')) {
       const statField = name.split('.')[1];
       setFormData(prev => ({
         ...prev,
@@ -81,6 +88,20 @@ const Winner25 = () => {
         ...prev,
         [name]: value
       }));
+    }
+  };
+
+  const handleImageFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData(prev => ({
+          ...prev,
+          image: reader.result
+        }));
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -112,6 +133,7 @@ const Winner25 = () => {
         votes: '',
         location: '',
         image: '',
+        imageSource: 'url',
         stats: {
           age: '',
           inns: '',
@@ -141,6 +163,7 @@ const Winner25 = () => {
       votes: player.votes || '',
       location: player.location || '',
       image: player.image || '',
+      imageSource: 'url',
       stats: {
         age: player.stats?.age || '',
         inns: player.stats?.inns || '',
@@ -187,6 +210,7 @@ const Winner25 = () => {
         votes: '',
         location: '',
         image: '',
+        imageSource: 'url',
         stats: {
           age: '',
           inns: '',
@@ -223,7 +247,6 @@ const Winner25 = () => {
     }
   };
 
-  // Get top 3 players per category
   const limitedPlayerData = categories.reduce((acc, category) => {
     const categoryPlayers = players
       .filter(player => player.category === category)
@@ -232,12 +255,10 @@ const Winner25 = () => {
     return [...acc, ...categoryPlayers];
   }, []);
 
-  // Get top 3 players overall based on votes for Popularity
   const topThreeOverall = [...limitedPlayerData]
     .sort((a, b) => b.votes - a.votes)
     .slice(0, 3);
 
-  // Filter players based on active category
   let filteredPlayers = [];
 
   if (activeCategory === 'Popularity') {
@@ -507,7 +528,6 @@ const Winner25 = () => {
           Winners of 2025
         </h1>
 
-        {/* Category Tabs */}
         <div style={styles.categoryTabsContainer1}>
           <div style={styles.categoryTabs1}>
             <Frame1321317519 />
@@ -527,7 +547,6 @@ const Winner25 = () => {
           </div>
         </div>
 
-        {/* Winner Cards */}
         {loading ? (
           <p style={{ color: 'white', textAlign: 'center' }}>Players loading...</p>
         ) : filteredPlayers.length === 0 ? (
@@ -630,7 +649,6 @@ const Winner25 = () => {
           </div>
         )}
 
-        {/* Add Player Button */}
         <motion.div
           style={styles.addButton}
           whileHover={{ scale: 1.1 }}
@@ -642,6 +660,7 @@ const Winner25 = () => {
               votes: '',
               location: '',
               image: '',
+              imageSource: 'url',
               stats: {
                 age: '',
                 inns: '',
@@ -662,7 +681,6 @@ const Winner25 = () => {
           +
         </motion.div>
 
-        {/* Add/Edit Player Modal */}
         <AnimatePresence>
           {showModal && (
             <motion.div
@@ -735,16 +753,57 @@ const Winner25 = () => {
                   </div>
 
                   <div style={styles.formGroup}>
-                    <label style={styles.formLabel}>Image URL</label>
-                    <input
-                      type="text"
-                      name="image"
-                      value={formData.image}
-                      onChange={handleChange}
-                      style={styles.formInput}
-                      required
-                    />
+                    <label style={styles.formLabel}>Image Source</label>
+                    <div style={{ display: 'flex', gap: '1rem', marginBottom: '0.5rem' }}>
+                      <label style={{ color: 'white' }}>
+                        <input
+                          type="radio"
+                          name="imageSource"
+                          value="url"
+                          checked={formData.imageSource === 'url'}
+                          onChange={handleChange}
+                          style={{ marginRight: '0.5rem' }}
+                        />
+                        URL
+                      </label>
+                      <label style={{ color: 'white' }}>
+                        <input
+                          type="radio"
+                          name="imageSource"
+                          value="local"
+                          checked={formData.imageSource === 'local'}
+                          onChange={handleChange}
+                          style={{ marginRight: '0.5rem' }}
+                        />
+                        Local File
+                      </label>
+                    </div>
                   </div>
+
+                  {formData.imageSource === 'url' ? (
+                    <div style={styles.formGroup}>
+                      <label style={styles.formLabel}>Image URL</label>
+                      <input
+                        type="text"
+                        name="image"
+                        value={formData.image}
+                        onChange={handleChange}
+                        style={styles.formInput}
+                        required
+                      />
+                    </div>
+                  ) : (
+                    <div style={styles.formGroup}>
+                      <label style={styles.formLabel}>Upload Image</label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageFileChange}
+                        style={styles.formInput}
+                        required
+                      />
+                    </div>
+                  )}
 
                   <h3 style={{ color: 'white', marginTop: '1.5rem' }}>Player Stats</h3>
                   <div style={styles.statsGrid}>

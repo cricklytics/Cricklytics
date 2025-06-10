@@ -14,8 +14,9 @@ export default function TournamentList() {
     organiserName: '',
     location: '',
     imageUrl: '',
-    tabCategory: 'myTournament', // categorizes tournament
+    tabCategory: 'myTournament',
   });
+  const [imageSource, setImageSource] = useState('url'); // 'url' or 'local'
 
   useEffect(() => {
     if (!auth.currentUser) return;
@@ -53,6 +54,7 @@ export default function TournamentList() {
         imageUrl: '',
         tabCategory: 'myTournament',
       });
+      setImageSource('url');
       setIsModalOpen(false);
     } else {
       alert('Please fill all fields except image (optional)!');
@@ -65,14 +67,25 @@ export default function TournamentList() {
     }
   };
 
+  const handleImageFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData({ ...formData, imageUrl: reader.result });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   // Filtering tournaments based on active tab
   let tournamentsToShow = [];
   if (activeTab === 'myTournament') {
     tournamentsToShow = tournamentList.filter(t => t.tabCategory === 'myTournament');
   } else if (activeTab === 'all') {
-    tournamentsToShow = tournamentList; // Show all tournaments regardless of category
+    tournamentsToShow = tournamentList;
   } else if (activeTab === 'following') {
-    tournamentsToShow = []; // no data for following tab, keep empty
+    tournamentsToShow = [];
   }
 
   // Helper to render the tournament image or fallback first letter circle
@@ -254,16 +267,60 @@ export default function TournamentList() {
               className="w-full mb-4 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
             />
 
-            {/* Image URL */}
-            <label className="block mb-1 text-white font-semibold" htmlFor="imageUrl">Image URL (optional)</label>
-            <input
-              id="imageUrl"
-              type="text"
-              placeholder="Enter image URL or leave blank"
-              value={formData.imageUrl}
-              onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-              className="w-full mb-4 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
-            />
+            {/* Image Source Selection */}
+            <div className="mb-4">
+              <label className="block mb-1 text-white font-semibold">Image Source</label>
+              <div className="flex gap-4">
+                <label className="flex items-center text-white">
+                  <input
+                    type="radio"
+                    name="imageSource"
+                    value="url"
+                    checked={imageSource === 'url'}
+                    onChange={() => setImageSource('url')}
+                    className="mr-2"
+                  />
+                  URL
+                </label>
+                <label className="flex items-center text-white">
+                  <input
+                    type="radio"
+                    name="imageSource"
+                    value="local"
+                    checked={imageSource === 'local'}
+                    onChange={() => setImageSource('local')}
+                    className="mr-2"
+                  />
+                  Local File
+                </label>
+              </div>
+            </div>
+
+            {/* Image Input */}
+            {imageSource === 'url' ? (
+              <>
+                <label className="block mb-1 text-white font-semibold" htmlFor="imageUrl">Image URL (optional)</label>
+                <input
+                  id="imageUrl"
+                  type="text"
+                  placeholder="Enter image URL or leave blank"
+                  value={formData.imageUrl}
+                  onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                  className="w-full mb-4 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                />
+              </>
+            ) : (
+              <>
+                <label className="block mb-1 text-white font-semibold" htmlFor="imageFile">Upload Image (optional)</label>
+                <input
+                  id="imageFile"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageFileChange}
+                  className="w-full mb-4 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                />
+              </>
+            )}
 
             {/* Category Selector */}
             <label className="block mb-1 text-white font-semibold" htmlFor="tabCategory">Category</label>

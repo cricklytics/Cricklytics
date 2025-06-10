@@ -5,6 +5,7 @@ import Leaderboard from '../components/pawan/Leaderboard';
 import { collection, getDocs, doc, addDoc, deleteDoc } from "firebase/firestore";
 import { db, auth } from '../firebase';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { FaTrashAlt } from 'react-icons/fa';
 
 function PlayerPages() {
   const [players, setPlayers] = useState([]);
@@ -231,8 +232,16 @@ function PlayerPages() {
       <div className="container mx-auto px-4 sm:px-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 md:gap-10 cursor-pointer select-none">
         {filteredPlayers.length > 0 ? (
           filteredPlayers.map((player, index) => (
-            <div key={player.id || index} className="flex justify-center">
+            <div key={player.id || index} className="flex justify-center relative">
               <PlayerCard player={player} onPlay={handlePlayAudio} onDelete={handleDeletePlayer} />
+              <button
+                onClick={() => handleDeletePlayer(player.id)}
+                className="absolute top-2 right-2 text-red-500 hover:text-red-700 transition"
+                aria-label="Delete Player"
+                title="Delete Player"
+              >
+                <FaTrashAlt size={20} />
+              </button>
             </div>
           ))
         ) : (

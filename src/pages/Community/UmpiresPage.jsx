@@ -3,7 +3,7 @@ import { FiStar, FiMessageSquare, FiUser, FiCalendar, FiMapPin, FiArrowLeft, FiE
 import { useNavigate } from 'react-router-dom';
 import cuslogo from "../../assets/yogesh/communityimg/cuslogo.png";
 import backButton from '../../assets/kumar/right-chevron.png';
-import { db, auth } from "../../firebase"; // Adjust path as needed
+import { db, auth } from "../../firebase";
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc } from "firebase/firestore";
 
 const UmpiresPage = () => {
@@ -22,6 +22,8 @@ const UmpiresPage = () => {
     image: '',
     bio: '',
     availability: 'Available',
+    imageSource: 'url',
+    imageFile: null,
   });
   const [editingId, setEditingId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -62,6 +64,18 @@ const UmpiresPage = () => {
 
   const { totalUmpires, availableUmpires, totalMatches, countries } = calculateCommunityStats();
 
+  // Handle image file change
+  const handleImageFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData({ ...formData, image: reader.result, imageFile: file });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   // Handle saving or updating umpire data
   const handleSaveData = async () => {
     if (!formData.name.trim() || !formData.rating || !formData.matches || !formData.location.trim() || !formData.experience.trim() || !formData.bio.trim()) {
@@ -76,7 +90,7 @@ const UmpiresPage = () => {
       alert("Matches must be a non-negative number!");
       return;
     }
-    if (formData.image && !formData.image.match(/\.(jpg|jpeg|png|gif)$/i)) {
+    if (formData.imageSource === 'url' && formData.image && !formData.image.match(/\.(jpg|jpeg|png|gif)$/i)) {
       alert("Please provide a valid image URL (jpg, jpeg, png, gif)!");
       return;
     }
@@ -111,6 +125,8 @@ const UmpiresPage = () => {
         image: '',
         bio: '',
         availability: 'Available',
+        imageSource: 'url',
+        imageFile: null,
       });
       setEditingId(null);
       setIsModalOpen(false);
@@ -127,7 +143,7 @@ const UmpiresPage = () => {
     if (!window.confirm("Are you sure you want to delete this umpire?")) return;
 
     try {
-      await deleteDoc(docRef(db, 'Umpires', id));
+      await deleteDoc(doc(db, 'Umpires', id));
     } catch (err) {
       console.error("Error deleting data:", err);
       alert("Failed to delete data. Please try again.");
@@ -145,6 +161,8 @@ const UmpiresPage = () => {
       image: umpire.image === cuslogo ? '' : umpire.image,
       bio: umpire.bio,
       availability: umpire.availability,
+      imageSource: 'url',
+      imageFile: null,
     });
     setEditingId(umpire.id);
     setIsModalOpen(true);
@@ -210,6 +228,8 @@ const UmpiresPage = () => {
                 image: '',
                 bio: '',
                 availability: 'Available',
+                imageSource: 'url',
+                imageFile: null,
               });
               setEditingId(null);
               setIsModalOpen(true);
@@ -284,7 +304,7 @@ const UmpiresPage = () => {
                     <FiMessageSquare className="mr-2" />
                     Send Message
                   </button>
-                  <button className="border border-blue-500 text-blue-400 hover:bg-blue-900/50 px-6 py-2 rounded-lg transition-colors">
+                  <button className="border border-blue-500 text-blue-400 hover:bg-blue-900/50 px-6 py-2 eligible rounded-lg transition-colors">
                     View Schedule
                   </button>
                 </div>
@@ -296,8 +316,7 @@ const UmpiresPage = () => {
             {filteredUmpires.length > 0 ? filteredUmpires.map(umpire => (
               <div
                 key={umpire.id}
-                className="bg-[#0b1a3b] border border-blue-600/50 rounded-xl p-4 hover:border-blue-400 transition-all cursor-pointer hover:shadow-lg"
-                onClick={() => setSelectedUmpire(umpire)}
+                className="bg-[#0b1a3b] border border-blue-600/50 rounded-xl p-4 hover:border-blue-400 transition-all cursor-pointer hover:shadow-lg relative"
               >
                 <div className="flex items-start gap-4">
                   <img
@@ -324,6 +343,14 @@ const UmpiresPage = () => {
                     {umpire.availability}
                   </span>
                 </div>
+                <button
+                  onClick={() => handleDeleteData(umpire.id)}
+                  className="absolute top-2 right-2 text-red-500 hover:text-red-600 transition"
+                  aria-label="Delete Umpire"
+                  title="Delete Umpire"
+                >
+                  <FiTrash2 size={20} />
+                </button>
               </div>
             )) : (
               <p className="text-center text-gray-400 col-span-3">No umpires found. Add an umpire to get started!</p>
@@ -432,18 +459,65 @@ const UmpiresPage = () => {
                 className="w-full mb-4 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
                 disabled={isLoading}
               />
-              <label className="block mb-1 text-white font-semibold" htmlFor="image">
-                Image URL (Optional)
-              </label>
-              <input
-                id="image"
-                type="text"
-                placeholder="Enter image URL"
-                value={formData.image}
-                onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                className="w-full mb-4 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
-                disabled={isLoading}
-              />
+              <div className="mb-4">
+                <label className="block mb-1 text-white font-semibold">Image Source</label>
+                <div className="flex gap-4">
+                  <label className="flex items-center text-white">
+                    <input
+                      type="radio"
+                      name="imageSource"
+                      value="url"
+                      checked={formData.imageSource === 'url'}
+                      onChange={() => setFormData({ ...formData, imageSource: 'url', image: '', imageFile: null })}
+                      className="mr-2"
+                      disabled={isLoading}
+                    />
+                    URL
+                  </label>
+                  <label className="flex items-center text-white">
+                    <input
+                      type="radio"
+                      name="imageSource"
+                      value="local"
+                      checked={formData.imageSource === 'local'}
+                      onChange={() => setFormData({ ...formData, imageSource: 'local', image: '', imageFile: null })}
+                      className="mr-2"
+                      disabled={isLoading}
+                    />
+                    Local File
+                  </label>
+                </div>
+              </div>
+              {formData.imageSource === 'url' ? (
+                <>
+                  <label className="block mb-1 text-white font-semibold" htmlFor="image">
+                    Image URL (Optional)
+                  </label>
+                  <input
+                    id="image"
+                    type="text"
+                    placeholder="Enter image URL"
+                    value={formData.image}
+                    onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+                    className="w-full mb-4 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                    disabled={isLoading}
+                  />
+                </>
+              ) : (
+                <>
+                  <label className="block mb-1 text-white font-semibold" htmlFor="imageFile">
+                    Upload Image (Optional)
+                  </label>
+                  <input
+                    id="imageFile"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageFileChange}
+                    className="w-full mb-4 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                    disabled={isLoading}
+                  />
+                </>
+              )}
               <label className="block mb-1 text-white font-semibold" htmlFor="bio">
                 Bio
               </label>
@@ -484,6 +558,8 @@ const UmpiresPage = () => {
                       image: '',
                       bio: '',
                       availability: 'Available',
+                      imageSource: 'url',
+                      imageFile: null,
                     });
                   }}
                   className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded transition"
