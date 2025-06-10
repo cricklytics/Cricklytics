@@ -14,7 +14,6 @@ const ScoresPage = () => {
     matches: '',
     rating: '',
     reviews: '',
-      reviews: ''
   });
   const [editingId, setEditingId] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
