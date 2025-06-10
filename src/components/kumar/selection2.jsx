@@ -34,44 +34,57 @@ const Selection2 = () => {
   // Generate round-robin schedule and initialize playoff phases
   useEffect(() => {
     const generateRoundRobin = (teams) => {
-      const n = teams.length;
-      const rounds = [];
-      let teamList = [...teams];
-
-      if (n % 2 !== 0) {
-        teamList.push({ teamName: 'BYE', points: 0 });
+    const shuffleArray = (array) => {
+      const newArray = [...array];
+      for (let i = newArray.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
       }
-
-      const numTeams = teamList.length;
-      const numRounds = numTeams - 1;
-      const matchesPerRound = numTeams / 2;
-
-      for (let round = 0; round < numRounds; round++) {
-        const roundMatches = [];
-        for (let i = 0; i < matchesPerRound; i++) {
-          const team1 = teamList[i];
-          const team2 = teamList[numTeams - 1 - i];
-          if (team1.teamName !== 'BYE' && team2.teamName !== 'BYE') {
-            roundMatches.push({
-              id: `group_${round + 1}_${i + 1}`,
-              phase: `Group Stage ${round + 1}`,
-              team1: team1.teamName,
-              team2: team2.teamName,
-              winner: null
-            });
-          }
-        }
-        rounds.push(roundMatches);
-
-        teamList = [
-          teamList[0],
-          teamList[numTeams - 1],
-          ...teamList.slice(1, numTeams - 1),
-        ];
-      }
-
-      return rounds;
+      return newArray;
     };
+
+    const n = teams.length;
+    const rounds = [];
+    let teamList = [...teams];
+
+    if (n % 2 !== 0) {
+      teamList.push({ teamName: 'BYE', points: 0 });
+    }
+
+    teamList = shuffleArray(teamList);
+
+    const numTeams = teamList.length;
+    const numRounds = numTeams - 1;
+    const matchesPerRound = numTeams / 2;
+
+    for (let round = 0; round < numRounds; round++) {
+      const roundMatches = [];
+      for (let i = 0; i < matchesPerRound; i++) {
+        const team1Candidate = teamList[i];
+        const team2Candidate = teamList[numTeams - 1 - i];
+        if (team1Candidate.teamName !== 'BYE' && team2Candidate.teamName !== 'BYE') {
+          const assignTeam1First = Math.random() < 0.5;
+          const match = {
+            id: `group_${round + 1}_${i + 1}`,
+            phase: `Group Stage ${round + 1}`,
+            team1: assignTeam1First ? team1Candidate.teamName : team2Candidate.teamName,
+            team2: assignTeam1First ? team2Candidate.teamName : team1Candidate.teamName,
+            winner: null,
+          };
+          roundMatches.push(match);
+        }
+      }
+      rounds.push(roundMatches);
+
+      teamList = [
+        teamList[0],
+        teamList[numTeams - 1],
+        ...teamList.slice(1, numTeams - 1),
+      ];
+    }
+
+    return rounds;
+  };
 
     const initializePlayoffs = (numTeams) => {
       let semiFinalMatches = [];
@@ -328,7 +341,7 @@ const Selection2 = () => {
             <button
               type="button"
               className="rounded-xl w-32 md:w-44 bg-gray-500 h-8 md:h-9 text-white cursor-pointer hover:shadow-[0px_0px_13px_0px_#5DE0E6] text-sm md:text-base"
-              onClick={() => navigate('/tournament')}
+              onClick={() => navigate('/TournamentPage')}
             >
               Back
             </button>

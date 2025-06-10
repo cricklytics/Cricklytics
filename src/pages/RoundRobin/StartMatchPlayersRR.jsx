@@ -212,6 +212,10 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin }) {
     }
 
     if (pendingOut && !isLabel && typeof value === 'number') {
+      if (value !== 0 && value !== 1) {
+        // Ignore invalid run values for out
+        return;
+      }
       playAnimation('out');
       setTimeout(() => {
         setPlayerScore(prev => prev + value);
@@ -1118,14 +1122,16 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin }) {
             <div className="mt-4 flex flex-wrap justify-center gap-2 md:gap-4">
               {[0, 1, 2, 4, 6].map((num) => {
                 const isActive = activeNumber === num;
+                const isDisabled = pendingOut && num !== 0 && num !== 1;
                 return (
                   <button
                     key={num}
                     onClick={() => handleScoreButtonClick(num)}
                     className={`w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16
-                      ${isActive ? 'bg-green-500' : 'bg-[#4C0025] hover:bg-green-300'}
+                      ${isActive ? 'bg-green-500' : isDisabled ? 'bg-gray-500 cursor-not-allowed' : 'bg-[#4C0025] hover:bg-green-300'}
                       text-white font-bold text-lg md:text-xl rounded-full border-2 border-white
                       flex items-center justify-center transition-colors duration-300`}
+                    disabled={isDisabled}
                   >
                     {num}
                   </button>
@@ -1152,7 +1158,7 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin }) {
             </div>
             {showRunInfo && (
               <p className="text-yellow-300 text-sm mt-2 text-center font-medium">
-                Please select run, if not select 0
+                {pendingOut ? 'Please select 0 or 1 for runs on out' : 'Please select run, if not select 0'}
               </p>
             )}
 

@@ -3,9 +3,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import HeaderComponent from '../../components/kumar/startMatchHeader';
-import flag1 from '../../assets/kumar/Netherland.png';
-import flag2 from '../../assets/kumar/ukraine.png';
-import btnbg from '../../assets/kumar/button.png';
 import backButton from '../../assets/kumar/right-chevron.png';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import { Player } from '@lottiefiles/react-lottie-player';
@@ -57,7 +54,9 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd, cur
   const [showThirdButtonOnly, setShowThirdButtonOnly] = useState(false);
   const [topPlays, setTopPlays] = useState([]);
   const [currentOverBalls, setCurrentOverBalls] = useState([]);
+  const [currentOverScores, setCurrentOverScores] = useState([]); // Store cumulative scores for each ball in the current over
   const [pastOvers, setPastOvers] = useState([]);
+  const [pastOversScores, setPastOversScores] = useState([]); // Store scores at the end of each over
   const [playerScore, setPlayerScore] = useState(0);
   const [outCount, setOutCount] = useState(0);
   const [opponentBallsFaced, setOpponentBallsFaced] = useState(0);
@@ -167,6 +166,38 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd, cur
     }, 3000); // Animation duration
   };
 
+  // Function to calculate the cumulative score up to the current ball in the current over
+  const calculateCurrentOverScores = (balls) => {
+    let totalScore = 0;
+    const scores = [];
+    // Include past overs' scores first
+    if (pastOvers.length > 0) {
+      totalScore = pastOversScores[pastOversScores.length - 1] || 0;
+    }
+    // Calculate scores for the current over
+    balls.forEach(ball => {
+      if (typeof ball === 'number') {
+        totalScore += ball;
+      } else if (typeof ball === 'string') {
+        if (ball.startsWith('W+')) {
+          const runs = parseInt(ball.replace('W+', ''), 10) + 1; // Wide + runs
+          totalScore += runs;
+        } else if (ball.startsWith('NB+')) {
+          const runs = parseInt(ball.replace('NB+', ''), 10) + 1; // No-ball + runs
+          totalScore += runs;
+        } else if (ball.startsWith('L+')) {
+          const runs = parseInt(ball.replace('L+', ''), 10); // Leg By + runs
+          totalScore += runs;
+        } else if (ball.startsWith('O+')) {
+          const runs = parseInt(ball.replace('O+', ''), 10); // Out + runs
+          totalScore += runs;
+        }
+      }
+      scores.push(totalScore);
+    });
+    return scores;
+  };
+
   const handleScoreButtonClick = (value, isLabel) => {
     if (gameFinished) return;
 
@@ -182,7 +213,9 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd, cur
     if (pendingWide && !isLabel && typeof value === 'number') {
       setPlayerScore(prev => prev + value + 1);
       setTopPlays(prev => [...prev, `W+${value}`]);
-      setCurrentOverBalls(prev => [...prev, `W+${value}`]);
+      const newBalls = [...currentOverBalls, `W+${value}`];
+      setCurrentOverBalls(newBalls);
+      setCurrentOverScores(calculateCurrentOverScores(newBalls));
       if (striker) updateBatsmanScore(striker.index, value + 1);
       setPendingWide(false);
       return;
@@ -191,7 +224,9 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd, cur
     if (pendingNoBall && !isLabel && typeof value === 'number') {
       setPlayerScore(prev => prev + value + 1);
       setTopPlays(prev => [...prev, `NB+${value}`]);
-      setCurrentOverBalls(prev => [...prev, `NB+${value}`]);
+      const newBalls = [...currentOverBalls, `NB+${value}`];
+      setCurrentOverBalls(newBalls);
+      setCurrentOverScores(calculateCurrentOverScores(newBalls));
       if (striker) updateBatsmanScore(striker.index, value + 1);
       setPendingNoBall(false);
       return;
@@ -200,7 +235,9 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd, cur
     if (pendingLegBy && !isLabel && typeof value === 'number') {
       setPlayerScore(prev => prev + value);
       setTopPlays(prev => [...prev, `L+${value}`]);
-      setCurrentOverBalls(prev => [...prev, `L+${value}`]);
+      const newBalls = [...currentOverBalls, `L+${value}`];
+      setCurrentOverBalls(newBalls);
+      setCurrentOverScores(calculateCurrentOverScores(newBalls));
       if (striker) updateBatsmanScore(striker.index, value);
       setPendingLegBy(false);
       setValidBalls(prev => prev + 1);
@@ -214,11 +251,14 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd, cur
     }
 
     if (pendingOut && !isLabel && typeof value === 'number') {
+      if (value !== 0 && value !== 1) return; // Only allow 0 or 1 runs when pendingOut is true
       playAnimation('out');
       setTimeout(() => {
         setPlayerScore(prev => prev + value);
         setTopPlays(prev => [...prev, `O+${value}`]);
-        setCurrentOverBalls(prev => [...prev, `O+${value}`]);
+        const newBalls = [...currentOverBalls, `O+${value}`];
+        setCurrentOverBalls(newBalls);
+        setCurrentOverScores(calculateCurrentOverScores(newBalls));
         if (striker) updateBatsmanScore(striker.index, value);
         setValidBalls(prev => prev + 1);
         if (striker) updateBatsmanBalls(striker.index);
@@ -242,7 +282,9 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd, cur
         playAnimation('six');
         setPlayerScore(prev => prev + 6);
         setTopPlays(prev => [...prev, 6]);
-        setCurrentOverBalls(prev => [...prev, 6]);
+        const newBalls = [...currentOverBalls, 6];
+        setCurrentOverBalls(newBalls);
+        setCurrentOverScores(calculateCurrentOverScores(newBalls));
         if (striker) updateBatsmanScore(striker.index, 6);
         setValidBalls(prev => prev + 1);
         if (striker) updateBatsmanBalls(striker.index);
@@ -250,7 +292,9 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd, cur
         playAnimation('four');
         setPlayerScore(prev => prev + 4);
         setTopPlays(prev => [...prev, 4]);
-        setCurrentOverBalls(prev => [...prev, 4]);
+        const newBalls = [...currentOverBalls, 4];
+        setCurrentOverBalls(newBalls);
+        setCurrentOverScores(calculateCurrentOverScores(newBalls));
         if (striker) updateBatsmanScore(striker.index, 4);
         setValidBalls(prev => prev + 1);
         if (striker) updateBatsmanBalls(striker.index);
@@ -278,7 +322,9 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd, cur
       setShowRunInfo(false);
       setPlayerScore(prev => prev + value);
       setTopPlays(prev => [...prev, value]);
-      setCurrentOverBalls(prev => [...prev, value]);
+      const newBalls = [...currentOverBalls, value];
+      setCurrentOverBalls(newBalls);
+      setCurrentOverScores(calculateCurrentOverScores(newBalls));
       setValidBalls(prev => prev + 1);
       if (striker) {
         updateBatsmanScore(striker.index, value);
@@ -417,8 +463,12 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd, cur
     }
 
     if (validBalls === 6) {
+      // Calculate the score for the current over
+      const currentOverScore = calculateOverScore([...pastOvers, currentOverBalls]);
       setPastOvers(prev => [...prev, currentOverBalls]);
+      setPastOversScores(prev => [...prev, currentOverScore]); // Store the cumulative score at the end of this over
       setCurrentOverBalls([]);
+      setCurrentOverScores([]); // Reset current over scores
       setOverNumber(prev => prev + 1);
       setValidBalls(0);
       const temp = striker;
@@ -431,9 +481,38 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd, cur
     }
   }, [validBalls, currentOverBalls, nonStriker, overNumber, isChasing, targetScore, playerScore, gameFinished, outCount, maxOvers, teamA, teamB]);
 
+  // Function to calculate the cumulative score up to the current over
+  const calculateOverScore = (overs) => {
+    let totalScore = 0;
+    overs.forEach(over => {
+      over.forEach(ball => {
+        if (typeof ball === 'number') {
+          totalScore += ball;
+        } else if (typeof ball === 'string') {
+          if (ball.startsWith('W+')) {
+            const runs = parseInt(ball.replace('W+', ''), 10) + 1; // Wide + runs
+            totalScore += runs;
+          } else if (ball.startsWith('NB+')) {
+            const runs = parseInt(ball.replace('NB+', ''), 10) + 1; // No-ball + runs
+            totalScore += runs;
+          } else if (ball.startsWith('L+')) {
+            const runs = parseInt(ball.replace('L+', ''), 10); // Leg By + runs
+            totalScore += runs;
+          } else if (ball.startsWith('O+')) {
+            const runs = parseInt(ball.replace('O+', ''), 10); // Out + runs
+            totalScore += runs;
+          }
+        }
+      });
+    });
+    return totalScore;
+  };
+
   const resetInnings = () => {
     setCurrentOverBalls([]);
+    setCurrentOverScores([]); // Reset current over scores
     setPastOvers([]);
+    setPastOversScores([]); // Reset past overs scores
     setPlayerScore(0);
     setOutCount(0);
     setValidBalls(0);
@@ -531,7 +610,9 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd, cur
     setShowBatsmanDropdown(false);
     setPendingOut(false);
     setTopPlays(prev => prev.slice(0, -1));
-    setCurrentOverBalls(prev => prev.slice(0, -1));
+    const newBalls = currentOverBalls.slice(0, -1);
+    setCurrentOverBalls(newBalls);
+    setCurrentOverScores(calculateCurrentOverScores(newBalls));
     setValidBalls(prev => Math.max(0, prev - 1));
   };
 
@@ -1143,9 +1224,10 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd, cur
                   <div className="mt-2 md:mt-4 text-white w-full">
                     <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-4 text-center">Overs History</h3>
                     <div className="flex flex-wrap gap-2 md:gap-4 justify-center">
+                      {/* Past Overs */}
                       {pastOvers.map((over, index) => (
                         <div key={index} className="bg-[#4C0025] p-2 md:p-3 rounded-lg">
-                          <h4 className="text-sm md:text-base">Over {index + 1}:</h4>
+                          <h4 className="text-sm md:text-base">Over {index + 1}: (Score: {pastOversScores[index]})</h4>
                           <div className="flex gap-1 md:gap-2">
                             {over.map((ball, ballIndex) => (
                               <span
@@ -1158,6 +1240,25 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd, cur
                           </div>
                         </div>
                       ))}
+                      {/* Current Over */}
+                      {currentOverBalls.length > 0 && (
+                        <div className="bg-[#4C0025] p-2 md:p-3 rounded-lg">
+                          <h4 className="text-sm md:text-base">Current Over {overNumber > maxOvers ? maxOvers : overNumber}:</h4>
+                          <div className="flex gap-1 md:gap-2">
+                            {currentOverBalls.map((ball, ballIndex) => (
+                              <span
+                                key={ballIndex}
+                                className={`w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 flex items-center justify-center rounded-full text-xs md:text-sm ${ball === 'W' || ball === 'O' ? 'bg-red-600' : 'bg-[#FF62A1]'}`}
+                              >
+                                {ball}
+                              </span>
+                            ))}
+                          </div>
+                          <div className="text-sm md:text-base mt-1">
+                            (Score: {currentOverScores.length > 0 ? currentOverScores[currentOverScores.length - 1] : (pastOversScores.length > 0 ? pastOversScores[pastOversScores.length - 1] : 0)})
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -1176,12 +1277,14 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd, cur
             <div className="mt-4 flex flex-wrap justify-center gap-2 md:gap-4">
               {[0, 1, 2, 4, 6].map((num) => {
                 const isActive = activeNumber === num;
+                const isDisabled = pendingOut && num !== 0 && num !== 1; // Disable 2, 4, 6 when pendingOut is true
                 return (
                   <button
                     key={num}
                     onClick={() => handleScoreButtonClick(num)}
+                    disabled={isDisabled}
                     className={`w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16
-                      ${isActive ? 'bg-green-500' : 'bg-[#4C0025] hover:bg-green-300'}
+                      ${isDisabled ? 'bg-gray-500 cursor-not-allowed' : isActive ? 'bg-green-500' : 'bg-[#4C0025] hover:bg-green-300'}
                       text-white font-bold text-lg md:text-xl rounded-full border-2 border-white
                       flex items-center justify-center transition-colors duration-300`}
                   >
@@ -1194,12 +1297,14 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd, cur
             <div className="mt-2 flex flex-wrap justify-center gap-2 md:gap-4">
               {['Wide', 'No-ball', 'OUT', 'Leg By', 'lbw'].map((label) => {
                 const isActive = activeLabel === label;
+                const isDisabled = pendingOut && label !== 'OUT'; // Disable all labels except OUT when pendingOut is true
                 return (
                   <button
                     key={label}
                     onClick={() => handleScoreButtonClick(label, true)}
+                    disabled={isDisabled}
                     className={`w-20 h-10 md:w-24 md:h-12
-                      ${isActive ? 'bg-red-600' : 'bg-[#4C0025] hover:bg-red-400'}
+                      ${isDisabled ? 'bg-gray-500 cursor-not-allowed' : isActive ? 'bg-red-600' : 'bg-[#4C0025] hover:bg-red-400'}
                       text-white font-bold text-sm md:text-lg rounded-lg border-2 border-white
                       flex items-center justify-center transition-colors duration-300`}
                   >
