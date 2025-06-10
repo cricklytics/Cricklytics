@@ -236,7 +236,7 @@ export default function Highlights() {
             </p>
             <button
               className="bg-[#70005A] text-white px-10 py-4 text-xl font-semibold rounded-md shadow-md shadow-black transition duration-300 hover:bg-[blue] hover:-translate-y-1"
-              onClick={() => navigate("/go-live")}
+              onClick={() => navigate("/go-live-upcomming")}
             >
               Go Live
             </button>
