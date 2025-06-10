@@ -1,99 +1,55 @@
-import React, { useState } from 'react';
-import { FiSearch, FiFilter, FiStar, FiMessageSquare, FiUser, FiCalendar, FiMapPin, FiArrowLeft } from 'react-icons/fi';
+import React, { useState, useEffect } from 'react';
+import { FiSearch, FiFilter, FiStar, FiMessageSquare, FiUser, FiCalendar, FiMapPin, FiArrowLeft, FiEdit, FiTrash2 } from 'react-icons/fi';
 import cuslogo from "../../assets/yogesh/communityimg/cuslogo.png";
 import { useNavigate } from 'react-router-dom';
-import backButton from '../../assets/kumar/right-chevron.png'
+import backButton from '../../assets/kumar/right-chevron.png';
+import { db, auth } from "../../firebase"; // Adjust path as needed
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc } from "firebase/firestore";
 
 const CommentatorsPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('all');
   const [selectedCommentator, setSelectedCommentator] = useState(null);
   const navigate = useNavigate();
+  const [commentatorsData, setCommentatorsData] = useState([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    location: '',
+    matches: '',
+    rating: '',
+    reviews: '',
+    languages: [],
+    image: '',
+    featured: false,
+    bio: '',
+    available: true,
+    experience: '',
+  });
+  const [editingId, setEditingId] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const commentators = [
-    {
-      id: 1,
-      name: "Harsha Bhogle",
-      location: "Mumbai, India",
-      matches: 1250,
-      rating: 4.9,
-      reviews: 842,
-      languages: ["English", "Hindi"],
-      image: cuslogo,
-      featured: true,
-      bio: "Legendary commentator known for his eloquent descriptions and deep cricket knowledge.",
-      available: true,
-      experience: "25 years"
-    },
-    {
-      id: 2,
-      name: "Danny Morrison",
-      location: "Auckland, New Zealand",
-      matches: 980,
-      rating: 4.7,
-      reviews: 756,
-      languages: ["English"],
-      image: cuslogo,
-      bio: "Energetic commentator famous for his enthusiastic style and catchphrases.",
-      available: true,
-      experience: "18 years"
-    },
-    {
-      id: 3,
-      name: "Isa Guha",
-      location: "London, UK",
-      matches: 720,
-      rating: 4.8,
-      reviews: 632,
-      languages: ["English"],
-      image: cuslogo,
-      featured: true,
-      bio: "Former international cricketer turned insightful commentator with a global perspective.",
-      available: false,
-      experience: "8 years"
-    },
-    {
-      id: 4,
-      name: "Sanjay Manjrekar",
-      location: "Bangalore, India",
-      matches: 1100,
-      rating: 4.5,
-      reviews: 587,
-      languages: ["English", "Hindi", "Kannada"],
-      image: cuslogo,
-      bio: "Former Test cricketer known for his analytical approach to commentary.",
-      available: true,
-      experience: "15 years"
-    },
-    {
-      id: 5,
-      name: "Mel Jones",
-      location: "Melbourne, Australia",
-      matches: 650,
-      rating: 4.6,
-      reviews: 498,
-      languages: ["English"],
-      image: cuslogo,
-      bio: "Former Australian player providing expert analysis in women's and men's cricket.",
-      available: true,
-      experience: "10 years"
-    },
-    {
-      id: 6,
-      name: "Rameez Raja",
-      location: "Lahore, Pakistan",
-      matches: 920,
-      rating: 4.4,
-      reviews: 521,
-      languages: ["English", "Urdu"],
-      image: cuslogo,
-      bio: "Former Pakistan captain offering unique player insights during commentary.",
-      available: false,
-      experience: "12 years"
-    }
-  ];
+  // Available language options
+  const languageOptions = ['English', 'Hindi', 'Urdu', 'Kannada', 'Tamil', 'Telugu', 'Spanish', 'French'];
 
-  const filteredCommentators = commentators.filter(commentator => {
+  // Fetch commentator data from Firestore
+  useEffect(() => {
+    if (!auth.currentUser) return;
+
+    const unsubscribe = onSnapshot(collection(db, 'Commentators'), (snapshot) => {
+      const data = snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter(entry => entry.userId === auth.currentUser.uid);
+      setCommentatorsData(data);
+    }, (error) => {
+      console.error("Error fetching commentators:", error);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Filter commentators based on search and active tab
+  const filteredCommentators = commentatorsData.filter(commentator => {
     const matchesSearch = commentator.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       commentator.location.toLowerCase().includes(searchTerm.toLowerCase());
 
@@ -101,6 +57,119 @@ const CommentatorsPage = () => {
     if (activeTab === 'available') return matchesSearch && commentator.available;
     return matchesSearch;
   });
+
+  // Calculate community stats
+  const calculateCommunityStats = () => {
+    const totalCommentators = commentatorsData.length;
+    const availableCommentators = commentatorsData.filter(c => c.available).length;
+    const totalMatches = commentatorsData.reduce((acc, c) => acc + (c.matches || 0), 0);
+    const languagesCovered = new Set(commentatorsData.flatMap(c => c.languages || [])).size;
+
+    return { totalCommentators, availableCommentators, totalMatches, languagesCovered };
+  };
+
+  const { totalCommentators, availableCommentators, totalMatches, languagesCovered } = calculateCommunityStats();
+
+  // Handle saving or updating commentator data
+  const handleSaveData = async () => {
+    if (!formData.name.trim() || !formData.location.trim() || !formData.matches || !formData.rating || !formData.reviews || !formData.languages.length || !formData.bio.trim() || !formData.experience.trim()) {
+      alert("Please fill all required fields!");
+      return;
+    }
+    if (isNaN(formData.matches) || formData.matches < 0) {
+      alert("Matches must be a non-negative number!");
+      return;
+    }
+    if (isNaN(formData.rating) || formData.rating < 0 || formData.rating > 5) {
+      alert("Rating must be between 0 and 5!");
+      return;
+    }
+    if (isNaN(formData.reviews) || formData.reviews < 0) {
+      alert("Reviews must be a non-negative number!");
+      return;
+    }
+    if (formData.image && !formData.image.match(/\.(jpg|jpeg|png|gif)$/i)) {
+      alert("Please provide a valid image URL (jpg, jpeg, png, gif)!");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const entryData = {
+        name: formData.name,
+        location: formData.location,
+        matches: parseInt(formData.matches),
+        rating: parseFloat(formData.rating),
+        reviews: parseInt(formData.reviews),
+        languages: formData.languages,
+        image: formData.image || cuslogo,
+        featured: formData.featured,
+        bio: formData.bio,
+        available: formData.available,
+        experience: formData.experience,
+        userId: auth.currentUser.uid,
+        timestamp: new Date().toISOString(),
+      };
+
+      if (editingId) {
+        await updateDoc(doc(db, 'Commentators', editingId), entryData);
+      } else {
+        await addDoc(collection(db, 'Commentators'), entryData);
+      }
+
+      setFormData({
+        name: '',
+        location: '',
+        matches: '',
+        rating: '',
+        reviews: '',
+        languages: [],
+        image: '',
+        featured: false,
+        bio: '',
+        available: true,
+        experience: '',
+      });
+      setEditingId(null);
+      setIsModalOpen(false);
+    } catch (err) {
+      console.error("Error saving data:", err);
+      alert("Failed to save data. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle deleting commentator data
+  const handleDeleteData = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this commentator?")) return;
+
+    try {
+      await deleteDoc(doc(db, 'Commentators', id));
+    } catch (err) {
+      console.error("Error deleting data:", err);
+      alert("Failed to delete data. Please try again.");
+    }
+  };
+
+  // Handle editing commentator data
+  const handleEditData = (commentator) => {
+    setFormData({
+      name: commentator.name,
+      location: commentator.location,
+      matches: commentator.matches.toString(),
+      rating: commentator.rating.toString(),
+      reviews: commentator.reviews.toString(),
+      languages: commentator.languages,
+      image: commentator.image === cuslogo ? '' : commentator.image,
+      featured: commentator.featured,
+      bio: commentator.bio,
+      available: commentator.available,
+      experience: commentator.experience,
+    });
+    setEditingId(commentator.id);
+    setIsModalOpen(true);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#0b0f28] to-[#06122e] text-white p-4 md:p-8">
@@ -143,6 +212,28 @@ const CommentatorsPage = () => {
               <option value="available">Available Now</option>
             </select>
           </div>
+          <button
+            onClick={() => {
+              setFormData({
+                name: '',
+                location: '',
+                matches: '',
+                rating: '',
+                reviews: '',
+                languages: [],
+                image: '',
+                featured: false,
+                bio: '',
+                available: true,
+                experience: '',
+              });
+              setEditingId(null);
+              setIsModalOpen(true);
+            }}
+            className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+          >
+            Add Commentator
+          </button>
         </div>
 
         {selectedCommentator ? (
@@ -160,6 +251,7 @@ const CommentatorsPage = () => {
                   src={selectedCommentator.image}
                   alt={selectedCommentator.name}
                   className="w-full h-auto rounded-lg object-cover"
+                  onError={(e) => { e.target.src = cuslogo; }}
                 />
                 <div className="mt-4 flex justify-between items-center">
                   <span className={`px-3 py-1 rounded-full text-sm ${selectedCommentator.available ? 'bg-green-900 text-green-300' : 'bg-red-900 text-red-300'}`}>
@@ -184,7 +276,19 @@ const CommentatorsPage = () => {
               </div>
 
               <div className="md:w-2/3">
-                <h2 className="text-2xl font-bold mb-2">{selectedCommentator.name}</h2>
+                <div className="flex justify-between items-center mb-2">
+                  <h2 className="text-2xl font-bold">{selectedCommentator.name}</h2>
+                  <div className="flex gap-2">
+                    <FiEdit
+                      className="text-yellow-500 cursor-pointer hover:text-yellow-600"
+                      onClick={() => handleEditData(selectedCommentator)}
+                    />
+                    <FiTrash2
+                      className="text-red-500 cursor-pointer hover:text-red-600"
+                      onClick={() => handleDeleteData(selectedCommentator.id)}
+                    />
+                  </div>
+                </div>
                 <div className="flex flex-wrap gap-4 mb-4">
                   <div className="flex items-center text-blue-300">
                     <FiMapPin className="mr-2" />
@@ -216,7 +320,7 @@ const CommentatorsPage = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredCommentators.map(commentator => (
+            {filteredCommentators.length > 0 ? filteredCommentators.map(commentator => (
               <div
                 key={commentator.id}
                 className="bg-[#0b1a3b] border border-blue-600/50 rounded-xl p-4 hover:border-blue-400 transition-all cursor-pointer hover:shadow-lg"
@@ -227,6 +331,7 @@ const CommentatorsPage = () => {
                     src={commentator.image}
                     alt={commentator.name}
                     className="w-16 h-16 rounded-full object-cover border-2 border-blue-500"
+                    onError={(e) => { e.target.src = cuslogo; }}
                   />
                   <div>
                     <h3 className="font-bold">{commentator.name}</h3>
@@ -254,7 +359,9 @@ const CommentatorsPage = () => {
                   </div>
                 )}
               </div>
-            ))}
+            )) : (
+              <p className="text-center text-gray-400 col-span-3">No commentators found. Add a commentator to get started!</p>
+            )}
           </div>
         )}
 
@@ -263,20 +370,207 @@ const CommentatorsPage = () => {
             <h2 className="text-xl font-bold mb-4">Commentary Community Stats</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="bg-[#0b1a3b] border border-blue-600/30 rounded-lg p-4 text-center">
-                <p className="text-3xl font-bold text-blue-400">{commentators.length}+</p>
+                <p className="text-3xl font-bold text-blue-400">{totalCommentators}+</p>
                 <p className="text-gray-400">Professional Commentators</p>
               </div>
               <div className="bg-[#0b1a3b] border border-blue-600/30 rounded-lg p-4 text-center">
-                <p className="text-3xl font-bold text-blue-400">{commentators.filter(c => c.available).length}</p>
+                <p className="text-3xl font-bold text-blue-400">{availableCommentators}</p>
                 <p className="text-gray-400">Available Now</p>
               </div>
               <div className="bg-[#0b1a3b] border border-blue-600/30 rounded-lg p-4 text-center">
-                <p className="text-3xl font-bold text-blue-400">{commentators.reduce((acc, c) => acc + c.matches, 0)}+</p>
+                <p className="text-3xl font-bold text-blue-400">{totalMatches}+</p>
                 <p className="text-gray-400">Matches Commented</p>
               </div>
               <div className="bg-[#0b1a3b] border border-blue-600/30 rounded-lg p-4 text-center">
-                <p className="text-3xl font-bold text-blue-400">{new Set(commentators.flatMap(c => c.languages)).size}</p>
+                <p className="text-3xl font-bold text-blue-400">{languagesCovered}</p>
                 <p className="text-gray-400">Languages Covered</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal for Adding/Editing Commentator */}
+        {isModalOpen && (
+          <div className="border-2 border-white fixed inset-0 bg-black bg-opacity-90 flex justify-center items-center z-50">
+            <div
+              className="w-96 rounded-lg p-6 shadow-lg max-h-[80vh] overflow-y-auto"
+              style={{
+                background: 'linear-gradient(140deg, rgba(8,0,6,0.85) 15%, rgba(255,0,119,0.85))',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.75)',
+              }}
+            >
+              <h2 className="text-xl font-bold mb-4 text-white text-center">
+                {editingId ? 'Edit Commentator' : 'Add Commentator'}
+              </h2>
+              <label className="block mb-1 text-white font-semibold" htmlFor="name">
+                Name
+              </label>
+              <input
+                id="name"
+                type="text"
+                placeholder="Enter commentator name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="w-full mb-4 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                disabled={isLoading}
+              />
+              <label className="block mb-1 text-white font-semibold" htmlFor="location">
+                Location
+              </label>
+              <input
+                id="location"
+                type="text"
+                placeholder="Enter location (e.g., Mumbai, India)"
+                value={formData.location}
+                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                className="w-full mb-4 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                disabled={isLoading}
+              />
+              <label className="block mb-1 text-white font-semibold" htmlFor="matches">
+                Matches Commented
+              </label>
+              <input
+                id="matches"
+                type="number"
+                placeholder="Enter matches commented"
+                value={formData.matches}
+                onChange={(e) => setFormData({ ...formData, matches: e.target.value })}
+                className="w-full mb-4 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                min="0"
+                disabled={isLoading}
+              />
+              <label className="block mb-1 text-white font-semibold" htmlFor="rating">
+                Rating (0-5)
+              </label>
+              <input
+                id="rating"
+                type="number"
+                placeholder="Enter rating"
+                value={formData.rating}
+                onChange={(e) => setFormData({ ...formData, rating: e.target.value })}
+                className="w-full mb-4 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                min="0"
+                max="5"
+                step="0.1"
+                disabled={isLoading}
+              />
+              <label className="block mb-1 text-white font-semibold" htmlFor="reviews">
+                Reviews
+              </label>
+              <input
+                id="reviews"
+                type="number"
+                placeholder="Enter number of reviews"
+                value={formData.reviews}
+                onChange={(e) => setFormData({ ...formData, reviews: e.target.value })}
+                className="w-full mb-4 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                min="0"
+                disabled={isLoading}
+              />
+              <label className="block mb-1 text-white font-semibold" htmlFor="languages">
+                Languages
+              </label>
+              <select
+                id="languages"
+                multiple
+                value={formData.languages}
+                onChange={(e) => setFormData({ ...formData, languages: Array.from(e.target.selectedOptions, option => option.value) })}
+                className="w-full mb-4 p-2 rounded border border-gray-600 bg-transparent text-white focus:outline-none focus:ring-2 focus:ring-pink-500"
+                disabled={isLoading}
+              >
+                {languageOptions.map(lang => (
+                  <option key={lang} value={lang}>{lang}</option>
+                ))}
+              </select>
+              <label className="block mb-1 text-white font-semibold" htmlFor="image">
+                Image URL (Optional)
+              </label>
+              <input
+                id="image"
+                type="text"
+                placeholder="Enter image URL"
+                value={formData.image}
+                onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+                className="w-full mb-4 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                disabled={isLoading}
+              />
+              <label className="block mb-1 text-white font-semibold" htmlFor="featured">
+                Featured
+              </label>
+              <input
+                id="featured"
+                type="checkbox"
+                checked={formData.featured}
+                onChange={(e) => setFormData({ ...formData, featured: e.target.checked })}
+                className="mb-4"
+                disabled={isLoading}
+              />
+              <label className="block mb-1 text-white font-semibold" htmlFor="bio">
+                Bio
+              </label>
+              <textarea
+                id="bio"
+                placeholder="Enter commentator bio"
+                value={formData.bio}
+                onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+                className="w-full mb-4 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                rows={3}
+                disabled={isLoading}
+              />
+              <label className="block mb-1 text-white font-semibold" htmlFor="available">
+                Available
+              </label>
+              <input
+                id="available"
+                type="checkbox"
+                checked={formData.available}
+                onChange={(e) => setFormData({ ...formData, available: e.target.checked })}
+                className="mb-4"
+                disabled={isLoading}
+              />
+              <label className="block mb-1 text-white font-semibold" htmlFor="experience">
+                Experience
+              </label>
+              <input
+                id="experience"
+                type="text"
+                placeholder="Enter experience (e.g., 15 years)"
+                value={formData.experience}
+                onChange={(e) => setFormData({ ...formData, experience: e.target.value })}
+                className="w-full mb-4 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                disabled={isLoading}
+              />
+              <div className="flex justify-between">
+                <button
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    setEditingId(null);
+                    setFormData({
+                      name: '',
+                      location: '',
+                      matches: '',
+                      rating: '',
+                      reviews: '',
+                      languages: [],
+                      image: '',
+                      featured: false,
+                      bio: '',
+                      available: true,
+                      experience: '',
+                    });
+                  }}
+                  className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded transition"
+                  disabled={isLoading}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveData}
+                  className="bg-pink-600 hover:bg-pink-700 text-white px-4 py-2 rounded transition"
+                  disabled={isLoading}
+                >
+                  {isLoading ? 'Saving...' : 'Save'}
+                </button>
               </div>
             </div>
           </div>

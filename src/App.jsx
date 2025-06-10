@@ -46,6 +46,7 @@ import MatchStartSB from './pages/MatchStartSB';
 import MatchStart from './pages/MatchStart';
 import MatchStartKO from './pages/KnouckOut/MatchStartKO';
 import TournamentBracket from './components/kumar/flowchart';
+import UpcomingPage from './pages/Upcomming';
 
 
 
@@ -202,6 +203,7 @@ function App() {
           <Route path="/clubs/:id"  element={<Tab/>} />
           <Route path="/Tab" element={<Tab/>} />
 
+          <Route path="/go-live-upcomming" element={<UpcomingPage/>} />
           <Route path="/community" element={<CommunitySection/>} />
           <Route path="/academics" element={<AcademicsPage/>} />
           <Route path="/bat-manufactures" element={<BatManufacturesPage/>} />

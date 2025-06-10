@@ -1,86 +1,240 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FiSearch, FiShoppingCart, FiStar, FiAward, FiTruck, FiShield, FiArrowLeft } from 'react-icons/fi';
+import { FiSearch, FiShoppingCart, FiStar, FiTruck, FiShield, FiArrowLeft } from 'react-icons/fi';
 import { FaTrophy, FaMedal, FaCertificate, FaRegMoneyBillAlt } from 'react-icons/fa';
-import backButton from '../../assets/kumar/right-chevron.png'
+import { Edit, Trash2 } from 'lucide-react';
+import backButton from '../../assets/kumar/right-chevron.png';
+import { db, auth, storage } from "../../firebase"; // Adjust path as needed
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+
 const TrophyVendorsPage = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('all');
   const [selectedVendor, setSelectedVendor] = useState(null);
   const [cartItems, setCartItems] = useState([]);
+  const [vendors, setVendors] = useState([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    rating: '',
+    orders: '',
+    deliveryTime: '',
+    minOrder: '',
+    image: '',
+    bio: '',
+    services: [],
+    featured: false,
+    products: [],
+    imageSource: 'url',
+    imageFile: null
+  });
+  const [editingId, setEditingId] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Sample vendor data
-  const vendors = [
-    {
-      id: 1,
-      name: 'Elite Trophy Designs',
-      rating: 4.8,
-      orders: 1560,
-      deliveryTime: '3-5 days',
-      minOrder: '$100',
-      image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT2d08SvvnMpDnYPqxUfbG3E1CGWmfnq9kwNw&s',
-      bio: 'Premium trophy manufacturer specializing in cricket awards with 20 years of experience in crafting exquisite pieces.',
-      available: true,
-      products: [
-        { id: 1, type: 'trophy', name: 'Champions Cup', price: '$45', image: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80' },
-        { id: 2, type: 'medal', name: 'Gold Medal', price: '$12', image: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80' }
-      ],
-      services: ['custom-engraving', 'express-delivery', 'bulk-discounts'],
-      featured: true
-    },
-    {
-      id: 2,
-      name: 'Cricket Awards Co.',
-      rating: 4.6,
-      orders: 980,
-      deliveryTime: '5-7 days',
-      minOrder: '$75',
-      image: 'https://images.unsplash.com/photo-1551641506-ee5bf4cb45f1?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80',
-      bio: 'Specialists in cricket-themed awards with a focus on quality craftsmanship and innovative designs.',
-      available: true,
-      products: [
-        { id: 3, type: 'trophy', name: 'Golden Bat Award', price: '$65', image: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80' },
-        { id: 4, type: 'plaque', name: 'Hall of Fame Plaque', price: '$85', image: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80' }
-      ],
-      services: ['custom-design', 'bulk-discounts'],
-      featured: false
-    },
-    {
-      id: 3,
-      name: 'Victory Trophies',
-      rating: 4.9,
-      orders: 2240,
-      deliveryTime: '2-4 days',
-      minOrder: '$150',
-      image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRmI6bdnxlFbUEl-f2lj818iqLP42ZXCSe3Vw&s',
-      bio: 'Industry leader in sports trophies with a dedicated cricket collection and fastest turnaround times.',
-      available: true,
-      products: [
-        { id: 5, type: 'medal', name: 'Silver Medal', price: '$10', image: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80' },
-        { id: 6, type: 'certificate', name: 'Achievement Certificate', price: '$8', image: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80' }
-      ],
-      services: ['express-delivery', 'custom-engraving', 'custom-design'],
-      featured: true
-    },
-    {
-      id: 4,
-      name: 'Golden Wickets Awards',
-      rating: 4.4,
-      orders: 720,
-      deliveryTime: '7-10 days',
-      minOrder: '$50',
-      image: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80',
-      bio: 'Budget-friendly trophy solutions without compromising on quality, perfect for local cricket clubs.',
-      available: true,
-      products: [
-        { id: 7, type: 'trophy', name: 'Player of the Series', price: '$55', image: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80' },
-        { id: 8, type: 'medal', name: 'Bronze Medal', price: '$8', image: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80' }
-      ],
-      services: ['bulk-discounts'],
-      featured: false
+  // Fetch vendor data from Firestore
+  useEffect(() => {
+    if (!auth.currentUser) return;
+
+    const unsubscribe = onSnapshot(collection(db, 'Vendors'), (snapshot) => {
+      const data = snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter(entry => entry.userId === auth.currentUser.uid);
+      setVendors(data);
+    }, (error) => {
+      console.error("Error fetching vendors:", error);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Calculate stats for "Trophy Vendor Network"
+  const calculateStats = () => {
+    const totalVendors = vendors.length;
+    const featuredSuppliers = vendors.filter(v => v.featured).length;
+    const totalOrders = vendors.reduce((acc, v) => acc + (parseInt(v.orders) || 0), 0);
+    const averageRating = vendors.length > 0
+      ? (vendors.reduce((acc, v) => acc + (parseFloat(v.rating) || 0), 0) / vendors.length).toFixed(1)
+      : 0;
+
+    return {
+      totalVendors,
+      featuredSuppliers,
+      totalOrders,
+      averageRating
+    };
+  };
+
+  const { totalVendors, featuredSuppliers, totalOrders, averageRating } = calculateStats();
+
+  // Handle saving or updating vendor data
+  const handleSaveData = async () => {
+    if (!formData.name.trim() || !formData.rating || !formData.orders || !formData.deliveryTime.trim() || !formData.minOrder.trim() || !formData.bio.trim()) {
+      alert("Please fill all required fields!");
+      return;
     }
-  ];
+    if (isNaN(formData.rating) || formData.rating < 0 || formData.rating > 5) {
+      alert("Rating must be between 0 and 5!");
+      return;
+    }
+    if (isNaN(formData.orders) || formData.orders < 0) {
+      alert("Orders must be a non-negative number!");
+      return;
+    }
+    if (!formData.minOrder.match(/^\$\d+$/)) {
+      alert("Minimum order must be in the format '$[number]' (e.g., '$100')!");
+      return;
+    }
+    if (formData.imageSource === 'url' && formData.image && !formData.image.match(/\.(jpg|jpeg|png|gif)$/i)) {
+      alert("Please provide a valid image URL (jpg, jpeg, png, gif)!");
+      return;
+    }
+    if (formData.imageSource === 'file' && !formData.imageFile) {
+      alert("Please select an image file!");
+      return;
+    }
+    if (formData.imageSource === 'file' && formData.imageFile && !formData.imageFile.type.match(/image\/(jpg|jpeg|png|gif)/i)) {
+      alert("Please select a valid image file (jpg, jpeg, png, gif)!");
+      return;
+    }
+    if (formData.services.length === 0) {
+      alert("Please add at least one service!");
+      return;
+    }
+    if (formData.products.length === 0) {
+      alert("Please add at least one product!");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      let imageUrl = formData.image;
+      if (formData.imageSource === 'file' && formData.imageFile) {
+        const storageRef = ref(storage, `vendors/${auth.currentUser.uid}/${formData.imageFile.name}`);
+        await uploadBytes(storageRef, formData.imageFile);
+        imageUrl = await getDownloadURL(storageRef);
+      }
+
+      const entryData = {
+        name: formData.name,
+        rating: parseFloat(formData.rating),
+        orders: parseInt(formData.orders),
+        deliveryTime: formData.deliveryTime,
+        minOrder: formData.minOrder,
+        image: imageUrl || '',
+        bio: formData.bio,
+        services: formData.services,
+        featured: formData.featured,
+        products: formData.products.map(product => ({
+          id: product.id || Date.now() + Math.random().toString(36).substr(2, 9),
+          type: product.type,
+          name: product.name,
+          price: product.price,
+          image: product.image || 'https://via.placeholder.com/150'
+        })),
+        userId: auth.currentUser.uid,
+        timestamp: new Date().toISOString(),
+      };
+
+      if (editingId) {
+        await updateDoc(doc(db, 'Vendors', editingId), entryData);
+      } else {
+        await addDoc(collection(db, 'Vendors'), entryData);
+      }
+
+      setFormData({
+        name: '',
+        rating: '',
+        orders: '',
+        deliveryTime: '',
+        minOrder: '',
+        image: '',
+        bio: '',
+        services: [],
+        featured: false,
+        products: [],
+        imageSource: 'url',
+        imageFile: null
+      });
+      setEditingId(null);
+      setIsModalOpen(false);
+    } catch (err) {
+      console.error("Error saving data:", err);
+      alert("Failed to save data. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle deleting vendor data
+  const handleDeleteData = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this vendor?")) return;
+
+    try {
+      await deleteDoc(doc(db, 'Vendors', id));
+      if (selectedVendor && selectedVendor.id === id) {
+        setSelectedVendor(null);
+      }
+    } catch (err) {
+      console.error("Error deleting data:", err);
+      alert("Failed to delete data. Please try again.");
+    }
+  };
+
+  // Handle editing vendor data
+  const handleEditData = (vendor) => {
+    setFormData({
+      name: vendor.name,
+      rating: vendor.rating.toString(),
+      orders: vendor.orders.toString(),
+      deliveryTime: vendor.deliveryTime,
+      minOrder: vendor.minOrder,
+      image: vendor.image,
+      bio: vendor.bio,
+      services: vendor.services,
+      featured: vendor.featured,
+      products: vendor.products,
+      imageSource: vendor.image ? 'url' : 'none',
+      imageFile: null
+    });
+    setEditingId(vendor.id);
+    setIsModalOpen(true);
+  };
+
+  // Add service
+  const addService = () => {
+    const newService = prompt("Enter service (e.g., custom-engraving, express-delivery):");
+    if (newService && newService.trim()) {
+      setFormData({ ...formData, services: [...formData.services, newService.trim()] });
+    }
+  };
+
+  // Remove service
+  const removeService = (index) => {
+    setFormData({ ...formData, services: formData.services.filter((_, i) => i !== index) });
+  };
+
+  // Add product
+  const addProduct = () => {
+    const type = prompt("Enter product type (trophy, medal, plaque, certificate):");
+    const name = prompt("Enter product name:");
+    const price = prompt("Enter product price (e.g., $45):");
+    const image = prompt("Enter product image URL (optional):");
+    if (type && name && price && ['trophy', 'medal', 'plaque', 'certificate'].includes(type.toLowerCase()) && price.match(/^\$\d+$/)) {
+      setFormData({
+        ...formData,
+        products: [...formData.products, { type: type.toLowerCase(), name, price, image }]
+      });
+    } else {
+      alert("Invalid product details! Ensure type is valid and price is in '$[number]' format.");
+    }
+  };
+
+  // Remove product
+  const removeProduct = (index) => {
+    setFormData({ ...formData, products: formData.products.filter((_, i) => i !== index) });
+  };
 
   const filteredVendors = vendors.filter(vendor => {
     const matchesSearch = vendor.name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -119,11 +273,11 @@ const TrophyVendorsPage = () => {
         {/* Header with Back Button */}
         <div className="flex justify-between items-center mb-8">
           <img
-                                      src={backButton}
-                                      alt="Back"
-                                      className="h-8 w-8 cursor-pointer -scale-x-100"
-                                      onClick={() => window.history.back()}
-                                    />
+            src={backButton}
+            alt="Back"
+            className="h-8 w-8 cursor-pointer -scale-x-100"
+            onClick={() => window.history.back()}
+          />
           <div className="text-center md:text-left">
             <h1 className="text-3xl md:text-4xl font-bold mb-2">Cricket Trophy Vendors</h1>
             <p className="text-blue-300">Find the perfect awards for your cricket tournaments</p>
@@ -154,25 +308,61 @@ const TrophyVendorsPage = () => {
               <option value="express">Express Delivery</option>
             </select>
           </div>
+          <button
+            onClick={() => {
+              setFormData({
+                name: '',
+                rating: '',
+                orders: '',
+                deliveryTime: '',
+                minOrder: '',
+                image: '',
+                bio: '',
+                services: [],
+                featured: false,
+                products: [],
+                imageSource: 'url',
+                imageFile: null
+              });
+              setEditingId(null);
+              setIsModalOpen(true);
+            }}
+            className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+          >
+            Add Vendor
+          </button>
         </div>
 
         {/* Main Content */}
         {selectedVendor ? (
           // Vendor Detail View
           <div className="bg-[#0b1a3b] border border-blue-600/50 rounded-xl p-6 shadow-lg">
-            <button 
-              onClick={() => setSelectedVendor(null)}
-              className="mb-4 flex items-center text-blue-400 hover:text-blue-300"
-            >
-              ← Back to all vendors
-            </button>
+            <div className="flex justify-between items-center mb-4">
+              <button 
+                onClick={() => setSelectedVendor(null)}
+                className="flex items-center text-blue-400 hover:text-blue-300"
+              >
+                <FiArrowLeft className="mr-2" /> Back to all vendors
+              </button>
+              <div className="flex gap-2">
+                <Edit
+                  className="text-yellow-500 cursor-pointer hover:text-yellow-600"
+                  onClick={() => handleEditData(selectedVendor)}
+                />
+                <Trash2
+                  className="text-red-500 cursor-pointer hover:text-red-600"
+                  onClick={() => handleDeleteData(selectedVendor.id)}
+                />
+              </div>
+            </div>
             
             <div className="flex flex-col md:flex-row gap-6">
               <div className="md:w-1/3">
                 <img 
-                  src={selectedVendor.image} 
+                  src={selectedVendor.image || 'https://via.placeholder.com/150'} 
                   alt={selectedVendor.name} 
                   className="w-full h-auto rounded-lg object-cover border-2 border-blue-500"
+                  onError={(e) => { e.target.src = 'https://via.placeholder.com/150'; }}
                 />
                 <div className="mt-4 flex justify-between items-center">
                   <span className="px-3 py-1 rounded-full text-sm bg-blue-900 text-blue-300">
@@ -225,6 +415,7 @@ const TrophyVendorsPage = () => {
                               src={product.image} 
                               alt={product.name} 
                               className="w-full h-full object-cover"
+                              onError={(e) => { e.target.src = 'https://via.placeholder.com/150'; }}
                             />
                           </div>
                           <div>
@@ -254,14 +445,31 @@ const TrophyVendorsPage = () => {
             {filteredVendors.map(vendor => (
               <div 
                 key={vendor.id} 
-                className="bg-[#0b1a3b] border border-blue-600/50 rounded-xl p-4 hover:border-blue-400 transition-all cursor-pointer hover:shadow-lg group"
+                className="bg-[#0b1a3b] border border-blue-600/50 rounded-xl p-4 hover:border-blue-400 transition-all cursor-pointer hover:shadow-lg group relative"
                 onClick={() => setSelectedVendor(vendor)}
               >
+                <div className="absolute top-2 right-2 flex flex-col gap-1 z-10">
+                  <Edit
+                    className="text-yellow-500 cursor-pointer hover:text-yellow-600"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEditData(vendor);
+                    }}
+                  />
+                  <Trash2
+                    className="text-red-500 cursor-pointer hover:text-red-600"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteData(vendor.id);
+                    }}
+                  />
+                </div>
                 <div className="flex items-start gap-4">
                   <img 
-                    src={vendor.image} 
+                    src={vendor.image || 'https://via.placeholder.com/150'} 
                     alt={vendor.name} 
                     className="w-16 h-16 rounded-full object-cover border-2 border-blue-500 group-hover:border-blue-300 transition-colors"
+                    onError={(e) => { e.target.src = 'https://via.placeholder.com/150'; }}
                   />
                   <div>
                     <h3 className="font-bold">{vendor.name}</h3>
@@ -300,25 +508,263 @@ const TrophyVendorsPage = () => {
           </div>
         )}
 
+        {/* Vendor Input Modal */}
+        {isModalOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-80 flex justify-center items-center z-50">
+            <div
+              className="w-96 rounded-lg p-6 shadow-lg max-h-[80vh] overflow-y-auto"
+              style={{
+                background: 'linear-gradient(140deg, rgba(8,0,6,0.85) 15%, rgba(255,0,119,0.85))',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+              }}
+            >
+              <h2 className="text-xl font-bold mb-4 text-white text-center font-semibold">
+                {editingId ? 'Edit Vendor' : 'Add Vendor'}
+              </h2>
+              <label className="block mb-1 text-white font-semibold" htmlFor="name">
+                Name
+              </label>
+              <input
+                id="name"
+                type="text"
+                placeholder="Enter vendor name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                disabled={isLoading}
+              />
+              <label className="block mb-1 text-white font-semibold" htmlFor="rating">
+                Rating (0-5)
+              </label>
+              <input
+                id="rating"
+                type="number"
+                placeholder="Enter rating"
+                value={formData.rating}
+                onChange={(e) => setFormData({ ...formData, rating: e.target.value })}
+                className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                min="0"
+                max="5"
+                step="0.1"
+                disabled={isLoading}
+              />
+              <label className="block mb-1 text-white font-semibold" htmlFor="orders">
+                Orders Completed
+              </label>
+              <input
+                id="orders"
+                type="number"
+                placeholder="Enter number of orders"
+                value={formData.orders}
+                onChange={(e) => setFormData({ ...formData, orders: e.target.value })}
+                className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                min="0"
+                disabled={isLoading}
+              />
+              <label className="block mb-1 text-white font-semibold" htmlFor="deliveryTime">
+                Delivery Time
+              </label>
+              <input
+                id="deliveryTime"
+                type="text"
+                placeholder="Enter delivery time (e.g., 3-5 days)"
+                value={formData.deliveryTime}
+                onChange={(e) => setFormData({ ...formData, deliveryTime: e.target.value })}
+                className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                disabled={isLoading}
+              />
+              <label className="block mb-1 text-white font-semibold" htmlFor="minOrder">
+                Minimum Order
+              </label>
+              <input
+                id="minOrder"
+                type="text"
+                placeholder="Enter minimum order (e.g., $100)"
+                value={formData.minOrder}
+                onChange={(e) => setFormData({ ...formData, minOrder: e.target.value })}
+                className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                disabled={isLoading}
+              />
+              <label className="block mb-1 text-white font-semibold">Image Source</label>
+              <div className="flex gap-4 mb-3">
+                <label className="flex items-center text-white">
+                  <input
+                    type="radio"
+                    name="imageSource"
+                    value="url"
+                    checked={formData.imageSource === 'url'}
+                    onChange={(e) => setFormData({ ...formData, imageSource: e.target.value, image: '', imageFile: null })}
+                    className="mr-2"
+                    disabled={isLoading}
+                  />
+                  URL
+                </label>
+                <label className="flex items-center text-white">
+                  <input
+                    type="radio"
+                    name="imageSource"
+                    value="file"
+                    checked={formData.imageSource === 'file'}
+                    onChange={(e) => setFormData({ ...formData, imageSource: e.target.value, image: '', imageFile: null })}
+                    className="mr-2"
+                    disabled={isLoading}
+                  />
+                  Local File
+                </label>
+              </div>
+              {formData.imageSource === 'url' ? (
+                <>
+                  <label className="block mb-1 text-white font-semibold" htmlFor="image">
+                    Image URL (Optional)
+                  </label>
+                  <input
+                    id="image"
+                    type="text"
+                    placeholder="Enter image URL"
+                    value={formData.image}
+                    onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+                    className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                    disabled={isLoading}
+                  />
+                </>
+              ) : (
+                <>
+                  <label className="block mb-1 text-white font-semibold" htmlFor="imageFile">
+                    Image File (Optional)
+                  </label>
+                  <input
+                    id="imageFile"
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif"
+                    onChange={(e) => setFormData({ ...formData, imageFile: e.target.files[0] })}
+                    className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                    disabled={isLoading}
+                  />
+                </>
+              )}
+              <label className="block mb-1 text-white font-semibold" htmlFor="bio">
+                Bio
+              </label>
+              <textarea
+                id="bio"
+                placeholder="Enter vendor bio"
+                value={formData.bio}
+                onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+                className="w-full mb-3 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
+                rows="4"
+                disabled={isLoading}
+              />
+              <label className="block mb-1 text-white font-semibold">Services</label>
+              <div className="mb-3">
+                {formData.services.map((service, index) => (
+                  <div key={index} className="flex items-center gap-2 mb-1">
+                    <span className="text-gray-300">{service}</span>
+                    <button
+                      onClick={() => removeService(index)}
+                      className="text-red-500 hover:text-red-600"
+                      disabled={isLoading}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+                <button
+                  onClick={addService}
+                  className="text-blue-400 hover:text-blue-500 text-sm"
+                  disabled={isLoading}
+                >
+                  + Add Service
+                </button>
+              </div>
+              <label className="block mb-1 text-white font-semibold">Products</label>
+              <div className="mb-3">
+                {formData.products.map((product, index) => (
+                  <div key={index} className="flex items-center gap-2 mb-1">
+                    <span className="text-gray-300">{product.name} ({product.type}, {product.price})</span>
+                    <button
+                      onClick={() => removeProduct(index)}
+                      className="text-red-500 hover:text-red-600"
+                      disabled={isLoading}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+                <button
+                  onClick={addProduct}
+                  className="text-blue-400 hover:text-blue-500 text-sm"
+                  disabled={isLoading}
+                >
+                  + Add Product
+                </button>
+              </div>
+              <label className="block mb-1 text-white font-semibold" htmlFor="featured">
+                Featured
+              </label>
+              <input
+                id="featured"
+                type="checkbox"
+                checked={formData.featured}
+                onChange={(e) => setFormData({ ...formData, featured: e.target.checked })}
+                className="mb-3"
+                disabled={isLoading}
+              />
+              <div className="flex justify-between">
+                <button
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    setEditingId(null);
+                    setFormData({
+                      name: '',
+                      rating: '',
+                      orders: '',
+                      deliveryTime: '',
+                      minOrder: '',
+                      image: '',
+                      bio: '',
+                      services: [],
+                      featured: false,
+                      products: [],
+                      imageSource: 'url',
+                      imageFile: null
+                    });
+                  }}
+                  className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded transition"
+                  disabled={isLoading}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveData}
+                  className="bg-pink-600 hover:bg-pink-700 text-white px-4 py-2 rounded transition"
+                  disabled={isLoading}
+                >
+                  {isLoading ? 'Saving...' : 'Save'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Community Stats */}
         {!selectedVendor && (
           <div className="mt-12 bg-[#0b1a3b]/50 border border-blue-600/30 rounded-xl p-6">
             <h2 className="text-xl font-bold mb-4">Trophy Vendor Network</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="bg-[#0b1a3b] border border-blue-600/30 rounded-lg p-4 text-center">
-                <p className="text-3xl font-bold text-blue-400">{vendors.length}+</p>
+                <p className="text-3xl font-bold text-blue-400">{totalVendors}+</p>
                 <p className="text-gray-400">Verified Vendors</p>
               </div>
               <div className="bg-[#0b1a3b] border border-blue-600/30 rounded-lg p-4 text-center">
-                <p className="text-3xl font-bold text-blue-400">{vendors.filter(v => v.featured).length}</p>
+                <p className="text-3xl font-bold text-blue-400">{featuredSuppliers}</p>
                 <p className="text-gray-400">Featured Suppliers</p>
               </div>
               <div className="bg-[#0b1a3b] border border-blue-600/30 rounded-lg p-4 text-center">
-                <p className="text-3xl font-bold text-blue-400">{vendors.reduce((acc, v) => acc + v.orders, 0)}+</p>
+                <p className="text-3xl font-bold text-blue-400">{totalOrders}+</p>
                 <p className="text-gray-400">Orders Completed</p>
               </div>
               <div className="bg-[#0b1a3b] border border-blue-600/30 rounded-lg p-4 text-center">
-                <p className="text-3xl font-bold text-blue-400">4.7</p>
+                <p className="text-3xl font-bold text-blue-400">{averageRating}</p>
                 <p className="text-gray-400">Average Rating</p>
               </div>
             </div>
