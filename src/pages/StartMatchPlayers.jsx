@@ -626,7 +626,7 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd, curr
                   autoplay
                   loop={true}
                   src={sixAnimation}
-                  style={{ width: '300px', height: '300px' }}
+                  style={{ width: '500px', height: '500px' }}
                 />
               )}
               {animationType === 'four' && (
@@ -634,7 +634,7 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd, curr
                   autoplay
                   loop={true}
                   src={fourAnimation}
-                  style={{ width: '300px', height: '300px' }}
+                  style={{ width: '500px', height: '500px' }}
                 />
               )}
               {animationType === 'out' && (
@@ -642,7 +642,7 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd, curr
                   autoplay
                   loop={true}
                   src={outAnimation}
-                  style={{ width: '300px', height: '300px' }}
+                  style={{ width: '500px', height: '500px' }}
                 />
               )}
             </div>

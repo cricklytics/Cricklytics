@@ -11,7 +11,6 @@ const ScoresPage = () => {
     name: '',
     location: '',
     matches: '',
-    matches: '',
     rating: '',
     reviews: '',
   });
