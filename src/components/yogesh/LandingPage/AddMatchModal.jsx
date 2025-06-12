@@ -1,13 +1,12 @@
-// src/LandingPage/AddMatchModal.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { db } from '../../../firebase'; // Adjust path as needed
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
 
 const AddMatchModal = ({ onClose, onMatchAdded, tournamentId, tournamentName, currentUserId }) => {
   const [matchData, setMatchData] = useState({
-    tournamentId: tournamentId, // Pre-fill with the selected tournament's ID
-    tournamentName: tournamentName, // Pre-fill with the selected tournament's name
+    tournamentId: tournamentId || '', // Pre-fill with prop or empty
+    tournamentName: tournamentName || '', // Pre-fill with prop or empty
     location: '',
     date: '',
     overs: '',
@@ -19,15 +18,62 @@ const AddMatchModal = ({ onClose, onMatchAdded, tournamentId, tournamentName, cu
     score2: '',
     result: '',
   });
+  const [tournaments, setTournaments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [loadingTournaments, setLoadingTournaments] = useState(true);
+
+  // Fetch tournaments for the current user
+  useEffect(() => {
+    if (!currentUserId) {
+      setTournaments([]);
+      setLoadingTournaments(false);
+      setError("You must be logged in to fetch tournaments.");
+      return;
+    }
+
+    const fetchTournaments = async () => {
+      try {
+        const q = query(
+          collection(db, "tournaments"),
+          where("userId", "==", currentUserId)
+        );
+        const querySnapshot = await getDocs(q);
+        const tournamentList = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          name: doc.data().name
+        }));
+        setTournaments(tournamentList);
+        if (tournamentList.length === 0) {
+          setError("No tournaments found. Please create a tournament first.");
+        }
+      } catch (err) {
+        console.error("Error fetching tournaments:", err);
+        setError("Failed to load tournaments: " + err.message);
+      } finally {
+        setLoadingTournaments(false);
+      }
+    };
+
+    fetchTournaments();
+  }, [currentUserId]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setMatchData((prevData) => ({
-      ...prevData,
-      [name]: value,
-    }));
+    if (name === 'tournamentName') {
+      // Update both tournamentName and tournamentId based on selection
+      const selectedTournament = tournaments.find(t => t.name === value);
+      setMatchData((prevData) => ({
+        ...prevData,
+        tournamentName: value,
+        tournamentId: selectedTournament ? selectedTournament.id : '',
+      }));
+    } else {
+      setMatchData((prevData) => ({
+        ...prevData,
+        [name]: value,
+      }));
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -78,16 +124,26 @@ const AddMatchModal = ({ onClose, onMatchAdded, tournamentId, tournamentName, cu
         transition={{ type: "spring", stiffness: 120, damping: 20 }}
       >
         <h2 className="text-2xl font-bold text-purple-400 mb-6 text-center">Add New Match</h2>
+        {loadingTournaments && <p className="text-gray-400 text-center mb-4">Loading tournaments...</p>}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-gray-300 text-sm font-bold mb-2">Tournament Name:</label>
-            <input
-              type="text"
+            <label htmlFor="tournamentName" className="block text-gray-300 text-sm font-bold mb-2">Tournament:</label>
+            <select
+              id="tournamentName"
               name="tournamentName"
               value={matchData.tournamentName}
-              readOnly // Make it read-only as it's passed from parent
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-300 leading-tight focus:outline-none focus:shadow-outline bg-gray-700 border-gray-600 cursor-not-allowed"
-            />
+              onChange={handleChange}
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-300 leading-tight focus:outline-none focus:shadow-outline bg-gray-700 border-gray-600"
+              disabled={loadingTournaments || tournaments.length === 0}
+              required
+            >
+              <option value="">Select a Tournament</option>
+              {tournaments.map(tournament => (
+                <option key={tournament.id} value={tournament.name}>
+                  {tournament.name}
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <label htmlFor="location" className="block text-gray-300 text-sm font-bold mb-2">Location:</label>
@@ -230,7 +286,7 @@ const AddMatchModal = ({ onClose, onMatchAdded, tournamentId, tournamentName, cu
             <button
               type="submit"
               className="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 transition-colors"
-              disabled={loading}
+              disabled={loading || loadingTournaments || tournaments.length === 0}
             >
               {loading ? 'Adding...' : 'Add Match'}
             </button>

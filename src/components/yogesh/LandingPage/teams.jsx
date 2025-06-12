@@ -49,6 +49,10 @@ const Teams = () => {
   const [loadingPlayers, setLoadingPlayers] = useState(true);
   const [playersError, setPlayersError] = useState(null);
 
+  const [matches, setMatches] = useState([]);
+  const [loadingMatches, setLoadingMatches] = useState(true);
+  const [matchesError, setMatchesError] = useState(null);
+
   const handleSelectRole = (role) => {
     setUserRole(role);
     sessionStorage.setItem('userRole', role);
@@ -112,9 +116,11 @@ const Teams = () => {
         setTeams([]);
         setTournaments([]);
         setPlayers([]);
+        setMatches([]);
         setTeamsError('Please log in to view teams.');
         setTournamentsError('Please log in to view tournaments.');
         setPlayersError('Please log in to view players.');
+        setMatchesError('Please log in to view matches.');
       }
       setAuthLoading(false);
     });
@@ -248,7 +254,112 @@ const Teams = () => {
     return () => unsubscribe();
   }, [currentUserId, selectedTournament]);
 
-  if (authLoading || loadingTournaments || loadingPlayers) {
+  useEffect(() => {
+    if (!currentUserId || !selectedTournament?.name) {
+      setLoadingMatches(false);
+      setMatches([]);
+      return;
+    }
+
+    setLoadingMatches(true);
+    setMatchesError(null);
+
+    const q = query(
+      collection(db, 'tournamentMatches'),
+      where('createdBy', '==', currentUserId),
+      where('tournamentName', '==', selectedTournament.name)
+    );
+
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const fetchedMatches = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setMatches(fetchedMatches);
+        setLoadingMatches(false);
+      },
+      (error) => {
+        console.error('Error fetching matches: ', error);
+        setMatchesError('Failed to load matches: ' + error.message);
+        setLoadingMatches(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [currentUserId, selectedTournament]);
+
+  // Process match data to extract highest, lowest totals, and biggest victories
+  const getMatchStats = () => {
+    const teamTotals = [];
+    const victories = [];
+
+    matches.forEach(match => {
+      if (match.score1 && match.team1) {
+        const [runs, wickets] = match.score1.split('/').map(s => parseInt(s)) || [0, 0];
+        teamTotals.push({
+          score: match.score1,
+          runs,
+          wickets,
+          team: match.team1,
+          opponent: match.team2,
+        });
+      }
+      if (match.score2 && match.team2) {
+        const [runs, wickets] = match.score2.split('/').map(s => parseInt(s)) || [0, 0];
+        teamTotals.push({
+          score: match.score2,
+          runs,
+          wickets,
+          team: match.team2,
+          opponent: match.team1,
+        });
+      }
+      if (match.result && match.team1 && match.team2) {
+        const runsMatch = match.result.match(/(\d+)\s*runs/i);
+        const wicketsMatch = match.result.match(/(\d+)\s*wickets/i);
+        if (runsMatch || wicketsMatch) {
+          const margin = runsMatch ? `${runsMatch[1]} runs` : `${wicketsMatch[1]} wickets`;
+          const winner = match.result.includes(match.team1) ? match.team1 : match.team2;
+          const loser = match.result.includes(match.team1) ? match.team2 : match.team1;
+          victories.push({
+            margin,
+            teams: `${winner} vs ${loser}`,
+          });
+        }
+      }
+    });
+
+    // Sort team totals by runs for highest
+    const highestTotals = teamTotals.sort((a, b) => b.runs - a.runs).slice(0, 3);
+
+    // For lowest totals, prioritize all-out scores, then fill with lowest non-all-out scores
+    const allOutTotals = teamTotals.filter(t => t.wickets === 10).sort((a, b) => a.runs - b.runs);
+    const nonAllOutTotals = teamTotals.filter(t => t.wickets < 10).sort((a, b) => a.runs - b.runs);
+    const lowestTotals = [...allOutTotals, ...nonAllOutTotals].slice(0, 3);
+
+    // Sort victories by margin (runs first, then wickets)
+    const sortedVictories = victories.sort((a, b) => {
+      const aIsRuns = a.margin.includes('runs');
+      const bIsRuns = b.margin.includes('runs');
+      if (aIsRuns && bIsRuns) {
+        return parseInt(b.margin) - parseInt(a.margin);
+      } else if (aIsRuns) {
+        return -1;
+      } else if (bIsRuns) {
+        return 1;
+      } else {
+        return parseInt(b.margin) - parseInt(a.margin);
+      }
+    }).slice(0, 3);
+
+    return { highestTotals, lowestTotals, victories: sortedVictories };
+  };
+
+  const { highestTotals, lowestTotals, victories } = getMatchStats();
+
+  if (authLoading || loadingTournaments || loadingPlayers || loadingMatches) {
     return (
       <div className="bg-gray-900 min-h-screen flex items-center justify-center text-white text-xl">
         Loading...
@@ -338,7 +449,6 @@ const Teams = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {teams.map((team) => {
-                // Filter players for the current team based on teamName
                 const teamPlayers = players.filter(player => player.teamName === team.teamName);
                 return (
                   <div key={team.id} className="bg-gray-800 rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow border border-gray-700 relative">
@@ -404,13 +514,8 @@ const Teams = () => {
                                     {player.careerStats?.batting?.runs || player.runs || 0}r
                                   </span>
                                   <span className="bg-green-900 text-green-300 px-2 py-0.5 rounded text-xs">
-                                      {player.careerStats?.bowling?.wickets || player.wickets}w
+                                    {player.careerStats?.bowling?.wickets || player.wickets || 0}w
                                   </span>
-                                  {player.wickets > 0 && (
-                                    <span className="bg-green-900 text-green-300 px-2 py-0.5 rounded text-xs">
-                                      {player.careerStats?.bowling?.wickets || player.wickets}w
-                                    </span>
-                                  )}
                                 </div>
                               </div>
                             ))
@@ -420,7 +525,7 @@ const Teams = () => {
                         </div>
                       </div>
                     </div>
-                    <div className="px- nested p-4">
+                    <div className="px-4 p-4">
                       <button
                         onClick={() => handleViewSquad(team)}
                         className="w-full py-2 bg-purple-900 text-purple-300 rounded-md hover:bg-purple-700 transition font-medium"
@@ -496,54 +601,60 @@ const Teams = () => {
           <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-700">
               <h3 className="text-lg font-bold text-gray-200 mb-4">Highest Team Totals</h3>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center pb-2 border-b border-gray-700">
-                  <span className="font-medium text-gray-300">202/2</span>
-                  <span className="text-sm text-gray-400">Jaipur Strikers vs JAY GARHWAL</span>
+              {loadingMatches ? (
+                <div className="text-center text-gray-400">Loading...</div>
+              ) : matchesError ? (
+                <div className="text-center text-red-500">{matchesError}</div>
+              ) : highestTotals.length === 0 ? (
+                <div className="text-center text-gray-400">No match data available.</div>
+              ) : (
+                <div className="space-y-3">
+                  {highestTotals.map((total, index) => (
+                    <div key={index} className="flex justify-between items-center pb-2 border-b border-gray-700">
+                      <span className="font-medium text-gray-300">{total.score}</span>
+                      <span className="text-sm text-gray-400">{total.team} vs {total.opponent}</span>
+                    </div>
+                  ))}
                 </div>
-                <div className="flex justify-between items-center pb-2 border-b border-gray-700">
-                  <span className="font-medium text-gray-300">203/7</span>
-                  <span className="text-sm text-gray-400">Aloha Warriors XI vs LUT Biggieagles</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="font-medium text-gray-300">169/8</span>
-                  <span className="text-sm text-gray-400">LUT Biggieagles vs Alejha Warriors</span>
-                </div>
-              </div>
+              )}
             </div>
             <div className="bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-700">
               <h3 className="text-lg font-bold text-gray-200 mb-4">Lowest Team Totals</h3>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center pb-2 border-b border-gray-700">
-                  <span className="font-medium text-gray-300">76/10</span>
-                  <span className="text-sm text-gray-400">Aavas Financiers vs Golden Warriors</span>
+              {loadingMatches ? (
+                <div className="text-center text-gray-400">Loading...</div>
+              ) : matchesError ? (
+                <div className="text-center text-red-500">{matchesError}</div>
+              ) : lowestTotals.length === 0 ? (
+                <div className="text-center text-gray-400">No match data available.</div>
+              ) : (
+                <div className="space-y-3">
+                  {lowestTotals.map((total, index) => (
+                    <div key={index} className="flex justify-between items-center pb-2 border-b border-gray-700">
+                      <span className="font-medium text-gray-300">{total.score}</span>
+                      <span className="text-sm text-gray-400">{total.team} vs {total.opponent}</span>
+                    </div>
+                  ))}
                 </div>
-                <div className="flex justify-between items-center pb-2 border-b border-gray-700">
-                  <span className="font-medium text-gray-300">128/9</span>
-                  <span className="text-sm text-gray-400">JAY GARHWAL vs Jaipur Strikers</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="font-medium text-gray-300">129/3</span>
-                  <span className="text-sm text-gray-400">LUT Biggieagles vs Aloha Warriors</span>
-                </div>
-              </div>
+              )}
             </div>
             <div className="bg-gray-800 rounded-xl shadow-lg p-6 border border-gray-700">
               <h3 className="text-lg font-bold text-gray-200 mb-4">Biggest Victories</h3>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center pb-2 border-b border-gray-700">
-                  <span className="font-medium text-gray-300">93 runs</span>
-                  <span className="text-sm text-gray-400">LUT Biggieagles vs Aavas Financiers</span>
+              {loadingMatches ? (
+                <div className="text-center text-gray-400">Loading...</div>
+              ) : matchesError ? (
+                <div className="text-center text-red-500">{matchesError}</div>
+              ) : victories.length === 0 ? (
+                <div className="text-center text-gray-400">No victory data available.</div>
+              ) : (
+                <div className="space-y-3">
+                  {victories.map((victory, index) => (
+                    <div key={index} className="flex justify-between items-center pb-2 border-b border-gray-700">
+                      <span className="font-medium text-gray-300">{victory.margin}</span>
+                      <span className="text-sm text-gray-400">{victory.teams}</span>
+                    </div>
+                  ))}
                 </div>
-                <div className="flex justify-between items-center pb-2 border-b border-gray-700">
-                  <span className="font-medium text-gray-300">74 runs</span>
-                  <span className="text-sm text-gray-400">Jaipur Strikers vs JAY GARHWAL</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="font-medium text-gray-300">8 wickets</span>
-                  <span className="text-sm text-gray-400">Golden Warriors vs Jaipur Strikers</span>
-                </div>
-              </div>
+              )}
             </div>
           </div>
 

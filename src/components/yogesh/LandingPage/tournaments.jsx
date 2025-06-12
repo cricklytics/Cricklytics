@@ -230,10 +230,11 @@ const Tournament = () => {
       setStatsError(null);
 
       try {
-        // Filter clubPlayers by tournamentId
+        // Filter clubPlayers by tournamentName
         const playersQuery = query(
           collection(db, 'clubPlayers'),
-          where('tournamentId', '==', tournamentData.id)
+          where('tournamentName', '==', tournamentData.name),
+          where('userId', '==', currentUserId)
         );
 
         const querySnapshot = await getDocs(playersQuery);
@@ -241,6 +242,18 @@ const Tournament = () => {
           id: doc.id,
           ...doc.data()
         }));
+
+        if (playersData.length === 0) {
+          setPerformersError("No players found for this tournament.");
+          setStatsError("No statistics available for this tournament.");
+          setTopBattingPerformers([]);
+          setTopBowlingPerformers([]);
+          setTotalRuns(0);
+          setTotalWickets(0);
+          setTotalHalfCenturies(0);
+          setAverageWicketsPerPlayer(0);
+          return;
+        }
 
         const playersWithBattingStats = playersData.filter(
           p => p.careerStats?.batting?.runs !== undefined && p.careerStats.batting.runs !== null
@@ -303,7 +316,7 @@ const Tournament = () => {
       }
     };
 
-    if (currentUserId && tournamentData?.id) {
+    if (currentUserId && tournamentData?.name) {
       fetchData();
     } else {
       setLoadingPerformers(false);
@@ -376,7 +389,7 @@ const Tournament = () => {
                   </div>
                   <div className="mt-4 md:mt-0 bg-gray-700 p-4 rounded-lg border border-gray-600">
                     <h3 className="font-semibold text-gray-300">Defending Champions</h3>
-                    <p className="text-xl font-bold text-purple-400">{tournamentData.defendingChampion}</p>
+                    <p className="text-xl font-bold text-blue-400">...</p>
                     <p className="text-sm text-gray-400 mt-1">
                       {tournamentData.startDate} - {tournamentData.endDate}
                     </p>
@@ -387,11 +400,10 @@ const Tournament = () => {
                   No tournaments found. {userRole === 'admin' ? 'Add one below.' : 'Check back later.'}
                 </div>
               )}
-
               {userRole === 'admin' && currentUserId && (
                 <button
                   onClick={() => setShowAddTournamentModal(true)}
-                  className="mt-4 md:mt-0 px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors self-start md:self-center"
+                  className="mt-6 md:mt-0 px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors self-start md:self-center"
                 >
                   Add Tournament
                 </button>
@@ -499,7 +511,7 @@ const Tournament = () => {
                             </div>
                           ))
                         ) : (
-                          <div className="text-gray-400 text-sm">No recent batsmen found.</div>
+                          <div className="text-gray-400 text-sm">No top batsmen found.</div>
                         )}
                       </div>
                     </div>

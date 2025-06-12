@@ -37,6 +37,8 @@ const AddDetailsModal = ({ onClose, onDetailsAdded, currentDetails, currentUserI
   });
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [editingMemberIndex, setEditingMemberIndex] = useState(null);
+  const [editTeamMember, setEditTeamMember] = useState({ name: '', role: '', bio: '', img: '', imgFile: null });
 
   const handleChange = (e, field = null, arrayField = null, index = null) => {
     const { name, value, files } = e.target;
@@ -44,6 +46,11 @@ const AddDetailsModal = ({ onClose, onDetailsAdded, currentDetails, currentUserI
       setDetails({
         ...details,
         newTeamMember: { ...details.newTeamMember, [name]: files ? files[0] : value },
+      });
+    } else if (field === 'editTeamMember') {
+      setEditTeamMember({
+        ...editTeamMember,
+        [name]: files ? files[0] : value,
       });
     } else if (arrayField === 'tournamentGrowth') {
       const updatedGrowth = [...details.tournamentGrowth];
@@ -67,6 +74,31 @@ const AddDetailsModal = ({ onClose, onDetailsAdded, currentDetails, currentUserI
       teamMembers: [...details.teamMembers, { ...details.newTeamMember }],
       newTeamMember: { name: '', role: '', bio: '', img: '', imgFile: null },
     });
+    setError(null);
+  };
+
+  const handleEditTeamMember = (index) => {
+    setEditingMemberIndex(index);
+    setEditTeamMember({ ...details.teamMembers[index], imgFile: null });
+  };
+
+  const handleUpdateTeamMember = () => {
+    const { name, role, bio } = editTeamMember;
+    if (!name || !role || !bio) {
+      setError('Please fill in all team member fields (Name, Role, Bio).');
+      return;
+    }
+    const updatedTeamMembers = [...details.teamMembers];
+    updatedTeamMembers[editingMemberIndex] = { ...editTeamMember };
+    setDetails({ ...details, teamMembers: updatedTeamMembers });
+    setEditingMemberIndex(null);
+    setEditTeamMember({ name: '', role: '', bio: '', img: '', imgFile: null });
+    setError(null);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingMemberIndex(null);
+    setEditTeamMember({ name: '', role: '', bio: '', img: '', imgFile: null });
     setError(null);
   };
 
@@ -198,14 +230,14 @@ const AddDetailsModal = ({ onClose, onDetailsAdded, currentDetails, currentUserI
     >
       <motion.div
         className="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-2xl border border-gray-700 overflow-y-auto max-h-[90vh]"
-        initial={{ y: '-100vh' }}
-        animate={{ y: '0' }}
-        transition={{ type: 'spring', stiffness: 120, damping: 20 }}
+        initial={{ translateY: '100vh' }}
+        animate={{ translateY: '0' }}
+        transition={{ type: 'spring', stiffness: 120, damping: 25 }}
       >
-        <h2 className="text-2xl font-bold text-purple-400 mb-6 text-center">
+        <h2 className="text-2xl font-semibold text-white mb-6 text-center">
           {currentDetails?.id ? 'Edit Page Details' : 'Add Page Details'}
         </h2>
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-4">
           {/* Club Name Label */}
           <div>
             <label className="block text-sm font-medium text-gray-300">Club Name</label>
@@ -221,7 +253,7 @@ const AddDetailsModal = ({ onClose, onDetailsAdded, currentDetails, currentUserI
               name="clubId"
               value={details.clubId}
               readOnly
-              className="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-white p-2"
+              className="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-white p-2 cursor-not-allowed"
             />
           </div>
           {/* Hero Section */}
@@ -232,7 +264,7 @@ const AddDetailsModal = ({ onClose, onDetailsAdded, currentDetails, currentUserI
               name="heroTitle"
               value={details.heroTitle}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-white p-2"
+              className="mt-1 block w-full border rounded-md bg-gray-700 border-gray-600 text-white p-2 focus:ring-2 focus:ring-indigo-500"
               required
             />
           </div>
@@ -242,7 +274,8 @@ const AddDetailsModal = ({ onClose, onDetailsAdded, currentDetails, currentUserI
               name="heroSubtitle"
               value={details.heroSubtitle}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-white p-2"
+              className="mt-1 block w-full border rounded-md bg-gray-700 border-gray-600 text-white p-2 focus:ring-2 focus:ring-indigo-500"
+              rows="4"
               required
             />
           </div>
@@ -253,7 +286,8 @@ const AddDetailsModal = ({ onClose, onDetailsAdded, currentDetails, currentUserI
               name="storyText1"
               value={details.storyText1}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-white p-2"
+              className="mt-1 block w-full border rounded-md bg-gray-700 border-gray-600 text-white p-2 focus:ring-2 focus:ring-indigo-500"
+              rows="4"
               required
             />
           </div>
@@ -263,7 +297,8 @@ const AddDetailsModal = ({ onClose, onDetailsAdded, currentDetails, currentUserI
               name="storyText2"
               value={details.storyText2}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-white p-2"
+              className="mt-1 block w-full border rounded-md bg-gray-700 border-gray-600 text-white p-2 focus:ring-2 focus:ring-indigo-500"
+              rows="4"
               required
             />
           </div>
@@ -274,10 +309,10 @@ const AddDetailsModal = ({ onClose, onDetailsAdded, currentDetails, currentUserI
               name="storyImageFile"
               onChange={handleChange}
               accept="image/*"
-              className="mt-1 block w-full text-gray-300"
+              className="mt-1 block w-full text-gray-400 file:bg-gray-700 file:border-gray-600 file:text-white file:p-2 file:rounded-md"
             />
             {details.storyImage && (
-              <img src={details.storyImage} alt="Story preview" className="mt-2 w-32 h-32 object-cover rounded" />
+              <img src={details.storyImage} alt="Story preview" className="mt-2 w-32 h-32 object-cover rounded-md border border-gray-600" />
             )}
           </div>
           {/* Mission and Values */}
@@ -288,7 +323,7 @@ const AddDetailsModal = ({ onClose, onDetailsAdded, currentDetails, currentUserI
               name="missionIcon1"
               value={details.missionIcon1}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-white p-2"
+              className="mt-1 block w-full border rounded-md bg-gray-700 border-gray-600 text-white p-2 focus:ring-2 focus:ring-indigo-500"
               placeholder="e.g., 🏆"
             />
           </div>
@@ -299,7 +334,7 @@ const AddDetailsModal = ({ onClose, onDetailsAdded, currentDetails, currentUserI
               name="missionTitle1"
               value={details.missionTitle1}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-white p-2"
+              className="mt-1 block w-full border rounded-md bg-gray-700 border-gray-600 text-white p-2 focus:ring-2 focus:ring-indigo-500"
             />
           </div>
           <div>
@@ -308,7 +343,8 @@ const AddDetailsModal = ({ onClose, onDetailsAdded, currentDetails, currentUserI
               name="missionValue1"
               value={details.missionValue1}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-white p-2"
+              className="mt-1 block w-full border rounded-md bg-gray-700 border-gray-600 text-white p-2 focus:ring-2 focus:ring-indigo-500"
+              rows="4"
             />
           </div>
           <div>
@@ -318,7 +354,7 @@ const AddDetailsModal = ({ onClose, onDetailsAdded, currentDetails, currentUserI
               name="missionIcon2"
               value={details.missionIcon2}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-white p-2"
+              className="mt-1 block w-full border rounded-md bg-gray-700 border-gray-600 text-white p-2 focus:ring-2 focus:ring-indigo-500"
               placeholder="e.g., 🤝"
             />
           </div>
@@ -329,7 +365,7 @@ const AddDetailsModal = ({ onClose, onDetailsAdded, currentDetails, currentUserI
               name="missionTitle2"
               value={details.missionTitle2}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-white p-2"
+              className="mt-1 block w-full border rounded-md bg-gray-700 border-gray-600 text-white p-2 focus:ring-2 focus:ring-indigo-500"
             />
           </div>
           <div>
@@ -338,7 +374,8 @@ const AddDetailsModal = ({ onClose, onDetailsAdded, currentDetails, currentUserI
               name="missionValue2"
               value={details.missionValue2}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-white p-2"
+              className="mt-1 block w-full border rounded-md bg-gray-700 border-gray-600 text-white p-2 focus:ring-2 focus:ring-indigo-500"
+              rows="4"
             />
           </div>
           <div>
@@ -348,7 +385,7 @@ const AddDetailsModal = ({ onClose, onDetailsAdded, currentDetails, currentUserI
               name="missionIcon3"
               value={details.missionIcon3}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-white p-2"
+              className="mt-1 block w-full border rounded-md bg-gray-700 border-gray-600 text-white p-2 focus:ring-2 focus:ring-indigo-500"
               placeholder="e.g., 🌱"
             />
           </div>
@@ -359,7 +396,7 @@ const AddDetailsModal = ({ onClose, onDetailsAdded, currentDetails, currentUserI
               name="missionTitle3"
               value={details.missionTitle3}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-white p-2"
+              className="mt-1 block w-full border rounded-md bg-gray-700 border-gray-600 text-white p-2 focus:ring-2 focus:ring-indigo-500"
             />
           </div>
           <div>
@@ -368,7 +405,8 @@ const AddDetailsModal = ({ onClose, onDetailsAdded, currentDetails, currentUserI
               name="missionValue3"
               value={details.missionValue3}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-white p-2"
+              className="mt-1 block w-full border rounded-md bg-gray-700 border-gray-600 text-white p-2 focus:ring-2 focus:ring-indigo-500"
+              rows="4"
             />
           </div>
           {/* Tournament Highlights */}
@@ -380,7 +418,7 @@ const AddDetailsModal = ({ onClose, onDetailsAdded, currentDetails, currentUserI
                 type="text"
                 value={growth}
                 onChange={(e) => handleChange(e, null, 'tournamentGrowth', index)}
-                className="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-white p-2 mb-2"
+                className="mt-1 block w-full border rounded-md bg-gray-700 border-gray-600 text-white p-2 mb-2 focus:ring-2 focus:ring-indigo-500"
                 placeholder={`Milestone ${index + 1}`}
               />
             ))}
@@ -392,7 +430,7 @@ const AddDetailsModal = ({ onClose, onDetailsAdded, currentDetails, currentUserI
               name="matchesPlayed"
               value={details.matchesPlayed}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-white p-2"
+              className="mt-1 block w-full border rounded-md bg-gray-700 border-gray-600 text-white p-2 focus:ring-2 focus:ring-indigo-500"
             />
           </div>
           <div>
@@ -402,7 +440,7 @@ const AddDetailsModal = ({ onClose, onDetailsAdded, currentDetails, currentUserI
               name="corporatePlayers"
               value={details.corporatePlayers}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-white p-2"
+              className="mt-1 block w-full border rounded-md bg-gray-700 border-gray-600 text-white p-2 focus:ring-2 focus:ring-indigo-500"
             />
           </div>
           <div>
@@ -412,7 +450,7 @@ const AddDetailsModal = ({ onClose, onDetailsAdded, currentDetails, currentUserI
               name="seasonsCompleted"
               value={details.seasonsCompleted}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-white p-2"
+              className="mt-1 block w-full border rounded-md bg-gray-700 border-gray-600 text-white p-2 focus:ring-2 focus:ring-indigo-500"
             />
           </div>
           <div>
@@ -422,22 +460,22 @@ const AddDetailsModal = ({ onClose, onDetailsAdded, currentDetails, currentUserI
               name="trophyImageFile"
               onChange={handleChange}
               accept="image/*"
-              className="mt-1 block w-full text-gray-300"
+              className="mt-1 block w-full text-gray-400 file:bg-gray-700 file:border-gray-600 file:text-white file:p-2 file:rounded-md"
             />
             {details.trophyImage && (
-              <img src={details.trophyImage} alt="Trophy preview" className="mt-2 w-32 h-32 object-cover rounded" />
+              <img src={details.trophyImage} alt="Trophy preview" className="mt-2 w-32 h-32 object-cover rounded-md border border-gray-600" />
             )}
           </div>
           {/* Team Members */}
           <div>
             <label className="block text-sm font-medium text-gray-300">Add Team Member</label>
-            <div className="border border-gray-600 p-4 rounded-md mb-4">
+            <div className="border border-gray-600 p-4 rounded-md mb-4 bg-gray-700">
               <input
                 type="text"
                 name="name"
                 value={details.newTeamMember.name}
                 onChange={(e) => handleChange(e, 'newTeamMember')}
-                className="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-white p-2 mb-2"
+                className="mt-1 block w-full border rounded-md bg-gray-800 border-gray-600 text-white p-2 mb-2 focus:ring-2 focus:ring-indigo-500"
                 placeholder="Name"
               />
               <input
@@ -445,40 +483,105 @@ const AddDetailsModal = ({ onClose, onDetailsAdded, currentDetails, currentUserI
                 name="role"
                 value={details.newTeamMember.role}
                 onChange={(e) => handleChange(e, 'newTeamMember')}
-                className="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-white p-2 mb-2"
+                className="mt-1 block w-full border rounded-md bg-gray-800 border-gray-600 text-white p-2 mb-2 focus:ring-2 focus:ring-indigo-500"
                 placeholder="Role"
               />
               <textarea
                 name="bio"
                 value={details.newTeamMember.bio}
                 onChange={(e) => handleChange(e, 'newTeamMember')}
-                className="mt-1 block w-full rounded-md bg-gray-700 border-gray-600 text-white p-2 mb-2"
+                className="mt-1 block w-full border rounded-md bg-gray-800 border-gray-600 text-white p-2 mb-2 focus:ring-2 focus:ring-indigo-500"
                 placeholder="Bio"
+                rows="3"
               />
               <input
                 type="file"
                 name="imgFile"
                 onChange={(e) => handleChange(e, 'newTeamMember')}
                 accept="image/*"
-                className="mt-1 block w-full text-gray-300"
+                className="mt-1 block w-full text-gray-400 file:bg-gray-800 file:border-gray-600 file:text-white file:p-2 file:rounded-md"
               />
               {details.newTeamMember.img && (
-                <img src={details.newTeamMember.img} alt="Member preview" className="mt-2 w-32 h-32 object-cover rounded" />
+                <img src={details.newTeamMember.img} alt="Member preview" className="mt-2 w-32 h-32 object-cover rounded-md border border-gray-600" />
               )}
               <button
                 type="button"
                 onClick={handleAddTeamMember}
-                className="mt-4 bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700"
+                className="mt-4 bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition-colors"
               >
                 Add Team Member
               </button>
             </div>
+            {editingMemberIndex !== null && (
+              <div className="border border-gray-600 p-4 rounded-md mb-4 bg-gray-700">
+                <h3 className="text-lg font-medium text-white mb-2">Edit Team Member</h3>
+                <input
+                  type="text"
+                  name="name"
+                  value={editTeamMember.name}
+                  onChange={(e) => handleChange(e, 'editTeamMember')}
+                  className="mt-1 block w-full border rounded-md bg-gray-800 border-gray-600 text-white p-2 mb-2 focus:ring-2 focus:ring-indigo-500"
+                  placeholder="Name"
+                />
+                <input
+                  type="text"
+                  name="role"
+                  value={editTeamMember.role}
+                  onChange={(e) => handleChange(e, 'editTeamMember')}
+                  className="mt-1 block w-full border rounded-md bg-gray-800 border-gray-600 text-white p-2 mb-2 focus:ring-2 focus:ring-indigo-500"
+                  placeholder="Role"
+                />
+                <textarea
+                  name="bio"
+                  value={editTeamMember.bio}
+                  onChange={(e) => handleChange(e, 'editTeamMember')}
+                  className="mt-1 block w-full border rounded-md bg-gray-800 border-gray-600 text-white p-2 mb-2 focus:ring-2 focus:ring-indigo-500"
+                  placeholder="Bio"
+                  rows="3"
+                />
+                <input
+                  type="file"
+                  name="imgFile"
+                  onChange={(e) => handleChange(e, 'editTeamMember')}
+                  accept="image/*"
+                  className="mt-1 block w-full text-gray-400 file:bg-gray-800 file:border-gray-600 file:text-white file:p-2 file:rounded-md"
+                />
+                {editTeamMember.img && (
+                  <img src={editTeamMember.img} alt="Edit member preview" className="mt-2 w-32 h-32 object-cover rounded-md border border-gray-600" />
+                )}
+                <div className="flex gap-2 mt-4">
+                  <button
+                    type="button"
+                    onClick={handleUpdateTeamMember}
+                    className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
+                  >
+                    Update Team Member
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCancelEdit}
+                    className="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
             {details.teamMembers.length > 0 && (
               <div>
-                <p className="text-sm font-medium text-gray-300">Added Team Members:</p>
-                <ul className="list-disc pl-5 text-gray-300">
+                <p className="text-sm font-medium text-gray-300 mb-2">Added Team Members:</p>
+                <ul className="space-y-2">
                   {details.teamMembers.map((member, index) => (
-                    <li key={index}>{member.name} - {member.role}</li>
+                    <li key={index} className="flex justify-between items-center bg-gray-700 p-2 rounded-md">
+                      <span className="text-gray-300">{member.name} - {member.role}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleEditTeamMember(index)}
+                        className="text-indigo-400 hover:text-indigo-300"
+                      >
+                        Edit
+                      </button>
+                    </li>
                   ))}
                 </ul>
               </div>
@@ -489,14 +592,14 @@ const AddDetailsModal = ({ onClose, onDetailsAdded, currentDetails, currentUserI
             <button
               type="button"
               onClick={onClose}
-              className="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700"
+              className="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition-colors"
               disabled={loading}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700"
+              className="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 transition-colors"
               disabled={loading}
             >
               {loading ? 'Saving...' : 'Save Details'}
