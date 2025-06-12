@@ -199,7 +199,7 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin }) {
       setPlayerScore(prev => prev + value);
       setTopPlays(prev => [...prev, `L+${value}`]);
       setCurrentOverBalls(prev => [...prev, `L+${value}`]);
-      if (striker) updateBatsmanScore(striker.index, value);
+      // Do not update batsman score for leg-by runs
       setPendingLegBy(false);
       setValidBalls(prev => prev + 1);
       if (striker) updateBatsmanBalls(striker.index);
@@ -212,8 +212,8 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin }) {
     }
 
     if (pendingOut && !isLabel && typeof value === 'number') {
-      if (value !== 0 && value !== 1) {
-        // Ignore invalid run values for out
+      if (value !== 0 && value !== 1 && value !== 2) {
+        // Only allow 0, 1, or 2 runs when pendingOut is true
         return;
       }
       playAnimation('out');
@@ -1042,7 +1042,7 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin }) {
                       <div className="text-xs md:text-sm">{nonStriker.role}</div>
                       <div className="text-xs md:text-sm">
                         {batsmenScores[nonStriker.index] || 0} ({batsmenBalls[nonStriker.index] || 0})
-                        <span className="text-yellow-300"> SR: {getStrikeRate(striker.index)}</span>
+                        <span className="text-yellow-300"> SR: {getStrikeRate(nonStriker.index)}</span>
                       </div>
                     </div>
                   )}
@@ -1120,9 +1120,9 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin }) {
             </div>
 
             <div className="mt-4 flex flex-wrap justify-center gap-2 md:gap-4">
-              {[0, 1, 2, 4, 6].map((num) => {
+              {[0, 1, 2, 3, 4, 6].map((num) => {
                 const isActive = activeNumber === num;
-                const isDisabled = pendingOut && num !== 0 && num !== 1;
+                const isDisabled = pendingOut && num !== 0 && num !== 1 && num !== 2;
                 return (
                   <button
                     key={num}
@@ -1158,7 +1158,7 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin }) {
             </div>
             {showRunInfo && (
               <p className="text-yellow-300 text-sm mt-2 text-center font-medium">
-                {pendingOut ? 'Please select 0 or 1 for runs on out' : 'Please select run, if not select 0'}
+                {pendingOut ? 'Please select 0, 1, or 2 for runs on out' : 'Please select run, if not select 0'}
               </p>
             )}
 

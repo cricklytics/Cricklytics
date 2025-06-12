@@ -238,7 +238,7 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd, cur
       const newBalls = [...currentOverBalls, `L+${value}`];
       setCurrentOverBalls(newBalls);
       setCurrentOverScores(calculateCurrentOverScores(newBalls));
-      if (striker) updateBatsmanScore(striker.index, value);
+      // Do not update batsman score for leg-by runs
       setPendingLegBy(false);
       setValidBalls(prev => prev + 1);
       if (striker) updateBatsmanBalls(striker.index);
@@ -251,7 +251,7 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd, cur
     }
 
     if (pendingOut && !isLabel && typeof value === 'number') {
-      if (value !== 0 && value !== 1) return; // Only allow 0 or 1 runs when pendingOut is true
+      if (value !== 0 && value !== 1 && value !== 2) return; // Only allow 0, 1, or 2 runs when pendingOut is true
       playAnimation('out');
       setTimeout(() => {
         setPlayerScore(prev => prev + value);
@@ -1275,9 +1275,9 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd, cur
             </div>
 
             <div className="mt-4 flex flex-wrap justify-center gap-2 md:gap-4">
-              {[0, 1, 2, 4, 6].map((num) => {
+              {[0, 1, 2, 3, 4, 6].map((num) => {
                 const isActive = activeNumber === num;
-                const isDisabled = pendingOut && num !== 0 && num !== 1; // Disable 2, 4, 6 when pendingOut is true
+                const isDisabled = pendingOut && num !== 0 && num !== 1 && num !== 2; // Disable 3, 4, 6 when pendingOut is true
                 return (
                   <button
                     key={num}
@@ -1399,7 +1399,7 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd, cur
                 resetInnings();
                 handleButtonClick('toss');
               }}
-              className="w-40 h-14 text-white text-lg font-bold bg-[url('../assets/button.png')] bg-cover bg-center shadow-lg"
+              className="w-40 h-14 text-white md:text-lg font-medium bg-black bg-opacity-75 rounded-lg shadow-lg hover:bg-gray-800 transition-colors duration-200"
             >
               Start Chase
             </button>
@@ -1408,6 +1408,6 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd, cur
       </section>
     </ErrorBoundary>
   );
-}
+};
 
 export default StartMatchPlayers;
