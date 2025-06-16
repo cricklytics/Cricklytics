@@ -7,7 +7,6 @@ import btnbg from '../assets/kumar/button.png';
 import backButton from '../assets/kumar/right-chevron.png';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import { Player } from '@lottiefiles/react-lottie-player';
-// Replace these with your actual local animation file paths
 import sixAnimation from '../assets/Animation/six.json';
 import fourAnimation from '../assets/Animation/four.json';
 import outAnimation from '../assets/Animation/out.json';
@@ -170,7 +169,7 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd }) {
     }
 
     // Handle pending actions first
-    if (pendingWide && !isLabel && typeof value === 'number') {
+    if (pendingWide && ! isLabel && typeof value === 'number') {
       setPlayerScore(prev => prev + value + 1);
       setTopPlays(prev => [...prev, `W+${value}`]);
       setCurrentOverBalls(prev => [...prev, `W+${value}`]);
@@ -192,7 +191,7 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd }) {
       setPlayerScore(prev => prev + value);
       setTopPlays(prev => [...prev, `L+${value}`]);
       setCurrentOverBalls(prev => [...prev, `L+${value}`]);
-      if (striker) updateBatsmanScore(striker.index, value);
+      // Do not update batsman score for leg-by runs
       setPendingLegBy(false);
       setValidBalls(prev => prev + 1);
       if (striker) updateBatsmanBalls(striker.index);
@@ -280,11 +279,11 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd }) {
         setStriker(nonStriker);
         setNonStriker(temp);
       }
-       if (value === 6) {
-      playAnimation('six');
-    } else if (value === 4) {
-      playAnimation('four');
-    }
+      if (value === 6) {
+        playAnimation('six');
+      } else if (value === 4) {
+        playAnimation('four');
+      }
     }
   };
 
@@ -953,7 +952,7 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd }) {
             </div>
 
             <div className="mt-4 flex flex-wrap justify-center gap-2 md:gap-4">
-              {[0, 1, 2, 4, 6].map((num) => {
+              {[0, 1, 2, 3, 4, 6].map((num) => {
                 const isActive = activeNumber === num;
                 return (
                   <button
@@ -1036,7 +1035,7 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd }) {
                   </button>
                   <h3 className="text-white text-lg md:text-xl font-bold mb-4">Select Next Bowler</h3>
                   <div className="grid grid-cols-2 gap-2 md:gap-4">
-                    {bowlingTeamPlayers.filter(player => player.index !== selectedBowler?.index).map((player) => ( // Filter out current bowler
+                    {bowlingTeamPlayers.filter(player => player.index !== selectedBowler?.index).map((player) => (
                       <div
                         key={player.index}
                         onClick={() => handleBowlerSelect(player)}
@@ -1069,7 +1068,7 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd }) {
             <button
               onClick={() => {
                 setIsChasing(true);
-                setTargetScore(playerScore + 1); // Target is one run more than the score
+                setTargetScore(playerScore + 1);
                 resetInnings();
                 handleButtonClick('toss');
               }}
