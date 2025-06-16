@@ -286,8 +286,8 @@ const Startmatch = ({
   console.groupEnd();
 
   const [allTeams, setAllTeams] = useState([]);
-  const [allMatches, setAllMatches] = useState([]); // State to store matches from Firestore
-  const [tournamentWinner, setTournamentWinner] = useState(null); // State to store the tournament winner
+  const [allMatches, setAllMatches] = useState([]);
+  const [tournamentWinner, setTournamentWinner] = useState(null);
   const [loadingTeams, setLoadingTeams] = useState(true);
   const [teamFetchError, setTeamFetchError] = useState(null);
   const [selectedTeamA, setSelectedTeamA] = useState(initialTeamA || '');
@@ -302,11 +302,11 @@ const Startmatch = ({
   const [groupPhase, setGroupPhase] = useState('');
   const [loadingTournament, setLoadingTournament] = useState(false);
   const [tournamentError, setTournamentError] = useState(null);
-  const [tournamentDocId, setTournamentDocId] = useState(''); // Store the Firestore document ID
-  const [showFlowchartModal, setShowFlowchartModal] = useState(false); // State for flowchart modal
-  const [flowchartData, setFlowchartData] = useState([]); // State to store flowchart data
-  const [flowchartLoading, setFlowchartLoading] = useState(false); // State for loading flowchart data
-  const [flowchartError, setFlowchartError] = useState(null); // State for flowchart errors
+  const [tournamentDocId, setTournamentDocId] = useState('');
+  const [showFlowchartModal, setShowFlowchartModal] = useState(false);
+  const [flowchartData, setFlowchartData] = useState([]);
+  const [flowchartLoading, setFlowchartLoading] = useState(false);
+  const [flowchartError, setFlowchartError] = useState(null);
 
   const scorers = ['John Doe', 'Jane Smith', 'Mike Johnson'];
   const navigate = useNavigate();
@@ -348,7 +348,6 @@ const Startmatch = ({
 
       setLoadingTournament(true);
       try {
-        // Query the tournament collection for the document with the given tournamentId
         const q = query(
           collection(db, 'roundrobin'),
           where('tournamentId', '==', tournamentId)
@@ -361,7 +360,7 @@ const Startmatch = ({
         }
 
         const tournamentDoc = querySnapshot.docs[0];
-        setTournamentDocId(tournamentDoc.id); // Store the document ID for updates
+        setTournamentDocId(tournamentDoc.id);
         const tournamentData = tournamentDoc.data();
 
         // Extract matches from roundRobin, semiFinals, and finals
@@ -388,12 +387,11 @@ const Startmatch = ({
 
         // Update semi-finals if Group Stage is complete and semi-finals are not yet set
         if (groupStageComplete && semiFinalMatches.every(match => match.team1 === 'TBD')) {
-          // Get top 4 teams based on points
           const teams = tournamentData.teams || [];
           const sortedTeams = teams
             .filter(team => team.teamName !== 'BYE')
             .sort((a, b) => b.points - a.points)
-            .slice(0, 4); // Top 4 teams
+            .slice(0, 4);
 
           if (sortedTeams.length >= 4) {
             const updatedSemiFinals = {
@@ -401,12 +399,10 @@ const Startmatch = ({
               match_2: { id: 'semi_2', phase: 'Semi-Final 2', team1: sortedTeams[1].teamName, team2: sortedTeams[2].teamName, winner: null },
             };
 
-            // Update Firestore with the new semi-finals
             await updateDoc(doc(db, 'roundrobin', tournamentDoc.id), {
               semiFinals: updatedSemiFinals,
             });
 
-            // Update local state
             semiFinalMatches.splice(0, semiFinalMatches.length, ...Object.values(updatedSemiFinals));
           }
         }
@@ -422,12 +418,10 @@ const Startmatch = ({
               match_1: { id: 'final_1', phase: 'Final', team1: semiFinalWinners[0], team2: semiFinalWinners[1], winner: null },
             };
 
-            // Update Firestore with the new finals
             await updateDoc(doc(db, 'roundrobin', tournamentDoc.id), {
               finals: updatedFinals,
             });
 
-            // Update local state
             finalMatches.splice(0, finalMatches.length, ...Object.values(updatedFinals));
           }
         }
@@ -437,7 +431,6 @@ const Startmatch = ({
           const finalWinner = finalMatches[0]?.winner;
           if (finalWinner) {
             setTournamentWinner(finalWinner);
-            // Optionally, update Firestore with the tournament winner
             await updateDoc(doc(db, 'roundrobin', tournamentDoc.id), {
               winner: finalWinner,
             });
@@ -449,22 +442,25 @@ const Startmatch = ({
         let phase = 'Group Stage';
 
         if (!groupStageComplete) {
-          // Group Stage is not complete, only show Group Stage matches
-          matchesToDisplay = roundRobinMatches.filter(match => match.winner === null);
+          matchesToDisplay = roundRobinMatches; // Include all group stage matches
           phase = 'Group Stage';
         } else if (groupStageComplete && !semiFinalsComplete) {
-          // Group Stage is complete, Semi-Finals are not complete, show Semi-Final matches
-          matchesToDisplay = semiFinalMatches.filter(match => match.winner === null);
+          matchesToDisplay = semiFinalMatches; // Include all semi-final matches
           phase = 'Semi-Finals';
         } else if (groupStageComplete && semiFinalsComplete && !finalsComplete) {
-          // Both Group Stage and Semi-Finals are complete, show Final matches
-          matchesToDisplay = finalMatches.filter(match => match.winner === null);
+          matchesToDisplay = finalMatches; // Include all final matches
           phase = 'Finals';
         } else if (groupStageComplete && semiFinalsComplete && finalsComplete) {
-          // Tournament is complete
-          matchesToDisplay = [];
+          matchesToDisplay = finalMatches; // Include final matches for display
           phase = 'Finals (Complete)';
         }
+
+        // Sort matches: played (winner !== null) first, unplayed (winner === null) second
+        matchesToDisplay = matchesToDisplay.sort((a, b) => {
+          if (a.winner !== null && b.winner === null) return -1; // Played matches first
+          if (a.winner === null && b.winner !== null) return 1; // Unplayed matches after
+          return 0; // Maintain original order within groups
+        });
 
         setAllMatches(matchesToDisplay);
         setCurrentPhase(phase);
@@ -498,7 +494,7 @@ const Startmatch = ({
   useEffect(() => {
     if (selectedMatchId) {
       const match = allMatches.find(m => m.id === selectedMatchId);
-      if (match) {
+      if (match && match.winner === null) {
         setSelectedTeamA(match.team1);
         setSelectedTeamB(match.team2);
         setGroupPhase(match.phase);
@@ -545,7 +541,6 @@ const Startmatch = ({
       const tournamentData = querySnapshot.docs[0].data();
       const flowchart = [];
 
-      // Group Stage: Show all teams
       if (tournamentData.roundRobin && Object.keys(tournamentData.roundRobin).length > 0) {
         flowchart.push({
           phase: 'Group Stage',
@@ -555,7 +550,6 @@ const Startmatch = ({
         });
       }
 
-      // Semi-Finals: Show teams if available
       let semiFinalTeams = [];
       const semiFinalMatches = Object.values(tournamentData.semiFinals || {});
       if (semiFinalMatches.length > 0 && semiFinalMatches[0].team1 !== 'TBD') {
@@ -574,7 +568,6 @@ const Startmatch = ({
         });
       }
 
-      // Finals: Show teams if available
       let finalTeams = [];
       const finalMatches = Object.values(tournamentData.finals || {});
       if (finalMatches.length > 0 && finalMatches[0].team1 !== 'TBD') {
@@ -607,6 +600,17 @@ const Startmatch = ({
   };
 
   const handleNext = () => {
+    if (!selectedMatchId) {
+      alert('Please select a match.');
+      return;
+    }
+
+    const selectedMatch = allMatches.find(match => match.id === selectedMatchId);
+    if (selectedMatch && selectedMatch.winner !== null) {
+      alert('This match has already been played.');
+      return;
+    }
+
     if (!selectedTeamA || !selectedTeamB || !overs) {
       alert('Please select a match and enter overs.');
       return;
@@ -711,7 +715,6 @@ const Startmatch = ({
             Start a Match
           </motion.h1>
 
-          {/* Display Tournament Winner */}
           {tournamentWinner && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -725,7 +728,6 @@ const Startmatch = ({
             </motion.div>
           )}
 
-          {/* Flowchart Button */}
           <motion.div
             className="text-center mb-8"
             initial={{ opacity: 0, y: 20 }}
@@ -741,14 +743,12 @@ const Startmatch = ({
           </motion.div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full">
-            {/* Left Column */}
             <motion.div
               className="flex flex-col space-y-6 w-full"
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
-              {/* Big Card - Select Teams */}
               <motion.div
                 className="min-h-[300px] bg-gradient-to-br from-blue-50 to-indigo-50 bg-opacity-90 rounded-xl shadow-xl p-6 w-full border border-blue-100 flex flex-col"
                 whileHover={{ scale: 1.01 }}
@@ -760,7 +760,6 @@ const Startmatch = ({
                   </span>
                 </div>
                 <div className="space-y-4 w-full flex-1">
-                  {/* Match Selector */}
                   <div className="w-full">
                     <label className="block text-gray-700 mb-2 font-medium">Select Match</label>
                     <select
@@ -768,12 +767,22 @@ const Startmatch = ({
                         hasValue(selectedMatchId) ? 'bg-gray-200 text-gray-700' : 'bg-white'
                       }`}
                       value={selectedMatchId}
-                      onChange={(e) => setSelectedMatchId(e.target.value)}
+                      onChange={(e) => {
+                        const match = allMatches.find(m => m.id === e.target.value);
+                        if (match && match.winner === null) {
+                          setSelectedMatchId(e.target.value);
+                        }
+                      }}
                     >
                       <option value="">Select a Match</option>
                       {allMatches.map(match => (
-                        <option key={match.id} value={match.id}>
-                          {`${match.team1} vs ${match.team2}`}
+                        <option
+                          key={match.id}
+                          value={match.id}
+                          disabled={match.winner !== null}
+                          className={match.winner !== null ? 'played-match' : ''}
+                        >
+                          {`${match.team1} vs ${match.team2}${match.winner ? ` (Winner: ${match.winner})` : ''}`}
                         </option>
                       ))}
                     </select>
@@ -782,13 +791,12 @@ const Startmatch = ({
                         No matches available. Please complete the previous phase.
                       </p>
                     )}
-                    {currentPhase === 'Finals (Complete)' && allMatches.length === 0 && (
+                    {currentPhase === 'Finals (Complete)' && (
                       <p className="text-green-500 mt-2 text-sm">
                         Tournament completed! No more matches to play.
                       </p>
                     )}
                   </div>
-                  {/* Team A (Read-only) */}
                   <div className="w-full">
                     <label className="block text-gray-700 mb-2 font-medium">Team A</label>
                     <input
@@ -798,7 +806,6 @@ const Startmatch = ({
                       readOnly
                     />
                   </div>
-                  {/* Team B (Read-only) */}
                   <div className="w-full">
                     <label className="block text-gray-700 mb-2 font-medium">Team B</label>
                     <input
@@ -811,7 +818,6 @@ const Startmatch = ({
                 </div>
               </motion.div>
 
-              {/* Smaller Card - Overs */}
               <motion.div
                 className="min-h-[200px] bg-gradient-to-br from-blue-50 to-indigo-50 bg-opacity-90 rounded-xl shadow-xl p-6 w-full border border-blue-100 flex flex-col justify-center"
                 whileHover={{ scale: 1.01 }}
@@ -833,21 +839,18 @@ const Startmatch = ({
               </motion.div>
             </motion.div>
 
-            {/* Right Column */}
             <motion.div
               className="flex flex-col space-y-6 w-full"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
             >
-              {/* Big Card - Toss Details */}
               <motion.div
                 className="min-h-[300px] bg-gradient-to-br from-blue-50 to-indigo-50 bg-opacity-90 rounded-xl shadow-xl p-6 w-full border border-blue-100 flex flex-col"
                 whileHover={{ scale: 1.01 }}
               >
                 <h2 className="text-xl font-semibold mb-4 text-blue-800">Toss Details</h2>
                 <div className="space-y-4 w-full flex-1">
-                  {/* Toss Winner */}
                   <div className="w-full">
                     <label className="block text-gray-700 mb-2 font-medium">Record Toss & Decision</label>
                     <select
@@ -862,7 +865,6 @@ const Startmatch = ({
                       {selectedTeamB && <option value={selectedTeamB}>{selectedTeamB}</option>}
                     </select>
                   </div>
-                  {/* Toss Decision */}
                   <div className="w-full">
                     <label className="block text-gray-700 mb-2 font-medium">Elected to:</label>
                     <div className="flex space-x-8 items-center">
@@ -893,7 +895,6 @@ const Startmatch = ({
                 </div>
               </motion.div>
 
-              {/* Smaller Card - Assign Scorer */}
               <motion.div
                 className="min-h-[200px] bg-gradient-to-br from-blue-50 to-indigo-50 bg-opacity-90 rounded-xl shadow-xl p-6 w-full border border-blue-100 flex flex-col justify-center"
                 whileHover={{ scale: 1.01 }}
@@ -917,7 +918,6 @@ const Startmatch = ({
             </motion.div>
           </div>
 
-          {/* Next Button */}
           <motion.div
             className="mt-8 text-center w-full"
             initial={{ opacity: 0, y: 20 }}
@@ -935,7 +935,6 @@ const Startmatch = ({
             </motion.button>
           </motion.div>
 
-          {/* Flowchart Modal */}
           {showFlowchartModal && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
               <div className="bg-[#1A2B4C] rounded-xl p-6 w-full max-w-4xl max-h-[80vh] overflow-y-auto">
@@ -967,7 +966,6 @@ const Startmatch = ({
                     ))}
                   </div>
                 )}
-                {/* Display Tournament Winner in Modal */}
                 {tournamentWinner && (
                   <div className="mt-6 text-center">
                     <h3 className="text-lg md:text-xl font-bold text-white">
@@ -986,6 +984,13 @@ const Startmatch = ({
           )}
         </div>
       </motion.div>
+
+      <style jsx>{`
+        .played-match {
+          color: #9ca3af; /* Gray color for played matches */
+          background-color: #f3f4f6; /* Light gray background */
+        }
+      `}</style>
     </div>
   );
 };
