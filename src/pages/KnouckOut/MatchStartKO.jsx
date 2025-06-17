@@ -5,39 +5,54 @@ import { FaChevronDown, FaChevronUp, FaTrophy, FaHeart, FaCommentDots, FaShareAl
 import { ResponsiveContainer, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Line } from 'recharts';
 import { ScatterChart, Scatter, ZAxis, BarChart, Bar } from 'recharts';
 import logo from '../../assets/sophita/HomePage/Picture3_2.png';
-import netherland from '../../assets/sophita/HomePage/Netherland.jpeg';
-import southAfrica from '../../assets/sophita/HomePage/Southafrica.png';
 import trophy from '../../assets/sophita/HomePage/trophy.png';
-import ipl2 from '../../assets/sophita/HomePage/ipl2.jpeg';
-import ipl2022 from '../../assets/sophita/HomePage/2022.jpeg';
-import ipl2025 from '../../assets/sophita/HomePage/2025.jpeg';
-import ipl2019 from '../../assets/sophita/HomePage/2019.jpeg';
-import ipl2019_3 from '../../assets/sophita/HomePage/2019-3.jpeg';
-import ipl2021 from '../../assets/sophita/HomePage/2021.jpeg';
-import ipl2020 from '../../assets/sophita/HomePage/2020.jpeg';
-import ipl2018 from '../../assets/sophita/HomePage/2018.jpeg';
 import advertisement1 from '../../assets/sophita/HomePage/Advertisement1.webp';
 import { useNavigate, useLocation } from 'react-router-dom';
-import Startmatch from '../KnouckOut/StartMatchKO'; // Corrected typo in path
+import Startmatch from '../KnouckOut/StartMatchKO';
 import nav from '../../assets/kumar/right-chevron.png';
 import placeholderFlag from '../../assets/sophita/HomePage/Netherland.jpeg';
-import TournamentBracket from '../KnouckOut/TournamentBracket'; // Assuming TournamentBracket is in the same directory
+import TournamentBracket from '../KnouckOut/TournamentBracket';
+import { db, storage } from '../../firebase';
+import { collection, addDoc, getDocs, serverTimestamp } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
-const IPLCards = ({ setActiveTab }) => {
-  const cards = [
-    { image: ipl2, videoUrl: 'https://www.youtube.com/embed/AFEZzf9_EHk?autoplay=1&mute=1&controls=0&modestbranding=1&rel=0', title: 'Rohit Sharma Hits 140!', alt: 'Cricket Match 1' },
-    { image: ipl2022, alt: 'Cricket Match 1' },
-    { image: ipl2025, alt: 'Cricket Match 3' },
-    { image: ipl2019, alt: 'Cricket Match 1' },
-    { image: ipl2019_3, alt: 'Cricket Match 2' },
-    { image: ipl2021, alt: 'Cricket Match 3' },
-    { image: ipl2020, alt: 'Cricket Match 1' },
-    { image: ipl2019, alt: 'Cricket Match 2' },
-    { image: advertisement1, alt: 'Cricket Match 3' },
-  ];
-
+const IPLCards = ({ setActiveTab, tournamentId }) => {
+  const [highlights, setHighlights] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const photoInputRef = useRef(null);
   const videoInputRef = useRef(null);
+
+  // Fetch highlights from Firestore
+  useEffect(() => {
+    const fetchHighlights = async () => {
+      if (!tournamentId) {
+        setError('No tournament ID provided.');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const highlightsRef = collection(db, 'matchstartKO', tournamentId, 'highlights');
+        const snapshot = await getDocs(highlightsRef);
+        const fetchedHighlights = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        // Sort by uploadedAt descending (newest first)
+        fetchedHighlights.sort((a, b) => b.uploadedAt?.seconds - a.uploadedAt?.seconds);
+        setHighlights(fetchedHighlights);
+      } catch (err) {
+        console.error('Error fetching highlights:', err);
+        setError('Failed to load highlights.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchHighlights();
+  }, [tournamentId]);
 
   const handlePhotoUploadClick = () => {
     photoInputRef.current.click();
@@ -47,25 +62,81 @@ const IPLCards = ({ setActiveTab }) => {
     videoInputRef.current.click();
   };
 
-  const handleFileChange = (event) => {
+  const handleFileChange = async (event) => {
     const files = event.target.files;
-    if (files.length > 0) {
-      console.log('Uploaded files:', files);
+    if (files.length === 0 || !tournamentId) {
+      alert('No file selected or tournament ID missing.');
+      return;
     }
-    event.target.value = null;
+
+    const file = files[0];
+    const fileType = file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : null;
+    if (!fileType) {
+      alert('Unsupported file type. Please upload an image or video.');
+      return;
+    }
+
+    try {
+      // Upload to Firebase Storage
+      const storagePath = `highlights/${tournamentId}/${Date.now()}_${file.name}`;
+      const storageRef = ref(storage, storagePath);
+      await uploadBytes(storageRef, file);
+      const downloadURL = await getDownloadURL(storageRef);
+
+      // Save metadata to Firestore
+      const highlightsRef = collection(db, 'matchstartKO', tournamentId, 'highlights');
+      await addDoc(highlightsRef, {
+        url: downloadURL,
+        type: fileType,
+        title: file.name, // Use file name as title (can be enhanced with user input)
+        uploadedAt: serverTimestamp(),
+      });
+
+      // Update local state to reflect new highlight
+      setHighlights(prev => [
+        {
+          url: downloadURL,
+          type: fileType,
+          title: file.name,
+          uploadedAt: { seconds: Math.floor(Date.now() / 1000) }, // Approximate for immediate display
+        },
+        ...prev,
+      ]);
+
+      alert(`${fileType.charAt(0).toUpperCase() + fileType.slice(1)} uploaded successfully!`);
+    } catch (err) {
+      console.error('Error uploading file:', err);
+      alert('Failed to upload file.');
+    }
+
+    event.target.value = null; // Reset input
   };
 
   const handleNextClick = () => {
     setActiveTab('Match Analytics');
   };
 
+  if (loading) {
+    return <div className="text-center text-white">Loading highlights...</div>;
+  }
+
+  if (error) {
+    return <div className="text-center text-red-500">{error}</div>;
+  }
+
   return (
     <div className="min-h-screen flex flex-col justify-center items-center p-6 py-0">
       <div className="flex justify-center gap-6 mb-6 w-full max-w-md">
-        <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg text-lg" onClick={handlePhotoUploadClick}>
+        <button
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg text-lg"
+          onClick={handlePhotoUploadClick}
+        >
           Upload Photo
         </button>
-        <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg text-lg" onClick={handleVideoUploadClick}>
+        <button
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg text-lg"
+          onClick={handleVideoUploadClick}
+        >
           Upload Video
         </button>
         <motion.button
@@ -76,24 +147,52 @@ const IPLCards = ({ setActiveTab }) => {
         >
           Next
         </motion.button>
-        <input type="file" accept="image/*" ref={photoInputRef} className="hidden" onChange={handleFileChange} />
-        <input type="file" accept="video/*" ref={videoInputRef} className="hidden" onChange={handleFileChange} />
+        <input
+          type="file"
+          accept="image/*"
+          ref={photoInputRef}
+          className="hidden"
+          onChange={handleFileChange}
+        />
+        <input
+          type="file"
+          accept="video/*"
+          ref={videoInputRef}
+          className="hidden"
+          onChange={handleFileChange}
+        />
       </div>
       <div className="flex flex-wrap justify-center gap-6 mb-12">
-        {cards.map((card, index) => (
-          <motion.div
-            key={index}
-            className="bg-white rounded-2xl overflow-hidden shadow-md flex flex-col items-center"
-            whileHover={{ scale: 1.05 }}
-          >
-            <img src={card.image} alt={card.alt} className="w-[300px] h-[220px] object-cover" />
-            <div className="flex justify-around items-center w-full py-3">
-              <FaHeart className="text-red-500 text-2xl cursor-pointer" />
-              <FaCommentDots className="text-black text-2xl cursor-pointer" />
-              <FaShareAlt className="text-black text-2xl cursor-pointer" />
-            </div>
-          </motion.div>
-        ))}
+        {highlights.length === 0 ? (
+          <p className="text-white text-lg">No highlights available for this tournament.</p>
+        ) : (
+          highlights.map((highlight, index) => (
+            <motion.div
+              key={highlight.id}
+              className="bg-white rounded-2xl overflow-hidden shadow-md flex flex-col items-center"
+              whileHover={{ scale: 1.05 }}
+            >
+              {highlight.type === 'image' ? (
+                <img
+                  src={highlight.url}
+                  alt={highlight.title}
+                  className="w-[300px] h-[220px] object-cover"
+                />
+              ) : (
+                <video
+                  src={highlight.url}
+                  controls
+                  className="w-[300px] h-[220px] object-cover"
+                />
+              )}
+              <div className="flex justify-around items-center w-full py-3">
+                <FaHeart className="text-red-500 text-2xl cursor-pointer" />
+                <FaCommentDots className="text-black text-2xl cursor-pointer" />
+                <FaShareAlt className="text-black text-2xl cursor-pointer" />
+              </div>
+            </motion.div>
+          ))
+        )}
       </div>
     </div>
   );
@@ -113,7 +212,7 @@ const WormGraph = () => {
         <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
         <XAxis dataKey="over" stroke="#cbd5e0" />
         <YAxis stroke="#cbd5e0" />
-        <Tooltip contentStyle={{ backgroundColor: '#374151', color: '#fff' }} />
+        <Tooltip contentStyle={{ backgroundColor: "#374151", color: "#fff" }} />
         <Line type="monotone" dataKey="runs" stroke="#ffc658" strokeWidth={2} />
       </LineChart>
     </ResponsiveContainer>
@@ -171,10 +270,10 @@ const FallOfWicketsChart = () => {
         <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
         <XAxis dataKey="over" stroke="#cbd5e0" />
         <YAxis stroke="#cbd5e0" />
-        <Tooltip contentStyle={{ backgroundColor: '#374151', color: '#fff' }} />
+        <Tooltip contentStyle={{ backgroundColor: "#374151", color: "#fff" }} />
         <Bar dataKey="wickets" fill="#d9534f" />
       </BarChart>
-    </ResponsiveContainer>
+  </ResponsiveContainer>
   );
 };
 
@@ -218,12 +317,12 @@ const FixtureGenerator = () => {
   const [liveTeamA, setLiveTeamA] = useState({ name: 'Team A', flag: placeholderFlag, score: '0/0', overs: '(0.0)' });
   const [liveTeamB, setLiveTeamB] = useState({ name: 'Team B', flag: placeholderFlag, score: '0/0', overs: '(0.0)' });
   const [winningCaption, setWinningCaption] = useState('');
-  const [activeTab, setActiveTab] = useState('Knockout Brackets'); // Default to Knockout Brackets
+  const [activeTab, setActiveTab] = useState('Knockout Brackets');
   const [activeAnalyticsTab, setActiveAnalyticsTab] = useState('scorecard');
   const [generatedFixtures, setGeneratedFixtures] = useState([]);
   const [showFixtures, setShowFixtures] = useState(false);
-  const navigate = useNavigate();
   const [matchResultWinner, setMatchResultWinner] = useState(null);
+  const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
@@ -240,22 +339,22 @@ const FixtureGenerator = () => {
           name: location.state.teamA.name,
           flag: location.state.teamA.flagUrl || placeholderFlag,
           score: `${location.state.teamA.score}/${location.state.teamA.wickets}`,
-          overs: location.state.teamA.balls ? `(${Math.floor(location.state.teamA.balls / 6)}.${location.state.teamA.balls % 6} overs)` : '(0.0 overs)',
+          overs: location.state.teamA.balls ? `(${Math.floor(location.state.teamA.balls / 6)}.${location.state.teamA.balls % 6} overs)` : '(0.0 overs)'
         });
         setLiveTeamB({
           name: location.state.teamB.name,
           flag: location.state.teamB.flagUrl || placeholderFlag,
           score: `${location.state.teamB.score}/${location.state.teamB.wickets}`,
-          overs: location.state.teamB.balls ? `(${Math.floor(location.state.teamB.balls / 6)}.${location.state.teamB.balls % 6} overs)` : '(0.0 overs)',
+          overs: location.state.teamB.balls ? `(${Math.floor(location.state.teamA.balls / 6)}.${location.state.teamB.balls % 6} overs)` : '(0.0 overs)'
         });
       } else if (location.state.teamA) {
-        setLiveTeamA((prevState) => ({
+        setLiveTeamA(prevState => ({
           ...prevState,
           name: location.state.teamA.name,
           flag: location.state.teamA.flagUrl || placeholderFlag,
         }));
       } else if (location.state.teamB) {
-        setLiveTeamB((prevState) => ({
+        setLiveTeamB(prevState => ({
           ...prevState,
           name: location.state.teamB.name,
           flag: location.state.teamB.flagUrl || placeholderFlag,
@@ -269,13 +368,13 @@ const FixtureGenerator = () => {
       name: teamAData.name,
       flag: teamAData.flagUrl,
       score: teamAData.score || '0/0',
-      overs: teamAData.overs || '(0.0)',
+      overs: teamAData.overs || '(0.0)'
     });
     setLiveTeamB({
       name: teamBData.name,
       flag: teamBData.flagUrl,
       score: teamBData.score || '0/0',
-      overs: teamBData.overs || '(0.0)',
+      overs: teamBData.overs || '(0.0)'
     });
   };
 
@@ -321,7 +420,7 @@ const FixtureGenerator = () => {
       id: Date.now(),
       teamA: selectedTeamA,
       teamB: selectedTeamB,
-      date: new Date().toISOString(),
+      date: new Date().toISOString()
     };
 
     setGeneratedFixtures([...generatedFixtures, newFixture]);
@@ -336,13 +435,13 @@ const FixtureGenerator = () => {
     switch (activeTab) {
       case 'Knockout Brackets':
         if (location.state?.origin) {
-          navigate('/landingpage'); // Navigate to origin (e.g., /TournamentPage)
+          navigate('/landingpage');
         } else {
-          navigate('/landingpage'); // Fallback
+          navigate('/landingpage');
         }
         break;
       case 'Start Match':
-        setActiveTab('Knockout Brackets'); // Go back to Knockout Brackets instead of landingpage
+        setActiveTab('Knockout Brackets');
         break;
       case 'Live Score':
         setActiveTab('Start Match');
@@ -396,25 +495,24 @@ const FixtureGenerator = () => {
               onClick={handleBack}
             />
           </div>
-         <div className="flex items-center overflow-x-auto mt-8 md:mt-8 mx-auto">
-          <ul className="flex gap-x-2 sm:gap-x-3 md:gap-x-4 lg:gap-x-5">
-            {allTabs.map((tab) => (
-              <li key={tab} className="flex-shrink-0">
-                <button
-                  className={`py-2 px-3 rounded-lg transition whitespace-nowrap text-sm sm:text-base ${
-                    activeTab === tab
-                      ? 'bg-blue-600 text-white font-semibold shadow-md'
-                      : 'bg-gray-100 text-black hover:bg-gray-200'
-                  }`}
-                  onClick={() => setActiveTab(tab)}
-                >
-                  {tab}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-
+          <div className="flex items-center overflow-x-auto mt-8 md:mt-8 mx-auto">
+            <ul className="flex gap-x-2 sm:gap-x-3 md:gap-x-4 lg:gap-x-5">
+              {allTabs.map((tab) => (
+                <li key={tab} className="flex-shrink-0">
+                  <button
+                    className={`py-2 px-3 rounded-lg transition whitespace-nowrap text-sm sm:text-base ${
+                      activeTab === tab
+                        ? 'bg-blue-600 text-white font-semibold shadow-md'
+                        : 'bg-gray-100 text-black hover:bg-gray-200'
+                    }`}
+                    onClick={() => setActiveTab(tab)}
+                  >
+                    {tab}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </header>
 
@@ -428,33 +526,58 @@ const FixtureGenerator = () => {
                 className="bg-white rounded-2xl shadow-2xl overflow-hidden max-w-3xl mx-auto mt-10"
                 initial={{ opacity: 0, y: 50 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, ease: 'easeOut' }}
+                transition={{ duration: 0.6, ease: "easeOut" }}
               >
                 <div className="bg-gradient-to-r from-blue-900 to-blue-700 text-white p-6">
                   <h3 className="text-2xl font-bold">ICC Cricket World Cup</h3>
                   <p className="text-sm opacity-90 mt-1">Today • 10:30 AM • Wankhede Stadium, Mumbai</p>
                 </div>
+
                 <div className="p-6 bg-gray-50">
                   <div className="flex justify-around items-center mb-6">
-                    <motion.div className="text-center" whileHover={{ scale: 1.05 }} transition={{ type: 'spring', stiffness: 300 }}>
+                    <motion.div
+                      className="text-center"
+                      whileHover={{ scale: 1.05 }}
+                      transition={{ type: "spring", stiffness: 300 }}
+                    >
                       <div className="w-20 h-20 mx-auto mb-2 bg-gray-200 rounded-full overflow-hidden shadow-md">
-                        <img src={liveTeamA.flag || placeholderFlag} alt={`${liveTeamA.name || 'Team A'} Flag`} className="w-full h-full object-contain" />
+                        <img
+                          src={liveTeamA.flag || placeholderFlag}
+                          alt={`${liveTeamA.name || 'Team A'} Flag`}
+                          className="w-full h-full object-contain"
+                        />
                       </div>
                       <h4 className="font-bold text-xl text-gray-800">{liveTeamA.name || 'Team A'}</h4>
                       <p className="text-3xl font-extrabold text-blue-700 mt-1">{liveTeamA.score || '198/6'}</p>
                       <p className="text-sm text-gray-600">{liveTeamA.overs || '(42.0 overs)'}</p>
                     </motion.div>
+
                     <div className="text-3xl font-bold text-gray-600 px-6">vs</div>
-                    <motion.div className="text-center" whileHover={{ scale: 1.05 }} transition={{ type: 'spring', stiffness: 300 }}>
+
+                    <motion.div
+                      className="text-center"
+                      whileHover={{ scale: 1.05 }}
+                      transition={{ type: "spring", stiffness: 300 }}
+                    >
                       <div className="w-20 h-20 mx-auto mb-2 bg-gray-200 rounded-full overflow-hidden shadow-md">
-                        <img src={liveTeamB.flag || placeholderFlag} alt={`${liveTeamB.name || 'Team B'} Flag`} className="w-full h-full object-contain" />
+                        <img
+                          src={liveTeamB.flag || placeholderFlag}
+                          alt={`${liveTeamB.name || 'Team B'} Flag`}
+                          className="w-full h-full object-contain"
+                        />
                       </div>
                       <h4 className="font-bold text-xl text-gray-800">{liveTeamB.name || 'Team B'}</h4>
                       <p className="text-3xl font-extrabold text-green-700 mt-1">{liveTeamB.score || '178/3'}</p>
                       <p className="text-sm text-gray-600">{liveTeamB.overs || '(15.2 overs)'}</p>
                     </motion.div>
                   </div>
-                  <motion.div className="bg-white p-5 rounded-xl shadow-inner" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
+
+                  <motion.div
+                    className="bg-white p-5 rounded-xl shadow-inner"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.5 }}
+                  >
                     <div className="flex justify-between items-center mb-3">
                       <span className="text-gray-700 font-medium">Match Status:</span>
                       {winningCaption ? (
@@ -487,7 +610,9 @@ const FixtureGenerator = () => {
               animate={{ opacity: 1 }}
               transition={{ duration: 0.5 }}
               className="relative w-full min-h-[60vh] rounded-xl shadow-lg flex flex-col bg-white items-center justify-center overflow-hidden"
-              style={{ background: 'linear-gradient(to bottom right, #ffe4e6, #ffc1cc)' }}
+              style={{
+                background: 'linear-gradient(to bottom right, #ffe4e6, #ffc1cc)'
+              }}
             >
               <FireworksCanvas />
               <div className="absolute top-4 right-4 z-30">
@@ -504,28 +629,46 @@ const FixtureGenerator = () => {
                 {matchResultWinner && matchResultWinner !== 'Tie' && (
                   <div className="mb-4">
                     {liveTeamA.name === matchResultWinner && liveTeamA.flag && (
-                      <img src={liveTeamA.flag} alt={`${liveTeamA.name} Flag`} className="w-24 h-24 mx-auto object-cover shadow-lg" />
+                      <img
+                        src={liveTeamA.flag}
+                        alt={`${liveTeamA.name} Flag`}
+                        className="w-24 h-24 mx-auto object-cover shadow-lg"
+                      />
                     )}
                     {liveTeamB.name === matchResultWinner && liveTeamB.flag && (
-                      <img src={liveTeamB.flag} alt={`${liveTeamB.name} Flag`} className="w-24 h-24 mx-auto object-cover shadow-lg" />
+                      <img
+                        src={liveTeamB.flag}
+                        alt={`${liveTeamB.name} Flag`}
+                        className="w-24 h-24 mx-auto object-cover shadow-lg"
+                      />
                     )}
                   </div>
                 )}
-                <img src={trophy} alt="Trophy" className="w-[300px] h-auto mb-8 drop-shadow-lg mx-auto" />
+                <img
+                  src={trophy}
+                  alt="Trophy"
+                  className="w-[300px] h-auto mb-8 drop-shadow-lg mx-auto"
+                />
                 {matchResultWinner && matchResultWinner !== 'Tie' && (
                   <h1 className="text-4xl text-green-400 font-bold drop-shadow-[0_0_10px_#22c55e]">{matchResultWinner} won the match!</h1>
                 )}
                 {matchResultWinner === 'Tie' && (
                   <h1 className="text-xl text-green-400 font-bold drop-shadow-[0_0_10px_#22c55e]">The match was a Tie!</h1>
                 )}
-                {!matchResultWinner && <p>No match results available yet.</p>}
+                {!matchResultWinner && (
+                  <p>No match results available yet.</p>
+                )}
               </div>
             </motion.div>
           )}
 
           {activeTab === 'Highlights' && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
-              <IPLCards setActiveTab={setActiveTab} />
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5 }}
+            >
+              <IPLCards setActiveTab={setActiveTab} tournamentId={location.state?.tournamentId || ''} />
             </motion.div>
           )}
 
@@ -533,49 +676,50 @@ const FixtureGenerator = () => {
             <div className="rounded-lg p-6 text-white">
               <div className="flex border-b border-gray-700 mb-6">
                 <button
-                  className={`py-2 px-4 mr-2 ${activeAnalyticsTab === 'scorecard' ? 'border-b-2 border-yellow-500 font-semibold' : 'text-black'}`}
+                  className={`py-2 px-4 mr-2 ${activeAnalyticsTab === 'scorecard' ? 'border-b-2 border-yellow-500 font-semibold' : 'text-gray-300'}`}
                   onClick={() => setActiveAnalyticsTab('scorecard')}
                 >
                   Scorecard
                 </button>
                 <button
-                  className={`py-2 px-4 mr-2 ${activeAnalyticsTab === 'wagonwheel' ? 'border-b-2 border-yellow-500 font-semibold' : 'text-black'}`}
+                  className={`py-2 px-4 mr-2 ${activeAnalyticsTab === 'wagonwheel' ? 'border-b-2 border-yellow-500 font-semibold' : 'text-gray-300'}`}
                   onClick={() => setActiveAnalyticsTab('wagonwheel')}
                 >
                   Wagon Wheel & Heat Map
                 </button>
                 <button
-                  className={`py-2 px-4 ${activeAnalyticsTab === 'fallofwickets' ? 'border-b-2 border-yellow-500 font-semibold' : 'text-black'}`}
+                  className={`py-2 px-4 ${activeAnalyticsTab === 'fallofwickets' ? 'border-b-2 border-yellow-500 font-semibold' : 'text-gray-300'}`}
                   onClick={() => setActiveAnalyticsTab('fallofwickets')}
                 >
                   Fall of Wickets
                 </button>
               </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {activeAnalyticsTab === 'scorecard' && (
                   <>
-                    <div className="bg-gray-700 rounded-lg p-4">
+                    <div className="bg-gray-800 rounded-lg p-4">
                       <h3 className="text-lg font-semibold mb-4">Worm Graph</h3>
                       <WormGraph />
                     </div>
-                    <div className="bg-gray-700 rounded-lg p-4">
+                    <div className="bg-gray-800 rounded-lg p-4">
                       <h3 className="text-lg font-semibold mb-4">Bowling Economy</h3>
-                      <div className="h-48 bg-gray-600 rounded flex items-end justify-around p-4">
+                      <div className="h-48 bg-gray-700 rounded flex items-end justify-around p-4">
                         <div className="bg-teal-500 h-1/3 w-1/5 rounded-t-md"></div>
                         <div className="bg-teal-500 h-2/3 w-1/5 rounded-t-md"></div>
                         <div className="bg-teal-500 h-1/2 w-1/5 rounded-t-md"></div>
                         <div className="bg-teal-500 h-full w-1/5 rounded-t-md"></div>
                       </div>
                     </div>
-                    <div className="bg-gray-700 rounded-lg p-4 md:col-span-2">
+                    <div className="bg-gray-800 rounded-lg p-4 md:col-span-2">
                       <h3 className="text-lg font-semibold mb-4">Runs Comparison</h3>
                       <ResponsiveContainer width="100%" height={300}>
                         <LineChart data={runsComparisonData}>
                           <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
                           <XAxis dataKey="over" stroke="#cbd5e0" />
                           <YAxis stroke="#cbd5e0" />
-                          <Tooltip contentStyle={{ backgroundColor: '#374151', color: '#fff' }} />
-                          <Legend wrapperStyle={{ color: '#fff' }} />
+                          <Tooltip contentStyle={{ backgroundColor: "#374151", color: "#fff" }} />
+                          <Legend wrapperStyle={{ color: "#fff" }} />
                           <Line type="monotone" dataKey="teamA" stroke="#ffc658" strokeWidth={2} />
                           <Line type="monotone" dataKey="teamB" stroke="#a4add3" strokeWidth={2} />
                         </LineChart>
@@ -583,29 +727,31 @@ const FixtureGenerator = () => {
                     </div>
                   </>
                 )}
+
                 {activeAnalyticsTab === 'wagonwheel' && (
                   <>
-                    <div className="bg-gray-700 rounded-lg p-4">
+                    <div className="bg-gray-800 rounded-lg p-4">
                       <h3 className="text-lg font-semibold mb-4">Wagon Wheel</h3>
                       <WagonWheelChart data={wagonWheelData} />
                     </div>
-                    <div className="bg-gray-700 rounded-lg p-4">
+                    <div className="bg-gray-800 rounded-lg p-4">
                       <h3 className="text-lg font-semibold mb-4">Batsman Heatmap</h3>
                       <BatsmanHeatmapChart data={batsmanHeatmapData} />
                     </div>
-                    <div className="bg-gray-700 rounded-lg p-4 md:col-span-2">
+                    <div className="bg-gray-800 rounded-lg p-4 md:col-span-2">
                       <h3 className="text-lg font-semibold mb-4">Bowler Heatmap</h3>
                       <BowlerHeatmapChart data={bowlerHeatmapData} />
                     </div>
                   </>
                 )}
+
                 {activeAnalyticsTab === 'fallofwickets' && (
                   <>
-                    <div className="bg-gray-700 rounded-lg p-4">
+                    <div className="bg-gray-800 rounded-lg p-4">
                       <h3 className="text-lg font-semibold mb-4">Fall of Wickets Chart</h3>
                       <FallOfWicketsChart />
                     </div>
-                    <div className="bg-gray-700 rounded-lg p-4">
+                    <div className="bg-gray-800 rounded-lg p-4">
                       <h3 className="text-lg font-semibold mb-4">Fall of Wickets Details</h3>
                       <FallOfWicketsDetails />
                     </div>
