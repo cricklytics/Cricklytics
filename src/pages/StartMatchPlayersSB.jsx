@@ -141,7 +141,22 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
     if (gameFinished && showModal) {
       return;
     }
-    navigate(-1, { state: { ...location.state, matchId } });
+    if (currentView === 'start' && showThirdButtonOnly) {
+      setCurrentView('toss');
+      setShowThirdButtonOnly(false);
+      setBowlerVisible(true);
+    } else if (bowlerVisible) {
+      setBowlerVisible(false);
+      setSelectedBowler(null);
+    } else if (striker || nonStriker) {
+      if (striker) {
+        cancelStriker();
+      } else if (nonStriker) {
+        cancelNonStriker();
+      }
+    } else {
+      navigate(-1, { state: { ...location.state, matchId } });
+    }
   };
 
   const updateBatsmanScore = (batsmanIndex, runs) => {
