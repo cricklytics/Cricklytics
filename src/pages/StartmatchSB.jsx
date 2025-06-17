@@ -7,12 +7,11 @@ import { collection, getDocs } from 'firebase/firestore'; // Import Firestore fu
 import logo from '../assets/pawan/PlayerProfile/picture-312.png'; // Still need these if used elsewhere
 import bgImg from '../assets/sophita/HomePage/advertisement5.jpeg'; // Still need these if used elsewhere
 
-
 // =====================================================================
 // PlayerSelector Component (will be updated in next step)
 // For now, it will receive full team objects.
 // =====================================================================
-const PlayerSelector = ({ teamA, teamB, overs, origin }) => {
+const PlayerSelector = ({ teamA, teamB, overs, origin, scorer }) => {
   const [leftSearch, setLeftSearch] = useState('');
   const [rightSearch, setRightSearch] = useState('');
   // Initialize selectedPlayers with empty arrays
@@ -25,7 +24,6 @@ const PlayerSelector = ({ teamA, teamB, overs, origin }) => {
   // They might be undefined initially, so handle that.
   const playersTeamAData = teamA?.players || [];
   const playersTeamBData = teamB?.players || [];
-
 
   const filteredLeftPlayers = playersTeamAData.filter(player =>
     player.name.toLowerCase().includes(leftSearch.toLowerCase()) // Filter by player.name
@@ -60,6 +58,7 @@ const PlayerSelector = ({ teamA, teamB, overs, origin }) => {
     console.log('Origin being passed to StartMatchPlayers:', origin);
     navigate('/StartMatchPlayersSB', {
       state: {
+        scorer: scorer, // Fixed: Use the scorer prop passed to PlayerSelector
         overs: overs,
         teamA: teamA, // Pass full team A object
         teamB: teamB, // Pass full team B object
@@ -265,9 +264,7 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '', origin }) => {
   const [overs, setOvers] = useState('');
   const [scorer, setScorer] = useState('');
   const [showPlayerSelector, setShowPlayerSelector] = useState(false);
-
-  const scorers = ['John Doe', 'Jane Smith', 'Mike Johnson']; // Still hardcoded for now
-
+  
   // Effect to fetch teams from Firebase
   useEffect(() => {
     const fetchAllTeams = async () => {
@@ -305,7 +302,6 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '', origin }) => {
     }
   }, [initialTeamB, allTeams]); // Depend on allTeams to ensure it's loaded
 
-
   // --- NEW LOGIC FOR TEAM B SELECTION FILTER ---
   // This useEffect ensures that if Team A is changed AFTER Team B is selected,
   // and the new Team A value is the same as Team B, Team B is reset.
@@ -316,10 +312,9 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '', origin }) => {
   }, [selectedTeamA, selectedTeamB]);
   // --- END NEW LOGIC ---
 
-
   const handleNext = () => {
-    if (!selectedTeamA || !selectedTeamB || !overs) {
-      alert('Please select both teams and enter overs.');
+    if (!selectedTeamA || !selectedTeamB || !overs || !scorer) {
+      alert('Please select both teams, enter overs, and assign the scorer.');
       return;
     }
     if (selectedTeamA === selectedTeamB) { // Double check for direct selection
@@ -363,6 +358,7 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '', origin }) => {
         teamB={teamBObject}
         overs={overs}
         origin={origin}
+        scorer={scorer}
       />
     );
   }
@@ -394,7 +390,6 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '', origin }) => {
       </div>
     );
   }
-
 
   return (
     <div
@@ -557,21 +552,17 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '', origin }) => {
               >
                 <h2 className="text-xl font-semibold mb-4 text-blue-800">Assign Scorer</h2>
                 <div className="w-full">
-                  <select
+                  <input
+                    type="text"
+                    placeholder="Enter scorer name"
                     className={`w-full p-3 border-2 border-blue-200 rounded-lg text-gray-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 ${hasValue(scorer) ? 'bg-gray-200 text-gray-700' : 'bg-white'}`}
                     value={scorer}
                     onChange={(e) => setScorer(e.target.value)}
-                  >
-                    <option value="">Select Scorer</option>
-                    {scorers.map(person => (
-                      <option key={person} value={person}>{person}</option>
-                    ))}
-                  </select>
+                  />
                 </div>
               </motion.div>
             </motion.div>
           </div>
-
 
           {/* Next Button */}
           <motion.div

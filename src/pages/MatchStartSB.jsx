@@ -337,7 +337,7 @@ const Scorecard = ({ matchData }) => {
             <span className="font-semibold">Next to Bat: </span>{unplayedPlayers}
           </p>
         )}
-        <h4 className="text-md font-semibold mb-2 text-white">Bowling ({opponentInnings.teamName})</h4>
+        <h4 className="text-md font-semibold mb-2 text-white">Bowling ({innings.teamName})</h4>
         <table className="min-w-full divide-y divide-gray-700">
           <thead>
             <tr className="bg-gray-800">

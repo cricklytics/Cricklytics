@@ -75,9 +75,9 @@ const Match = () => {
       matchResult,
       firstInnings,
       secondInnings,
-      format,
+      Format,
       venue,
-      umpires,
+      umpire,
       matchId,
     } = match;
 
@@ -90,8 +90,8 @@ const Match = () => {
           status: matchResult ? "Past" : "Live",
           score: `${teamA.totalScore}/${teamA.wickets} (${teamA.overs}) vs ${teamB.totalScore}/${teamB.wickets} (${teamB.overs})`,
           venue: venue || "Unknown Venue",
-          format: format || "T20",
-          umpires: umpires || "Unknown Umpires",
+          Format: Format || "T20",
+          umpire: umpire || "Unknown Umpires",
         };
       case "summary":
         let summary = "";
@@ -254,8 +254,8 @@ const Match = () => {
                             <p><strong>Status:</strong> {matchData.status}</p>
                             <p><strong>Score:</strong> {matchData.score}</p>
                             <p><strong>Venue:</strong> {matchData.venue}</p>
-                            <p><strong>Format:</strong> {matchData.format}</p>
-                            <p><strong>Umpires:</strong> {matchData.umpires}</p>
+                            <p><strong>Format:</strong> {matchData.Format}</p>
+                            <p><strong>Umpires:</strong> {matchData.umpire}</p>
                           </div>
                         )}
                         {activeSubOption === "summary" && (
@@ -353,8 +353,8 @@ const Match = () => {
                         <p className="text-cyan-300">{matchData.status}</p>
                         <p className="mt-2">{matchData.score}</p>
                         <p className="text-gray-400">{matchData.venue}</p>
-                        <p><strong>Format:</strong> {matchData.format}</p>
-                        <p><strong>Umpires:</strong> {matchData.umpires}</p>
+                        <p><strong>Format:</strong> {matchData.Format}</p>
+                        <p><strong>Umpires:</strong> {matchData.umpire}</p>
                       </div>
                     );
                   })

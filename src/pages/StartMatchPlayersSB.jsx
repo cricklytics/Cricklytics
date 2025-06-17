@@ -10,7 +10,7 @@ import { Player } from '@lottiefiles/react-lottie-player';
 import sixAnimation from '../assets/Animation/six.json';
 import fourAnimation from '../assets/Animation/four.json';
 import outAnimation from '../assets/Animation/out.json';
-import { db, auth } from '../firebase'; // Added auth import
+import { db, auth } from '../firebase';
 import { setDoc, doc, Timestamp } from 'firebase/firestore';
 
 // Error Boundary Component
@@ -40,6 +40,7 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
 
   // Extract all relevant data from location.state
   const originPage = location.state?.origin;
+  const umpire = location.state?.scorer;
   const maxOvers = location.state?.overs;
   const teamA = location.state?.teamA;
   const teamB = location.state?.teamB;
@@ -222,7 +223,7 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
 
       const playerStats = battingTeamPlayers.map(player => {
         const stats = batsmenStats[player.index] || {};
-        const wicket = wicketOvers.find(w => w.batsmanIndex2 === player.index);
+        const wicket = wicketOvers.find(w => w.batsmanIndex === player.index);
         return {
           index: player.index || '',
           name: player.name || 'Unknown',
@@ -231,7 +232,7 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
           runs: stats.runs || 0,
           balls: stats.balls || 0,
           dotBalls: stats.dotBalls || 0,
-          ones: stats.ones0 || 0,
+          ones: stats.ones || 0,
           twos: stats.twos || 0,
           threes: stats.threes || 0,
           fours: stats.fours || 0,
@@ -256,8 +257,10 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
 
       const matchData = {
         matchId,
-        userId: auth.currentUser.uid, // Added userId for centric data
+        userId: auth.currentUser.uid,
         createdAt: Timestamp.fromDate(new Date()),
+        Format: maxOvers,
+        umpire: umpire,
         teamA: {
           name: teamA?.name || 'Team A',
           flagUrl: teamA?.flagUrl || '',
@@ -329,7 +332,7 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
     // Handle pending wide
     if (pendingWide && !isLabel && typeof value === 'number') {
       setShowRunInfo(false);
-      runsToAdd = 1 + value; // 1 for wide + additional runs
+      runsToAdd = 1 + value;
       setPlayerScore(prev => prev + runsToAdd);
       setTopPlays(prev => [...prev, `W+${value}`]);
       setCurrentOverBalls(prev => [...prev, `W+${value}`]);
@@ -347,12 +350,12 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
     // Handle pending no-ball
     if (pendingNoBall && !isLabel && typeof value === 'number') {
       setShowRunInfo(false);
-      runsToAdd = 1 + value; // 1 for no-ball + additional runs
+      runsToAdd = 1 + value;
       setPlayerScore(prev => prev + runsToAdd);
       setTopPlays(prev => [...prev, `NB+${value}`]);
       setCurrentOverBalls(prev => [...prev, `NB+${value}`]);
       if (striker) {
-        updateBatsmanScore(striker.index, value); // Only additional runs credited to batsman
+        updateBatsmanScore(striker.index, value);
         updateBatsmanStats(striker.index, value);
         updateBatsmanBalls(striker.index);
       }
@@ -1157,7 +1160,7 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
               </div>
             </div>
 
-            <div className="w-full flex flex-col md:justify-between md:flex-row md:w-[50%] justify-around mt-2 md:pr-15">
+            <div className="mt-2 flex flex-col md:flex-row w-full md:w-[45%] justify-between relative">
               <div className="flex flex-row px-[4.8%] md:p-0 justify-between md:flex-row md:items-center gap-4 md:gap-8 mb-4 md:mb-0">
                 <div className="text-white text-center">
                   <h3 className={`text-lg md:text-xl font-bold ${striker ? 'text-yellow-300' : 'text-gray-400'}`}>Striker</h3>
@@ -1195,38 +1198,6 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
                   )}
                 </div>
               </div>
-              <div className="flex flex-col justify-center items-center w-full md:w-[20%] mb-4 md:mb-0">
-                <div className="flex justify-center">
-                  <button
-                    onClick={() => setShowPastOvers(!showPastOvers)}
-                    className="w-24 md:w-32 h-10 md:h-12 bg-[#4C0025] text-white font-bold text-sm md:text-lg rounded-lg border-2 border-white"
-                  >
-                    {showPastOvers ? 'Hide Overs' : 'Show Overs'}
-                  </button>
-                </div>
-                {showPastOvers && (
-                  <div className="mt-2 md:mt-4 text-white w-full">
-                    <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-4 text-center">Overs History</h3>
-                    <div className="flex flex-wrap gap-2 md:gap-4 justify-center">
-                      {pastOvers.map((over, index) => (
-                        <div key={index} className="bg-[#4C0025] p-2 md:p-3 rounded-lg">
-                          <h4 className="text-sm md:text-base">Over {index + 1}:</h4>
-                          <div className="flex gap-1 md:gap-2">
-                            {over.map((ball, ballIndex) => (
-                              <span
-                                key={ballIndex}
-                                className={`w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 flex items-center justify-center rounded-full text-xs md:text-sm ${ball === 'W' || ball === 'O' || ball.startsWith('W+') || ball.startsWith('NB+') ? 'bg-red-600' : 'bg-[#FF62A1]'}`}
-                              >
-                                {ball}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
               <div className="hidden sm:block w-20 text-white text-center">
                 <h3 className="text-lg md:text-xl font-bold">Bowler</h3>
                 {selectedBowler && (
@@ -1236,7 +1207,57 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
                   </div>
                 )}
               </div>
+      
+              </div>
+              <div className="absolute right-0 md:right-4 lg:right-8 xl:right-12 2xl:right-20 top-0 md:top-4">
+  <button
+    onClick={() => setShowPastOvers(!showPastOvers)}
+    className="w-24 md:w-32 h-10 md:h-12 bg-[#4C0025] text-white font-bold text-sm md:text-lg rounded-lg border-2 border-white"
+  >
+    {showPastOvers ? 'Hide Overs' : 'Show Overs'}
+  </button>
+  {showPastOvers && (
+    <div className="mt-2 md:mt-4 text-white w-48 md:w-64 absolute right-0">
+      <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-4 text-center">Overs History</h3>
+      <div className="bg-[#4C0025] p-3 rounded-lg w-full max-h-48 md:max-h-64 overflow-y-auto">
+        {[...pastOvers, currentOverBalls.length > 0 ? currentOverBalls : null]
+          .filter(Boolean)
+          .reverse()
+          .map((over, index) => (
+            <div key={`over-${index}`} className="mb-2">
+              <div className="text-sm md:text-base font-bold text-yellow-300">
+                Over {pastOvers.length - index}
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {over.map((ball, ballIndex) => {
+                  let displayBall = ball;
+                  if (typeof ball === 'string' && ball.includes('+')) {
+                    const [type, runs] = ball.split('+');
+                    if (type.toLowerCase() === 'w') displayBall = `Wd+${runs}`;
+                    else if (type.toLowerCase() === 'nb') displayBall = `Nb+${runs}`;
+                    else if (type.toLowerCase() === 'o') displayBall = `W+${runs}`;
+                    else if (type.toLowerCase() === 'l') displayBall = `L+${runs}`;
+                    else displayBall = `${type}+${runs}`;
+                  }
+                  const isWicket = typeof ball === 'string' && (ball.includes('O') || ball.includes('W'));
+                  return (
+                    <span
+                      key={`ball-${index}-${ballIndex}`}
+                      className={`w-6 h-6 flex items-center justify-center rounded-full px-1 text-xs md:text-sm whitespace-nowrap ${
+                        isWicket ? 'bg-red-600' : 'bg-[#FF62A1]'
+                      }`}
+                    >
+                      {displayBall}
+                    </span>
+                  );
+                })}
+              </div>
             </div>
+          ))}
+      </div>
+    </div>
+  )}
+</div>
 
             <div className="mt-4 flex flex-wrap justify-center gap-2 md:gap-4">
               {[0, 1, 2, 3, 4, 6].map((num) => {
@@ -1368,6 +1389,15 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
           </div>
         )}
       </section>
+      <style jsx>{`
+        .scrollbar-hidden::-webkit-scrollbar {
+          display: none;
+        }
+        .scrollbar-hidden {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
     </ErrorBoundary>
   );
 }
