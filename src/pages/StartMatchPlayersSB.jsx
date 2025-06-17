@@ -10,6 +10,8 @@ import { Player } from '@lottiefiles/react-lottie-player';
 import sixAnimation from '../assets/Animation/six.json';
 import fourAnimation from '../assets/Animation/four.json';
 import outAnimation from '../assets/Animation/out.json';
+import { db, auth } from '../firebase'; // Added auth import
+import { setDoc, doc, Timestamp } from 'firebase/firestore';
 
 // Error Boundary Component
 class ErrorBoundary extends Component {
@@ -32,7 +34,7 @@ class ErrorBoundary extends Component {
   }
 }
 
-function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd }) {
+function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -43,6 +45,7 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd }) {
   const teamB = location.state?.teamB;
   const selectedPlayersFromProps = location.state?.selectedPlayers || { left: [], right: [] };
 
+  const [matchId] = useState(Date.now().toString());
   const [currentView, setCurrentView] = useState('toss');
   const [showThirdButtonOnly, setShowThirdButtonOnly] = useState(false);
   const [topPlays, setTopPlays] = useState([]);
@@ -50,7 +53,6 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd }) {
   const [pastOvers, setPastOvers] = useState([]);
   const [playerScore, setPlayerScore] = useState(0);
   const [outCount, setOutCount] = useState(0);
-  const [opponentBallsFaced, setOpponentBallsFaced] = useState(0);
   const [validBalls, setValidBalls] = useState(0);
   const [overNumber, setOverNumber] = useState(1);
   const [striker, setStriker] = useState(null);
@@ -59,25 +61,28 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd }) {
   const [selectedBowler, setSelectedBowler] = useState(null);
   const [showBowlerDropdown, setShowBowlerDropdown] = useState(false);
   const [showBatsmanDropdown, setShowBatsmanDropdown] = useState(false);
-  const [nextBatsmanIndex, setNextBatsmanIndex] = useState(null);
   const [showPastOvers, setShowPastOvers] = useState(false);
   const [selectedBatsmenIndices, setSelectedBatsmenIndices] = useState([]);
   const [isChasing, setIsChasing] = useState(false);
   const [targetScore, setTargetScore] = useState(0);
   const [batsmenScores, setBatsmenScores] = useState({});
   const [batsmenBalls, setBatsmenBalls] = useState({});
+  const [batsmenStats, setBatsmenStats] = useState({});
+  const [bowlerStats, setBowlerStats] = useState({});
+  const [wicketOvers, setWicketOvers] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [modalContent, setModalContent] = useState({ title: '', message: '' });
   const [gameFinished, setGameFinished] = useState(false);
   const [pendingWide, setPendingWide] = useState(false);
   const [pendingNoBall, setPendingNoBall] = useState(false);
   const [pendingOut, setPendingOut] = useState(false);
+  const [pendingLegBy, setPendingLegBy] = useState(false);
   const [activeLabel, setActiveLabel] = useState(null);
   const [activeNumber, setActiveNumber] = useState(null);
   const [showRunInfo, setShowRunInfo] = useState(false);
   const [showAnimation, setShowAnimation] = useState(false);
   const [animationType, setAnimationType] = useState(null);
-  const [pendingLegBy, setPendingLegBy] = useState(false);
+  const [firstInningsData, setFirstInningsData] = useState(null);
 
   // Dynamic player data
   const [battingTeamPlayers, setBattingTeamPlayers] = useState([]);
@@ -116,6 +121,9 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd }) {
     setSelectedBatsmenIndices([]);
     setBatsmenScores({});
     setBatsmenBalls({});
+    setBatsmenStats({});
+    setBowlerStats({});
+    setWicketOvers([]);
   }, [isChasing, selectedPlayersFromProps, teamA, teamB, navigate]);
 
   const displayModal = (title, message) => {
@@ -132,7 +140,7 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd }) {
     if (gameFinished && showModal) {
       return;
     }
-    navigate(-1);
+    navigate(-1, { state: { ...location.state, matchId } });
   };
 
   const updateBatsmanScore = (batsmanIndex, runs) => {
@@ -149,16 +157,166 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd }) {
     }));
   };
 
+  const updateBatsmanStats = (batsmanIndex, runs) => {
+    setBatsmenStats(prev => {
+      const currentRuns = (prev[batsmanIndex]?.runs || 0) + runs;
+      const milestone = currentRuns >= 100 ? 'Century' : currentRuns >= 50 ? 'Half-Century' : null;
+      return {
+        ...prev,
+        [batsmanIndex]: {
+          ...prev[batsmanIndex],
+          runs: currentRuns,
+          balls: (prev[batsmanIndex]?.balls || 0) + 1,
+          dotBalls: runs === 0 ? (prev[batsmanIndex]?.dotBalls || 0) + 1 : prev[batsmanIndex]?.dotBalls || 0,
+          ones: runs === 1 ? (prev[batsmanIndex]?.ones || 0) + 1 : prev[batsmanIndex]?.ones || 0,
+          twos: runs === 2 ? (prev[batsmanIndex]?.twos || 0) + 1 : prev[batsmanIndex]?.twos || 0,
+          threes: runs === 3 ? (prev[batsmanIndex]?.threes || 0) + 1 : prev[batsmanIndex]?.threes || 0,
+          fours: runs === 4 ? (prev[batsmanIndex]?.fours || 0) + 1 : prev[batsmanIndex]?.fours || 0,
+          sixes: runs === 6 ? (prev[batsmanIndex]?.sixes || 0) + 1 : prev[batsmanIndex]?.sixes || 0,
+          milestone
+        }
+      };
+    });
+  };
+
+  const updateBowlerStats = (bowlerIndex, isWicket = false, isValidBall = false, runsConceded = 0) => {
+    setBowlerStats(prev => {
+      const currentBowler = prev[bowlerIndex] || { wickets: 0, ballsBowled: 0, oversBowled: '0.0', runsConceded: 0 };
+      const ballsBowled = currentBowler.ballsBowled + (isValidBall ? 1 : 0);
+      const overs = Math.floor(ballsBowled / 6) + (ballsBowled % 6) / 10;
+      return {
+        ...prev,
+        [bowlerIndex]: {
+          wickets: isWicket ? (currentBowler.wickets || 0) + 1 : currentBowler.wickets || 0,
+          ballsBowled,
+          oversBowled: overs.toFixed(1),
+          runsConceded: (currentBowler.runsConceded || 0) + runsConceded
+        }
+      };
+    });
+  };
+
+  const recordWicketOver = (batsmanIndex) => {
+    const currentOver = `${overNumber - 1}.${validBalls}`;
+    setWicketOvers(prev => [...prev, { batsmanIndex, over: currentOver }]);
+  };
+
   const playAnimation = (type) => {
     setAnimationType(type);
     setShowAnimation(true);
     setTimeout(() => {
       setShowAnimation(false);
-    }, 3000); // Animation duration
+    }, 3000);
+  };
+
+  const saveMatchData = async (isFinal = false) => {
+    try {
+      if (!auth.currentUser) {
+        console.error('No authenticated user found.');
+        return;
+      }
+
+      const overs = `${overNumber - 1}.${validBalls}`;
+      const battingTeam = isChasing ? teamB : teamA;
+      const bowlingTeam = isChasing ? teamA : teamB;
+
+      const playerStats = battingTeamPlayers.map(player => {
+        const stats = batsmenStats[player.index] || {};
+        const wicket = wicketOvers.find(w => w.batsmanIndex2 === player.index);
+        return {
+          index: player.index || '',
+          name: player.name || 'Unknown',
+          photoUrl: player.photoUrl || '',
+          role: player.role || '',
+          runs: stats.runs || 0,
+          balls: stats.balls || 0,
+          dotBalls: stats.dotBalls || 0,
+          ones: stats.ones0 || 0,
+          twos: stats.twos || 0,
+          threes: stats.threes || 0,
+          fours: stats.fours || 0,
+          sixes: stats.sixes || 0,
+          milestone: stats.milestone || null,
+          wicketOver: wicket ? wicket.over : null
+        };
+      });
+
+      const bowlerStatsArray = bowlingTeamPlayers.map(player => {
+        const stats = bowlerStats[player.index] || {};
+        return {
+          index: player.index || '',
+          name: player.name || 'Unknown',
+          photoUrl: player.photoUrl || '',
+          role: player.role || '',
+          wickets: stats.wickets || 0,
+          oversBowled: stats.oversBowled || '0.0',
+          runsConceded: stats.runsConceded || 0
+        };
+      });
+
+      const matchData = {
+        matchId,
+        userId: auth.currentUser.uid, // Added userId for centric data
+        createdAt: Timestamp.fromDate(new Date()),
+        teamA: {
+          name: teamA?.name || 'Team A',
+          flagUrl: teamA?.flagUrl || '',
+          players: selectedPlayersFromProps.left.map(p => ({
+            name: p.name || 'Unknown',
+            index: p.name + selectedPlayersFromProps.left.findIndex(pl => pl.name === p.name),
+            photoUrl: p.photoUrl || '',
+            role: p.role || ''
+          })),
+          totalScore: isChasing ? (firstInningsData?.totalScore || 0) : playerScore,
+          wickets: isChasing ? (firstInningsData?.wickets || 0) : outCount,
+          overs: isChasing ? (firstInningsData?.overs || '0.0') : overs,
+          result: isFinal ? (playerScore < targetScore - 1 ? 'Win' : playerScore === targetScore - 1 ? 'Tie' : 'Loss') : null
+        },
+        teamB: {
+          name: teamB?.name || 'Team B',
+          flagUrl: teamB?.flagUrl || '',
+          players: selectedPlayersFromProps.right.map(p => ({
+            name: p.name || 'Unknown',
+            index: p.name + selectedPlayersFromProps.right.findIndex(pl => pl.name === p.name),
+            photoUrl: p.photoUrl || '',
+            role: p.role || ''
+          })),
+          totalScore: isChasing ? playerScore : (firstInningsData?.totalScore || 0),
+          wickets: isChasing ? outCount : (firstInningsData?.wickets || 0),
+          overs: isChasing ? overs : (firstInningsData?.overs || '0.0'),
+          result: isFinal ? (playerScore < targetScore - 1 ? 'Loss' : playerScore === targetScore - 1 ? 'Tie' : 'Win') : null
+        },
+        firstInnings: firstInningsData || {
+          teamName: teamA?.name || 'Team A',
+          totalScore: playerScore,
+          wickets: outCount,
+          overs,
+          playerStats,
+          bowlerStats: bowlerStatsArray
+        },
+        secondInnings: isChasing ? {
+          teamName: teamB?.name || 'Team B',
+          totalScore: playerScore,
+          wickets: outCount,
+          overs,
+          playerStats,
+          bowlerStats: bowlerStatsArray
+        } : null,
+        matchResult: isFinal ? (playerScore < targetScore - 1 ? teamA?.name || 'Team A' : playerScore === targetScore - 1 ? 'Tie' : teamB?.name || 'Team B') : null
+      };
+
+      await setDoc(doc(db, 'scoringpage', matchId), matchData);
+      console.log('Match data updated successfully:', matchData);
+    } catch (error) {
+      console.error('Error saving match data:', error);
+    }
   };
 
   const handleScoreButtonClick = (value, isLabel) => {
     if (gameFinished) return;
+
+    let runsToAdd = 0;
+    let isValidBall = false;
 
     if (isLabel) {
       setActiveNumber(null);
@@ -168,58 +326,92 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd }) {
       setActiveNumber(value);
     }
 
-    // Handle pending actions first
-    if (pendingWide && ! isLabel && typeof value === 'number') {
-      setPlayerScore(prev => prev + value + 1);
+    // Handle pending wide
+    if (pendingWide && !isLabel && typeof value === 'number') {
+      setShowRunInfo(false);
+      runsToAdd = 1 + value; // 1 for wide + additional runs
+      setPlayerScore(prev => prev + runsToAdd);
       setTopPlays(prev => [...prev, `W+${value}`]);
       setCurrentOverBalls(prev => [...prev, `W+${value}`]);
-      if (striker) updateBatsmanScore(striker.index, value + 1);
+      if (selectedBowler) updateBowlerStats(selectedBowler.index, false, false, runsToAdd);
+      if (value % 2 !== 0) {
+        const temp = striker;
+        setStriker(nonStriker);
+        setNonStriker(temp);
+      }
       setPendingWide(false);
+      saveMatchData();
       return;
     }
 
+    // Handle pending no-ball
     if (pendingNoBall && !isLabel && typeof value === 'number') {
-      setPlayerScore(prev => prev + value + 1);
+      setShowRunInfo(false);
+      runsToAdd = 1 + value; // 1 for no-ball + additional runs
+      setPlayerScore(prev => prev + runsToAdd);
       setTopPlays(prev => [...prev, `NB+${value}`]);
       setCurrentOverBalls(prev => [...prev, `NB+${value}`]);
-      if (striker) updateBatsmanScore(striker.index, value + 1);
+      if (striker) {
+        updateBatsmanScore(striker.index, value); // Only additional runs credited to batsman
+        updateBatsmanStats(striker.index, value);
+        updateBatsmanBalls(striker.index);
+      }
+      if (selectedBowler) updateBowlerStats(selectedBowler.index, false, false, runsToAdd);
+      if (value % 2 !== 0) {
+        const temp = striker;
+        setStriker(nonStriker);
+        setNonStriker(temp);
+      }
       setPendingNoBall(false);
+      saveMatchData();
       return;
     }
 
+    // Handle pending leg-bye
     if (pendingLegBy && !isLabel && typeof value === 'number') {
-      setPlayerScore(prev => prev + value);
+      setShowRunInfo(false);
+      runsToAdd = value;
+      setPlayerScore(prev => prev + runsToAdd);
       setTopPlays(prev => [...prev, `L+${value}`]);
       setCurrentOverBalls(prev => [...prev, `L+${value}`]);
-      // Do not update batsman score for leg-by runs
-      setPendingLegBy(false);
       setValidBalls(prev => prev + 1);
+      isValidBall = true;
       if (striker) updateBatsmanBalls(striker.index);
       if (value % 2 !== 0) {
         const temp = striker;
         setStriker(nonStriker);
         setNonStriker(temp);
       }
+      setPendingLegBy(false);
+      saveMatchData();
       return;
     }
 
+    // Handle pending out
     if (pendingOut && !isLabel && typeof value === 'number') {
       playAnimation('out');
       setTimeout(() => {
-        setPlayerScore(prev => prev + value);
+        runsToAdd = value;
+        setPlayerScore(prev => prev + runsToAdd);
         setTopPlays(prev => [...prev, `O+${value}`]);
         setCurrentOverBalls(prev => [...prev, `O+${value}`]);
-        if (striker) updateBatsmanScore(striker.index, value);
+        if (striker) {
+          updateBatsmanScore(striker.index, value);
+          updateBatsmanStats(striker.index, value);
+          updateBatsmanBalls(striker.index);
+          recordWicketOver(striker.index);
+        }
         setValidBalls(prev => prev + 1);
-        if (striker) updateBatsmanBalls(striker.index);
+        isValidBall = true;
+        if (selectedBowler) {
+          updateBowlerStats(selectedBowler.index, true, true, runsToAdd);
+        }
         setShowBatsmanDropdown(true);
+        saveMatchData();
       }, 5000);
       setPendingOut(false);
       return;
     }
-
-    const extraBalls = ['No-ball', 'Wide', 'No ball'];
-    const playValue = typeof value === 'string' ? value.charAt(0) : value;
 
     if (isLabel) {
       if (value === 'Wide' || value === 'No-ball' || value === 'Leg By') {
@@ -228,23 +420,7 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd }) {
         setShowRunInfo(false);
       }
 
-      if (value === 'Six') {
-        playAnimation('six');
-        setPlayerScore(prev => prev + 6);
-        setTopPlays(prev => [...prev, 6]);
-        setCurrentOverBalls(prev => [...prev, 6]);
-        if (striker) updateBatsmanScore(striker.index, 6);
-        setValidBalls(prev => prev + 1);
-        if (striker) updateBatsmanBalls(striker.index);
-      } else if (value === 'Four') {
-        playAnimation('four');
-        setPlayerScore(prev => prev + 4);
-        setTopPlays(prev => [...prev, 4]);
-        setCurrentOverBalls(prev => [...prev, 4]);
-        if (striker) updateBatsmanScore(striker.index, 4);
-        setValidBalls(prev => prev + 1);
-        if (striker) updateBatsmanBalls(striker.index);
-      } else if (value === 'Wide') {
+      if (value === 'Wide') {
         setPendingWide(true);
         return;
       } else if (value === 'No-ball') {
@@ -253,27 +429,24 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd }) {
       } else if (value === 'Leg By') {
         setPendingLegBy(true);
         return;
-      } else if (value === 'OUT' || value === 'Wicket' || value === 'lbw') {
+      } else if (value === 'OUT' || value === 'lbw') {
         setPendingOut(true);
         return;
       }
-
-      if (!extraBalls.includes(value)) {
-        setValidBalls(prev => prev + 1);
-        if (striker && value !== 'Wide' && value !== 'No-ball') {
-          updateBatsmanBalls(striker.index);
-        }
-      }
     } else {
       setShowRunInfo(false);
-      setPlayerScore(prev => prev + value);
+      runsToAdd = value;
+      setPlayerScore(prev => prev + runsToAdd);
       setTopPlays(prev => [...prev, value]);
       setCurrentOverBalls(prev => [...prev, value]);
       setValidBalls(prev => prev + 1);
+      isValidBall = true;
       if (striker) {
         updateBatsmanScore(striker.index, value);
+        updateBatsmanStats(striker.index, value);
         updateBatsmanBalls(striker.index);
       }
+      if (selectedBowler) updateBowlerStats(selectedBowler.index, false, true, runsToAdd);
       if (value % 2 !== 0) {
         const temp = striker;
         setStriker(nonStriker);
@@ -285,6 +458,8 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd }) {
         playAnimation('four');
       }
     }
+
+    saveMatchData();
   };
 
   useEffect(() => {
@@ -373,13 +548,58 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd }) {
   }, [modalContent.title]);
 
   useEffect(() => {
-    if (gameFinished) return;
+    if (gameFinished) {
+      saveMatchData(true);
+      return;
+    }
 
-    if (outCount >= 10 || (validBalls === 6 && overNumber > maxOvers -1)) {
+    if (outCount >= 10 || (validBalls === 6 && overNumber > maxOvers - 1)) {
       if (!isChasing) {
+        const overs = `${overNumber - 1}.${validBalls}`;
+        const playerStats = battingTeamPlayers.map(player => {
+          const stats = batsmenStats[player.index] || {};
+          const wicket = wicketOvers.find(w => w.batsmanIndex === player.index);
+          return {
+            index: player.index || '',
+            name: player.name || 'Unknown',
+            photoUrl: player.photoUrl || '',
+            role: player.role || '',
+            runs: stats.runs || 0,
+            balls: stats.balls || 0,
+            dotBalls: stats.dotBalls || 0,
+            ones: stats.ones || 0,
+            twos: stats.twos || 0,
+            threes: stats.threes || 0,
+            fours: stats.fours || 0,
+            sixes: stats.sixes || 0,
+            milestone: stats.milestone || null,
+            wicketOver: wicket ? wicket.over : null
+          };
+        });
+        const bowlerStatsArray = bowlingTeamPlayers.map(player => {
+          const stats = bowlerStats[player.index] || {};
+          return {
+            index: player.index || '',
+            name: player.name || 'Unknown',
+            photoUrl: player.photoUrl || '',
+            role: player.role || '',
+            wickets: stats.wickets || 0,
+            oversBowled: stats.oversBowled || '0.0',
+            runsConceded: stats.runsConceded || 0
+          };
+        });
+        setFirstInningsData({
+          teamName: teamA?.name || 'Team A',
+          totalScore: playerScore,
+          wickets: outCount,
+          overs,
+          playerStats,
+          bowlerStats: bowlerStatsArray
+        });
         setTargetScore(playerScore + 1);
         setIsChasing(true);
         resetInnings();
+        saveMatchData();
         displayModal('Innings Break', `You need to chase ${playerScore + 1} runs`);
       } else {
         let winnerTeamName = '';
@@ -438,6 +658,9 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd }) {
     setShowThirdButtonOnly(false);
     setBatsmenScores({});
     setBatsmenBalls({});
+    setBatsmenStats({});
+    setBowlerStats({});
+    setWicketOvers([]);
     setGameFinished(false);
     setPendingWide(false);
     setPendingNoBall(false);
@@ -452,6 +675,7 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd }) {
     resetInnings();
     setIsChasing(false);
     setTargetScore(0);
+    setFirstInningsData(null);
   };
 
   const getStrikeRate = (batsmanIndex) => {
@@ -467,17 +691,56 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd }) {
       setSelectedBatsmenIndices(prev => [...prev, player.index]);
       setBatsmenScores(prev => ({ ...prev, [player.index]: 0 }));
       setBatsmenBalls(prev => ({ ...prev, [player.index]: 0 }));
+      setBatsmenStats(prev => ({
+        ...prev,
+        [player.index]: {
+          runs: 0,
+          balls: 0,
+          dotBalls: 0,
+          ones: 0,
+          twos: 0,
+          threes: 0,
+          fours: 0,
+          sixes: 0,
+          milestone: null
+        }
+      }));
     } else if (!nonStriker && striker.index !== player.index) {
       setNonStriker(player);
       setSelectedBatsmenIndices(prev => [...prev, player.index]);
       setBatsmenScores(prev => ({ ...prev, [player.index]: 0 }));
       setBatsmenBalls(prev => ({ ...prev, [player.index]: 0 }));
+      setBatsmenStats(prev => ({
+        ...prev,
+        [player.index]: {
+          runs: 0,
+          balls: 0,
+          dotBalls: 0,
+          ones: 0,
+          twos: 0,
+          threes: 0,
+          fours: 0,
+          sixes: 0,
+          milestone: null
+        }
+      }));
     }
+    saveMatchData();
   };
 
   const handleBowlerSelect = (player) => {
     setSelectedBowler(player);
+    setBowlerStats(prev => ({
+      ...prev,
+      [player.index]: {
+        wickets: prev[player.index]?.wickets || 0,
+        ballsBowled: prev[player.index]?.ballsBowled || 0,
+        oversBowled: prev[player.index]?.oversBowled || '0.0',
+        runsConceded: prev[player.index]?.runsConceded || 0
+      }
+    }));
     setShowBowlerDropdown(false);
+    saveMatchData();
   };
 
   const handleBatsmanSelect = (player) => {
@@ -486,7 +749,22 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd }) {
     setShowBatsmanDropdown(false);
     setBatsmenScores(prev => ({ ...prev, [player.index]: 0 }));
     setBatsmenBalls(prev => ({ ...prev, [player.index]: 0 }));
+    setBatsmenStats(prev => ({
+      ...prev,
+      [player.index]: {
+        runs: 0,
+        balls: 0,
+        dotBalls: 0,
+        ones: 0,
+        twos: 0,
+        threes: 0,
+        fours: 0,
+        sixes: 0,
+        milestone: null
+      }
+    }));
     setOutCount(prev => prev + 1);
+    saveMatchData();
   };
 
   const getAvailableBatsmen = () => {
@@ -503,7 +781,11 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd }) {
     const newBalls = { ...batsmenBalls };
     delete newBalls[striker?.index];
     setBatsmenBalls(newBalls);
+    const newStats = { ...batsmenStats };
+    delete newStats[striker?.index];
+    setBatsmenStats(newStats);
     setStriker(null);
+    saveMatchData();
   };
 
   const cancelNonStriker = () => {
@@ -514,7 +796,11 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd }) {
     const newBalls = { ...batsmenBalls };
     delete newBalls[nonStriker?.index];
     setBatsmenBalls(newBalls);
+    const newStats = { ...batsmenStats };
+    delete newStats[nonStriker?.index];
+    setBatsmenStats(newStats);
     setNonStriker(null);
+    saveMatchData();
   };
 
   const cancelBatsmanDropdown = () => {
@@ -523,6 +809,7 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd }) {
     setTopPlays(prev => prev.slice(0, -1));
     setCurrentOverBalls(prev => prev.slice(0, -1));
     setValidBalls(prev => Math.max(0, prev - 1));
+    saveMatchData();
   };
 
   const handleModalOkClick = () => {
@@ -541,9 +828,9 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd }) {
       const originPage = location.state?.origin;
       console.log(originPage);
       if (originPage) {
-        navigate(originPage, { state: { activeTab: 'Match Results', winner: winnerTeamName } });
+        navigate(originPage, { state: { activeTab: 'Match Results', winner: winnerTeamName, matchId } });
       } else {
-        navigate('/');
+        navigate('/', { state: { matchId } });
       }
     } else if (modalContent.title === 'Innings Break') {
       resetInnings();
@@ -893,7 +1180,7 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd }) {
                       <div className="text-xs md:text-sm">{nonStriker.role}</div>
                       <div className="text-xs md:text-sm">
                         {batsmenScores[nonStriker.index] || 0} ({batsmenBalls[nonStriker.index] || 0})
-                        <span className="text-yellow-300"> SR: {getStrikeRate(nonStriker.index)}</span>
+                        <span className="text-yellow-300"> SR: {getStrikeRate(striker.index)}</span>
                       </div>
                     </div>
                   )}
@@ -928,7 +1215,7 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd }) {
                             {over.map((ball, ballIndex) => (
                               <span
                                 key={ballIndex}
-                                className={`w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 flex items-center justify-center rounded-full text-xs md:text-sm ${ball === 'W' || ball === 'O' ? 'bg-red-600' : 'bg-[#FF62A1]'}`}
+                                className={`w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6 flex items-center justify-center rounded-full text-xs md:text-sm ${ball === 'W' || ball === 'O' || ball.startsWith('W+') || ball.startsWith('NB+') ? 'bg-red-600' : 'bg-[#FF62A1]'}`}
                               >
                                 {ball}
                               </span>
@@ -961,7 +1248,9 @@ function StartMatchPlayers({initialTeamA, initialTeamB, origin, onMatchEnd }) {
                     className={`w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16
                       ${isActive ? 'bg-green-500' : 'bg-[#4C0025] hover:bg-green-300'}
                       text-white font-bold text-lg md:text-xl rounded-full border-2 border-white
-                      flex items-center justify-center transition-colors duration-300`}
+                      flex items-center justify-center transition-colors duration-300
+                      ${pendingOut && (num === 4 || num === 6) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    disabled={pendingOut && (num === 4 || num === 6)}
                   >
                     {num}
                   </button>

@@ -1,9 +1,36 @@
 import React from "react";
 import { motion } from "framer-motion";
+import backButton from '../assets/kumar/right-chevron.png';
+import logo from "../assets/pawan/PlayerProfile/picture-312.png";
 
 const UpcomingPage = () => {
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-indigo-900 via-blue-900 to-gray-900 overflow-hidden px-4">
+
+      {/* Top Navigation Bar */}
+      <div className="absolute top-0 left-0 flex items-center gap-2 p-4">
+        <img 
+          src={backButton}
+          alt="Back"
+          className="h-8 w-8 cursor-pointer -scale-x-100"
+          onClick={() => window.history.back()}
+        />
+        <div className="flex items-center gap-2">
+          <img 
+            src={logo}
+            alt="Cricklytics Logo"
+            className="h-7 w-7 md:h-10 object-contain block select-none"
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.src = "/images/Picture3 2.png";
+            }}
+          />
+          <span className="text-2xl font-bold text-white whitespace-nowrap text-shadow-[0_0_8px_rgba(93,224,230,0.4)]">
+            Cricklytics
+          </span>
+        </div>
+      </div>
+
       <motion.div
         initial={{ scale: 0.5, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
@@ -22,7 +49,7 @@ const UpcomingPage = () => {
             repeat: Infinity,
             ease: "easeInOut",
           }}
-          className="text-4xl sm:text-6xl mb-2 sm:mb-4" // Smaller emoji on mobile
+          className="text-4xl sm:text-6xl mb-2 sm:mb-4"
         >
           🚀
         </motion.div>
@@ -41,7 +68,7 @@ const UpcomingPage = () => {
             ease: "easeInOut",
             delay: 0.5,
           }}
-          className="text-4xl sm:text-6xl mt-2 sm:mt-4" // Smaller emoji on mobile
+          className="text-4xl sm:text-6xl mt-2 sm:mt-4"
         >
           🔥
         </motion.div>
@@ -71,7 +98,7 @@ const UpcomingPage = () => {
           key={i}
           initial={{ 
             opacity: 0,
-            x: Math.random() * 600 - 300, // Smaller range on mobile
+            x: Math.random() * 600 - 300,
             y: Math.random() * 600 - 300,
           }}
           animate={{ 
@@ -86,7 +113,7 @@ const UpcomingPage = () => {
           }}
           className="absolute rounded-full bg-blue-400 blur-xl"
           style={{
-            width: Math.random() * 60 + 30, // Smaller circles on mobile
+            width: Math.random() * 60 + 30,
             height: Math.random() * 60 + 30,
           }}
         />
