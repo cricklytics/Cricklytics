@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db, auth } from '../firebase';
-import { doc, setDoc, getDocs, collection, query, where } from 'firebase/firestore';
+import { doc, setDoc, getDocs, collection, query, where, updateDoc, getDoc, arrayUnion } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { onAuthStateChanged } from 'firebase/auth';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -27,7 +27,7 @@ const generateUniquePlayerId = async () => {
   return newId;
 };
 
-const AddPlayerModal = ({ onClose}) => {
+const AddPlayerModal = ({ onClose }) => {
   const [clubPlayerFormData, setClubPlayerFormData] = useState({
     playerId: '',
     name: '',
@@ -48,7 +48,7 @@ const AddPlayerModal = ({ onClose}) => {
     bestBowling: '',
     bio: '',
     recentMatches: '',
-    tournamentName: '', // Added for tournament selection
+    tournamentName: '',
     careerStatsBattingMatches: '',
     careerStatsBattingInnings: '',
     careerStatsBattingNotOuts: '',
@@ -69,6 +69,7 @@ const AddPlayerModal = ({ onClose}) => {
     careerStatsFieldingCatches: '',
     careerStatsFieldingStumpings: '',
     careerStatsFieldingRunOuts: '',
+    user: 'no',
   });
   const [clubPlayerImageFile, setClubPlayerImageFile] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -171,6 +172,12 @@ const AddPlayerModal = ({ onClose}) => {
       return;
     }
 
+    if (!clubPlayerFormData.teamName) {
+      setError("Team name is required.");
+      setLoading(false);
+      return;
+    }
+
     let uploadedImageUrl = clubPlayerFormData.image;
     try {
       if (clubPlayerImageFile) {
@@ -203,7 +210,7 @@ const AddPlayerModal = ({ onClose}) => {
         playerId: parseInt(clubPlayerFormData.playerId),
         name: playerName,
         image: uploadedImageUrl,
-        teamName: clubPlayerFormData.team,
+        teamName: clubPlayerFormData.teamName,
         role: clubPlayerFormData.role,
         age: parseInt(clubPlayerFormData.age) || 0,
         battingStyle: clubPlayerFormData.battingStyle,
@@ -219,8 +226,9 @@ const AddPlayerModal = ({ onClose}) => {
         bestBowling: clubPlayerFormData.bestBowling || '',
         bio: clubPlayerFormData.bio || '',
         recentMatches: recentMatchesParsed,
-        tournamentName: clubPlayerFormData.tournamentName, // Store selected tournament name
-        userId: currentUserId, // Store userId
+        tournamentName: clubPlayerFormData.tournamentName,
+        userId: currentUserId,
+        user: clubPlayerFormData.user,
         careerStats: {
           batting: {
             matches: parseInt(clubPlayerFormData.careerStatsBattingMatches) || 0,
@@ -251,10 +259,43 @@ const AddPlayerModal = ({ onClose}) => {
         }
       };
 
-      const clubPlayerId = playerName.toLowerCase().replace(/\s+/g, "_");
+      const clubPlayerId = clubPlayerFormData.playerId;
+      // Save player to clubPlayers collection
       await setDoc(doc(db, "clubPlayers", clubPlayerId), clubPlayerData);
-      setSuccess(true);
 
+      // Add player to clubTeams collection
+      const teamQuery = query(
+        collection(db, 'clubTeams'),
+        where('teamName', '==', clubPlayerFormData.teamName),
+        where('tournamentName', '==', clubPlayerFormData.tournamentName),
+        where('createdBy', '==', currentUserId)
+      );
+      const teamSnapshot = await getDocs(teamQuery);
+
+      if (!teamSnapshot.empty) {
+        // Team exists, append player to players array
+        const teamDoc = teamSnapshot.docs[0];
+        await updateDoc(doc(db, 'clubTeams', teamDoc.id), {
+          players: arrayUnion(clubPlayerData)
+        });
+      } else {
+        // Team doesn't exist, create new team with player
+        await addDoc(collection(db, 'clubTeams'), {
+          teamName: clubPlayerFormData.teamName,
+          tournamentName: clubPlayerFormData.tournamentName,
+          createdBy: currentUserId,
+          createdAt: new Date(),
+          players: [clubPlayerData],
+          captain: '', // Default empty, can be set via AddTeamModal
+          matches: 0,
+          wins: 0,
+          losses: 0,
+          points: 0,
+          lastMatch: ''
+        });
+      }
+
+      setSuccess(true);
 
       const newId = await generateUniquePlayerId();
       setClubPlayerFormData({
@@ -298,6 +339,7 @@ const AddPlayerModal = ({ onClose}) => {
         careerStatsFieldingCatches: '',
         careerStatsFieldingStumpings: '',
         careerStatsFieldingRunOuts: '',
+        user: 'no',
       });
       setClubPlayerImageFile(null);
 
@@ -305,6 +347,7 @@ const AddPlayerModal = ({ onClose}) => {
     } catch (err) {
       console.error("Error adding club player:", err);
       setError("Failed to add club player: " + err.message);
+      setLoading(false);
     } finally {
       setLoading(false);
     }
@@ -356,6 +399,33 @@ const AddPlayerModal = ({ onClose}) => {
                   readOnly
                   className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 opacity-75"
                 />
+                <div className="mt-2 flex items-center gap-4">
+                  <label className="text-gray-300">User</label>
+                  <div className="flex gap-4">
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="user"
+                        value="yes"
+                        checked={clubPlayerFormData.user === 'yes'}
+                        onChange={handleClubPlayerChange}
+                        className="mr-2 text-blue-500 focus:ring-blue-500"
+                      />
+                      <span className="text-gray-300">Yes</span>
+                    </label>
+                    <label className="flex items-center">
+                      <input
+                        type="radio"
+                        name="user"
+                        value="no"
+                        checked={clubPlayerFormData.user === 'no'}
+                        onChange={handleClubPlayerChange}
+                        className="mr-2 text-blue-500 focus:ring-blue-500"
+                      />
+                      <span className="text-gray-300">No</span>
+                    </label>
+                  </div>
+                </div>
               </div>
               <div>
                 <label className="block mb-1 text-gray-300">Name</label>
@@ -389,8 +459,8 @@ const AddPlayerModal = ({ onClose}) => {
                 <label className="block mb-1 text-gray-300">Team Name</label>
                 <input
                   type="text"
-                  name="team"
-                  value={clubPlayerFormData.team}
+                  name="teamName"
+                  value={clubPlayerFormData.teamName}
                   onChange={handleClubPlayerChange}
                   className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   required

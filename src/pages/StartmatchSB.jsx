@@ -1,45 +1,36 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { db } from '../firebase'; // Import your Firebase db instance
-import { collection, getDocs } from 'firebase/firestore'; // Import Firestore functions
+import { db, auth } from '../firebase';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { onAuthStateChanged } from 'firebase/auth';
 
-import logo from '../assets/pawan/PlayerProfile/picture-312.png'; // Still need these if used elsewhere
-import bgImg from '../assets/sophita/HomePage/advertisement5.jpeg'; // Still need these if used elsewhere
+import logo from '../assets/pawan/PlayerProfile/picture-312.png';
+import bgImg from '../assets/sophita/HomePage/advertisement5.jpeg';
 
-// =====================================================================
-// PlayerSelector Component (will be updated in next step)
-// For now, it will receive full team objects.
-// =====================================================================
+// PlayerSelector Component
 const PlayerSelector = ({ teamA, teamB, overs, origin, scorer }) => {
   const [leftSearch, setLeftSearch] = useState('');
   const [rightSearch, setRightSearch] = useState('');
-  // Initialize selectedPlayers with empty arrays
   const [selectedPlayers, setSelectedPlayers] = useState({ left: [], right: [] });
   const navigate = useNavigate();
 
-  // IMPORTANT: playersTeamA and playersTeamB will no longer be hardcoded.
-  // They will come from the 'players' array within the teamA and teamB objects.
-  // teamA and teamB props now contain the full team object from Firestore.
-  // They might be undefined initially, so handle that.
   const playersTeamAData = teamA?.players || [];
   const playersTeamBData = teamB?.players || [];
 
   const filteredLeftPlayers = playersTeamAData.filter(player =>
-    player.name.toLowerCase().includes(leftSearch.toLowerCase()) // Filter by player.name
+    player.name.toLowerCase().includes(leftSearch.toLowerCase())
   );
   const filteredRightPlayers = playersTeamBData.filter(player =>
-    player.name.toLowerCase().includes(rightSearch.toLowerCase()) // Filter by player.name
+    player.name.toLowerCase().includes(rightSearch.toLowerCase())
   );
 
   const togglePlayerSelection = (side, player) => {
     setSelectedPlayers(prev => {
       const newSelection = { ...prev };
       if (newSelection[side].includes(player)) {
-        // Deselect player (using the full player object)
-        newSelection[side] = newSelection[side].filter(p => p !== player);
+        newSelection[side] = newSelection[side].filter(p => p.playerId !== player.playerId);
       } else {
-        // Select player only if less than 11 are already selected
         if (newSelection[side].length < 11) {
           newSelection[side] = [...newSelection[side], player];
         }
@@ -58,14 +49,44 @@ const PlayerSelector = ({ teamA, teamB, overs, origin, scorer }) => {
     console.log('Origin being passed to StartMatchPlayers:', origin);
     navigate('/StartMatchPlayersSB', {
       state: {
-        scorer: scorer, // Fixed: Use the scorer prop passed to PlayerSelector
+        scorer: scorer,
         overs: overs,
-        teamA: teamA, // Pass full team A object
-        teamB: teamB, // Pass full team B object
-        selectedPlayers: selectedPlayers, // This now contains full player objects
+        teamA: teamA,
+        teamB: teamB,
+        selectedPlayers: selectedPlayers,
         origin: origin
       }
     });
+  };
+
+  // Generate fallback flag (first letter of team name)
+  const getTeamFlag = (team) => {
+    if (team?.flagUrl) {
+      return <img src={team.flagUrl} alt={`${team.teamName} Flag`} className="w-8 h-6 object-cover rounded-sm" />;
+    }
+    return (
+      <div className="w-8 h-6 flex items-center justify-center bg-blue-500 text-white font-bold rounded-sm">
+        {team?.teamName?.charAt(0).toUpperCase() || '?'}
+      </div>
+    );
+  };
+
+  // Generate player image or fallback (first letter of player name)
+  const getPlayerImage = (player) => {
+    if (player?.image) {
+      return (
+        <img
+          src={player.image}
+          alt={player.name}
+          className="w-8 h-8 rounded-full object-cover mr-3 border border-gray-300"
+        />
+      );
+    }
+    return (
+      <div className="w-8 h-8 flex items-center justify-center bg-blue-500 text-white font-bold rounded-full mr-3 border border-gray-300">
+        {player?.name?.charAt(0).toUpperCase() || '?'}
+      </div>
+    );
   };
 
   return (
@@ -93,10 +114,8 @@ const PlayerSelector = ({ teamA, teamB, overs, origin, scorer }) => {
             {/* Team A Player Selection */}
             <motion.div className="flex-1" whileHover={{ scale: 1.02 }}>
               <div className="flex items-center gap-2 mb-3">
-                <span className="text-xl font-semibold text-blue-800">{teamA?.name || 'Team A'}</span>
-                {teamA?.flagUrl && (
-                    <img src={teamA.flagUrl} alt={`${teamA.name} Flag`} className="w-8 h-6 object-cover rounded-sm" />
-                )}
+                <span className="text-xl font-semibold text-blue-800">{teamA?.teamName || 'Team A'}</span>
+                {getTeamFlag(teamA)}
                 <span className="ml-auto text-lg font-bold text-blue-700">
                   Selected: {selectedPlayers.left.length}/11
                 </span>
@@ -129,13 +148,13 @@ const PlayerSelector = ({ teamA, teamB, overs, origin, scorer }) => {
                   {filteredLeftPlayers.length === 0 ? (
                       <p className="p-3 text-gray-500">No players found or team has no players.</p>
                   ) : (
-                    filteredLeftPlayers.map((player, index) => {
-                      const isSelected = selectedPlayers.left.includes(player);
+                    filteredLeftPlayers.map((player) => {
+                      const isSelected = selectedPlayers.left.some(p => p.playerId === player.playerId);
                       const isSelectionDisabled = selectedPlayers.left.length >= 11 && !isSelected;
 
                       return (
                         <motion.div
-                          key={player.name} // Use player.name or a unique ID if available
+                          key={player.playerId}
                           className={`p-3 border-b border-blue-50 last:border-b-0 transition-colors duration-200 flex items-center ${
                             isSelected
                               ? 'bg-blue-100 font-medium'
@@ -144,11 +163,13 @@ const PlayerSelector = ({ teamA, teamB, overs, origin, scorer }) => {
                           onClick={isSelectionDisabled ? null : () => togglePlayerSelection('left', player)}
                           whileHover={isSelectionDisabled ? {} : { scale: 1.01 }}
                         >
-                          {player.photoUrl && (
-                              <img src={player.photoUrl} alt={player.name} className="w-8 h-8 rounded-full object-cover mr-3 border border-gray-300" />
-                          )}
-                          <span className="text-blue-800">{player.name}</span>
-                          {player.role && <span className="ml-2 text-sm text-gray-500">({player.role})</span>}
+                          {getPlayerImage(player)}
+                          <div className="flex flex-col">
+                            <span className="text-blue-800">{player.name}</span>
+                            <span className="text-sm text-gray-500">
+                              ID: {player.playerId} | User: {player.user} | Role: {player.role || 'N/A'}
+                            </span>
+                          </div>
                           {isSelected && (
                             <span className="float-right text-blue-600 ml-auto">✓</span>
                           )}
@@ -163,10 +184,8 @@ const PlayerSelector = ({ teamA, teamB, overs, origin, scorer }) => {
             {/* Team B Player Selection */}
             <motion.div className="flex-1" whileHover={{ scale: 1.02 }}>
               <div className="flex items-center gap-2 mb-3">
-                <span className="text-xl font-semibold text-indigo-800">{teamB?.name || 'Team B'}</span>
-                {teamB?.flagUrl && (
-                    <img src={teamB.flagUrl} alt={`${teamB.name} Flag`} className="w-8 h-6 object-cover rounded-sm" />
-                )}
+                <span className="text-xl font-semibold text-indigo-800">{teamB?.teamName || 'Team B'}</span>
+                {getTeamFlag(teamB)}
                 <span className="ml-auto text-lg font-bold text-indigo-700">
                   Selected: {selectedPlayers.right.length}/11
                 </span>
@@ -199,13 +218,13 @@ const PlayerSelector = ({ teamA, teamB, overs, origin, scorer }) => {
                   {filteredRightPlayers.length === 0 ? (
                       <p className="p-3 text-gray-500">No players found or team has no players.</p>
                   ) : (
-                    filteredRightPlayers.map((player, index) => {
-                      const isSelected = selectedPlayers.right.includes(player);
+                    filteredRightPlayers.map((player) => {
+                      const isSelected = selectedPlayers.right.some(p => p.playerId === player.playerId);
                       const isSelectionDisabled = selectedPlayers.right.length >= 11 && !isSelected;
 
                       return (
                         <motion.div
-                          key={player.name} // Use player.name or a unique ID if available
+                          key={player.playerId}
                           className={`p-3 border-b border-indigo-50 last:border-b-0 transition-colors duration-200 flex items-center ${
                             isSelected
                               ? 'bg-indigo-100 font-medium'
@@ -214,11 +233,13 @@ const PlayerSelector = ({ teamA, teamB, overs, origin, scorer }) => {
                           onClick={isSelectionDisabled ? null : () => togglePlayerSelection('right', player)}
                           whileHover={isSelectionDisabled ? {} : { scale: 1.01 }}
                         >
-                          {player.photoUrl && (
-                              <img src={player.photoUrl} alt={player.name} className="w-8 h-8 rounded-full object-cover mr-3 border border-gray-300" />
-                          )}
-                          <span className="text-blue-800">{player.name}</span>
-                          {player.role && <span className="ml-2 text-sm text-gray-500">({player.role})</span>}
+                          {getPlayerImage(player)}
+                          <div className="flex flex-col">
+                            <span className="text-blue-800">{player.name}</span>
+                            <span className="text-sm text-gray-500">
+                              ID: {player.playerId} | User: {player.user} | Role: {player.role || 'N/A'}
+                            </span>
+                          </div>
                           {isSelected && (
                             <span className="float-right text-indigo-600 ml-auto">✓</span>
                           )}
@@ -247,16 +268,13 @@ const PlayerSelector = ({ teamA, teamB, overs, origin, scorer }) => {
   );
 };
 
-// =====================================================================
 // Startmatch Component
-// =====================================================================
 const Startmatch = ({ initialTeamA = '', initialTeamB = '', origin }) => {
   console.log('Startmatch received origin prop:', origin);
 
-  const [allTeams, setAllTeams] = useState([]); // New state to store fetched teams
-  const [loadingTeams, setLoadingTeams] = useState(true); // Loading state for teams
-  const [teamFetchError, setTeamFetchError] = useState(null); // Error state for teams
-
+  const [allTeams, setAllTeams] = useState([]);
+  const [loadingTeams, setLoadingTeams] = useState(true);
+  const [teamFetchError, setTeamFetchError] = useState(null);
   const [selectedTeamA, setSelectedTeamA] = useState('');
   const [selectedTeamB, setSelectedTeamB] = useState('');
   const [tossWinner, setTossWinner] = useState('');
@@ -264,19 +282,40 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '', origin }) => {
   const [overs, setOvers] = useState('');
   const [scorer, setScorer] = useState('');
   const [showPlayerSelector, setShowPlayerSelector] = useState(false);
-  
-  // Effect to fetch teams from Firebase
+  const [currentUserId, setCurrentUserId] = useState(null);
+
+  // Fetch current user ID
   useEffect(() => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setCurrentUserId(user.uid);
+      } else {
+        setCurrentUserId(null);
+        setTeamFetchError('You must be logged in to start a match.');
+      }
+    });
+    return () => unsubscribeAuth();
+  }, []);
+
+  // Fetch teams from clubTeams collection
+  useEffect(() => {
+    if (!currentUserId) {
+      setLoadingTeams(false);
+      return;
+    }
+
     const fetchAllTeams = async () => {
       try {
         setLoadingTeams(true);
-        const teamsCollectionRef = collection(db, 'teams');
-        const teamSnapshot = await getDocs(teamsCollectionRef);
+        const teamsCollectionRef = collection(db, 'clubTeams');
+        const q = query(teamsCollectionRef, where('createdBy', '==', currentUserId));
+        const teamSnapshot = await getDocs(q);
         const fetchedTeams = teamSnapshot.docs.map(doc => ({
-          id: doc.id, // The document ID is the team name, used as key
-          name: doc.data().name, // Actual team name field
-          flagUrl: doc.data().flagUrl,
-          players: doc.data().players || [] // Ensure players array exists
+          id: doc.id,
+          teamName: doc.data().teamName,
+          flagUrl: doc.data().flagUrl || '',
+          players: doc.data().players || [],
+          ...doc.data()
         }));
         setAllTeams(fetchedTeams);
       } catch (err) {
@@ -287,52 +326,46 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '', origin }) => {
       }
     };
     fetchAllTeams();
-  }, []);
+  }, [currentUserId]);
 
-  // Effect to update state if props change after initial render (optional but good practice)
   useEffect(() => {
     if (initialTeamA && allTeams.length > 0) {
       setSelectedTeamA(initialTeamA);
     }
-  }, [initialTeamA, allTeams]); // Depend on allTeams to ensure it's loaded
+  }, [initialTeamA, allTeams]);
 
   useEffect(() => {
     if (initialTeamB && allTeams.length > 0) {
       setSelectedTeamB(initialTeamB);
     }
-  }, [initialTeamB, allTeams]); // Depend on allTeams to ensure it's loaded
+  }, [initialTeamB, allTeams]);
 
-  // --- NEW LOGIC FOR TEAM B SELECTION FILTER ---
-  // This useEffect ensures that if Team A is changed AFTER Team B is selected,
-  // and the new Team A value is the same as Team B, Team B is reset.
   useEffect(() => {
     if (selectedTeamA && selectedTeamB === selectedTeamA) {
-      setSelectedTeamB(''); // Reset Team B if it clashes with Team A
+      setSelectedTeamB('');
     }
   }, [selectedTeamA, selectedTeamB]);
-  // --- END NEW LOGIC ---
 
   const handleNext = () => {
     if (!selectedTeamA || !selectedTeamB || !overs || !scorer) {
       alert('Please select both teams, enter overs, and assign the scorer.');
       return;
     }
-    if (selectedTeamA === selectedTeamB) { // Double check for direct selection
-        alert('Teams A and B cannot be the same. Please select different teams.');
-        return;
+    if (selectedTeamA === selectedTeamB) {
+      alert('Teams A and B cannot be the same. Please select different teams.');
+      return;
     }
 
-    // Ensure the selected teams exist and have players
-    const teamAData = allTeams.find(team => team.name === selectedTeamA);
-    const teamBData = allTeams.find(team => team.name === selectedTeamB);
+    const teamAData = allTeams.find(team => team.teamName === selectedTeamA);
+    const teamBData = allTeams.find(team => team.teamName === selectedTeamB);
 
     if (!teamAData) {
-        alert(`Team "${selectedTeamA}" not found in database.`);
-        return;
+      alert(`Team "${selectedTeamA}" not found in database.`);
+      return;
     }
     if (!teamBData) {
-        alert(`Team "${selectedTeamB}" not found in database.`);
-        return;
+      alert(`Team "${selectedTeamB}" not found in database.`);
+      return;
     }
     if (!teamAData.players || teamAData.players.length === 0) {
       alert(`Team "${selectedTeamA}" has no players registered. Please add players via Admin Panel.`);
@@ -346,11 +379,9 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '', origin }) => {
     setShowPlayerSelector(true);
   };
 
-  // If showing player selector, render it
   if (showPlayerSelector) {
-    // Pass the full team objects (including players array) to PlayerSelector
-    const teamAObject = allTeams.find(team => team.name === selectedTeamA);
-    const teamBObject = allTeams.find(team => team.name === selectedTeamB);
+    const teamAObject = allTeams.find(team => team.teamName === selectedTeamA);
+    const teamBObject = allTeams.find(team => team.teamName === selectedTeamB);
 
     return (
       <PlayerSelector
@@ -367,20 +398,20 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '', origin }) => {
 
   if (loadingTeams) {
     return (
-        <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
-            <p className="text-xl">Loading Teams...</p>
-        </div>
+      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
+        <p className="text-xl">Loading Teams...</p>
+      </div>
     );
   }
 
   if (teamFetchError) {
-      return (
-          <div className="min-h-screen bg-gray-900 text-red-500 flex items-center justify-center">
-              <p className="text-xl">Error: {teamFetchError}</p>
-          </div>
-      );
+    return (
+      <div className="min-h-screen bg-gray-900 text-red-500 flex items-center justify-center">
+        <p className="text-xl">Error: {teamFetchError}</p>
+      </div>
+    );
   }
-  // Check if there are at least two teams to select from
+
   if (allTeams.length < 2) {
     return (
       <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
@@ -444,7 +475,9 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '', origin }) => {
                     >
                       <option value="">Select Team</option>
                       {allTeams.map(team => (
-                        <option key={`teamA-${team.id}`} value={team.name}>{team.name}</option>
+                        <option key={`teamA-${team.id}`} value={team.teamName}>
+                          {team.teamName}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -457,11 +490,11 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '', origin }) => {
                       onChange={(e) => setSelectedTeamB(e.target.value)}
                     >
                       <option value="">Select Team</option>
-                      {/* --- MODIFIED LINE HERE --- */}
-                      {allTeams.filter(t => t.name !== selectedTeamA).map(team => (
-                        <option key={`teamB-${team.id}`} value={team.name}>{team.name}</option>
+                      {allTeams.filter(t => t.teamName !== selectedTeamA).map(team => (
+                        <option key={`teamB-${team.id}`} value={team.teamName}>
+                          {team.teamName}
+                        </option>
                       ))}
-                      {/* --- END MODIFIED LINE --- */}
                     </select>
                   </div>
                 </div>
