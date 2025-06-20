@@ -3,17 +3,13 @@ import { useNavigate } from "react-router-dom";
 import logo from '../../../assets/pawan/PlayerProfile/picture-312.png';
 import backButton from '../../../assets/kumar/right-chevron.png';
 import { db, auth } from "../../../firebase";
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc } from "firebase/firestore";
+import { collection, query, where, onSnapshot } from "firebase/firestore";
 
 const Insights = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("batting");
   const [activeSubOption, setActiveSubOption] = useState("high-score");
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [insightsData, setInsightsData] = useState({});
-  const [formData, setFormData] = useState({ value: "" });
-  const [editingEntryId, setEditingEntryId] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
 
   const tabs = [
     { id: "batting", label: "Batting" },
@@ -69,24 +65,186 @@ const Insights = () => {
     overall: [],
   };
 
-  // Fetch insights data from Firestore with centric data logic
+  // Fetch player data from clubTeams collection
   useEffect(() => {
-    if (!auth.currentUser) return;
+    if (!auth.currentUser) {
+      console.log("No authenticated user found.");
+      return;
+    }
+    console.log("Current User UID:", auth.currentUser.uid); // Debug log
 
-    const unsubscribe = onSnapshot(collection(db, 'PlayerInsights'), (snapshot) => {
-      const data = snapshot.docs
-        .map(doc => ({ id: doc.id, ...doc.data() }))
-        .filter(entry => entry.userId === auth.currentUser.uid)
-        .reduce((acc, entry) => {
-          const { tab, subOption } = entry;
-          if (!acc[tab]) acc[tab] = {};
-          if (!acc[tab][subOption]) acc[tab][subOption] = [];
-          acc[tab][subOption].push(entry);
-          return acc;
-        }, {});
+    const q = query(
+      collection(db, 'clubTeams'),
+      where('createdBy', '==', auth.currentUser.uid)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      let playerFound = false;
+      let playerData = null;
+
+      // Find the first player with userId matching current user and user: "Yes"
+      for (const doc of snapshot.docs) {
+        const teamData = doc.data();
+        console.log("Team Data:", JSON.stringify(teamData, null, 2)); // Detailed debug log
+        const players = teamData.players || [];
+        console.log("Players Array:", players); // Debug log
+        const matchingPlayer = players.find(
+          (player) => player.userId === auth.currentUser.uid && player.user?.toLowerCase() === "yes"
+        );
+        if (matchingPlayer) {
+          playerData = matchingPlayer;
+          playerFound = true;
+          console.log("Matching Player Found:", JSON.stringify(playerData, null, 2)); // Detailed debug log
+          break;
+        }
+      }
+
+      const data = {
+        batting: {},
+        bowling: {},
+        fielding: {},
+        captain: {},
+      };
+
+      if (playerFound && playerData) {
+        const careerStats = playerData.careerStats || {
+          batting: {},
+          bowling: {},
+          fielding: {},
+        };
+        console.log("Career Stats:", JSON.stringify(careerStats, null, 2)); // Detailed debug log
+
+        // Batting stats
+        data.batting["high-score"] = [{ value: careerStats.batting.highest ?? 1 }];
+        data.batting.win = [{ value: 1 }]; // No teamName.wins in provided data
+        data.batting.lose = [{ value: 1 }]; // No teamName.losses in provided data
+        data.batting.matches = [{ value: careerStats.batting.matches ?? 1 }];
+        data.batting.innings = [{ value: careerStats.batting.innings ?? 1 }];
+        data.batting["strike-rate"] = [{ value: careerStats.batting.strikeRate ?? 1 }];
+        data.batting["30s"] = [{ value: careerStats.batting.thirties ?? 1 }];
+        data.batting["50s"] = [{ value: careerStats.batting.fifties ?? 1 }];
+        data.batting["100s"] = [{ value: careerStats.batting.centuries ?? 1 }];
+        data.batting["4s"] = [{ value: careerStats.batting.fours ?? 1 }];
+        data.batting["6s"] = [{ value: careerStats.batting.sixes ?? 1 }];
+        data.batting.ducks = [{ value: careerStats.batting.ducks ?? 1 }];
+
+        // Bowling stats
+        data.bowling["best-bowl"] = [{ value: playerData.bestBowling || "1/0" }];
+        data.bowling.match = [{ value: careerStats.bowling.matches ?? 1 }];
+        data.bowling.innings = [{ value: careerStats.bowling.innings ?? 1 }];
+        data.bowling.overs = [{ value: careerStats.bowling.overs ?? 1 }];
+        data.bowling.maiden = [{ value: careerStats.bowling.maidens ?? 1 }];
+        data.bowling.runs = [{ value: careerStats.bowling.runsConceded ?? 1 }];
+        data.bowling.wickets = [{ value: careerStats.bowling.wickets ?? 1 }];
+        data.bowling["3-wickets"] = [{ value: careerStats.bowling.threeWickets ?? 1 }];
+        data.bowling["5-wickets"] = [{ value: careerStats.bowling.fiveWickets ?? 1 }];
+        data.bowling.economy = [{ value: careerStats.bowling.economy ?? 1 }];
+        data.bowling.average = [{ value: careerStats.bowling.average ?? 1 }];
+        data.bowling.wide = [{ value: careerStats.bowling.wides ?? 1 }];
+        data.bowling["no-balls"] = [{ value: careerStats.bowling.noBalls ?? 1 }];
+        data.bowling.dots = [{ value: careerStats.bowling.dots ?? 1 }];
+        data.bowling["4s"] = [{ value: careerStats.bowling.foursConceded ?? 1 }];
+        data.bowling["6s"] = [{ value: careerStats.bowling.sixesConceded ?? 1 }];
+
+        // Fielding stats
+        data.fielding.matches = [{ value: careerStats.batting.matches ?? 1 }];
+        data.fielding.catch = [{ value: careerStats.fielding.catches ?? 1 }];
+        data.fielding.stumping = [{ value: careerStats.fielding.stumpings ?? 1 }];
+        data.fielding["run-out"] = [{ value: careerStats.fielding.runOuts ?? 1 }];
+        data.fielding["catch-and-bowl"] = [{ value: careerStats.fielding.catchAndBowl ?? 1 }];
+
+        // Captain stats
+        data.captain["matches-captained"] = [{ value: careerStats.captain?.matchesCaptained ?? 1 }];
+      } else {
+        console.log("No matching player found, using defaults.");
+        // Initialize with default values if no player is found
+        data.batting["high-score"] = [{ value: 1 }];
+        data.batting.win = [{ value: 1 }];
+        data.batting.lose = [{ value: 1 }];
+        data.batting.matches = [{ value: 1 }];
+        data.batting.innings = [{ value: 1 }];
+        data.batting["strike-rate"] = [{ value: 1 }];
+        data.batting["30s"] = [{ value: 1 }];
+        data.batting["50s"] = [{ value: 1 }];
+        data.batting["100s"] = [{ value: 1 }];
+        data.batting["4s"] = [{ value: 1 }];
+        data.batting["6s"] = [{ value: 1 }];
+        data.batting.ducks = [{ value: 1 }];
+
+        data.bowling["best-bowl"] = [{ value: "1/0" }];
+        data.bowling.match = [{ value: 1 }];
+        data.bowling.innings = [{ value: 1 }];
+        data.bowling.overs = [{ value: 1 }];
+        data.bowling.maiden = [{ value: 1 }];
+        data.bowling.runs = [{ value: 1 }];
+        data.bowling.wickets = [{ value: 1 }];
+        data.bowling["3-wickets"] = [{ value: 1 }];
+        data.bowling["5-wickets"] = [{ value: 1 }];
+        data.bowling.economy = [{ value: 1 }];
+        data.bowling.average = [{ value: 1 }];
+        data.bowling.wide = [{ value: 1 }];
+        data.bowling["no-balls"] = [{ value: 1 }];
+        data.bowling.dots = [{ value: 1 }];
+        data.bowling["4s"] = [{ value: 1 }];
+        data.bowling["6s"] = [{ value: 1 }];
+
+        data.fielding.matches = [{ value: 1 }];
+        data.fielding.catch = [{ value: 1 }];
+        data.fielding.stumping = [{ value: 1 }];
+        data.fielding["run-out"] = [{ value: 1 }];
+        data.fielding["catch-and-bowl"] = [{ value: 1 }];
+
+        data.captain["matches-captained"] = [{ value: 1 }];
+      }
+
       setInsightsData(data);
+      console.log("Insights Data Set:", data);
     }, (error) => {
-      console.error("Error fetching insights:", error);
+      console.error("Error fetching clubTeams data:", error);
+      setInsightsData({
+        batting: {
+          "high-score": [{ value: 1 }],
+          win: [{ value: 1 }],
+          lose: [{ value: 1 }],
+          matches: [{ value: 1 }],
+          innings: [{ value: 1 }],
+          "strike-rate": [{ value: 1 }],
+          "30s": [{ value: 1 }],
+          "50s": [{ value: 1 }],
+          "100s": [{ value: 1 }],
+          "4s": [{ value: 1 }],
+          "6s": [{ value: 1 }],
+          ducks: [{ value: 1 }],
+        },
+        bowling: {
+          "best-bowl": [{ value: "1/0" }],
+          match: [{ value: 1 }],
+          innings: [{ value: 1 }],
+          overs: [{ value: 1 }],
+          maiden: [{ value: 1 }],
+          runs: [{ value: 1 }],
+          wickets: [{ value: 1 }],
+          "3-wickets": [{ value: 1 }],
+          "5-wickets": [{ value: 1 }],
+          economy: [{ value: 1 }],
+          average: [{ value: 1 }],
+          wide: [{ value: 1 }],
+          "no-balls": [{ value: 1 }],
+          dots: [{ value: 1 }],
+          "4s": [{ value: 1 }],
+          "6s": [{ value: 1 }],
+        },
+        fielding: {
+          matches: [{ value: 1 }],
+          catch: [{ value: 1 }],
+          stumping: [{ value: 1 }],
+          "run-out": [{ value: 1 }],
+          "catch-and-bowl": [{ value: 1 }],
+        },
+        captain: {
+          "matches-captained": [{ value: 1 }],
+        },
+      });
     });
 
     return () => unsubscribe();
@@ -94,13 +252,13 @@ const Insights = () => {
 
   // Calculate overall stats
   const calculateOverallStats = () => {
-    const battingMatches = insightsData.batting?.matches?.[0]?.value || 0;
-    const runs = (insightsData.batting?.["100s"]?.[0]?.value || 0) * 100 +
-                 (insightsData.batting?.["50s"]?.[0]?.value || 0) * 50 +
-                 (insightsData.batting?.["30s"]?.[0]?.value || 0) * 30;
-    const wickets = insightsData.bowling?.wickets?.[0]?.value || 0;
-    const catches = insightsData.fielding?.catch?.[0]?.value || 0;
-    const matchesCaptained = insightsData.captain?.["matches-captained"]?.[0]?.value || 0;
+    const battingMatches = insightsData.batting?.matches?.[0]?.value || 1;
+    const runs = (insightsData.batting?.["100s"]?.[0]?.value || 1) * 100 +
+                 (insightsData.batting?.["50s"]?.[0]?.value || 1) * 50 +
+                 (insightsData.batting?.["30s"]?.[0]?.value || 1) * 30;
+    const wickets = insightsData.bowling?.wickets?.[0]?.value || 1;
+    const catches = insightsData.fielding?.catch?.[0]?.value || 1;
+    const matchesCaptained = insightsData.captain?.["matches-captained"]?.[0]?.value || 1;
 
     return {
       title: "Overall Stats",
@@ -114,59 +272,6 @@ const Insights = () => {
         </div>
       ),
     };
-  };
-
-  // Handle saving or updating data
-  const handleSaveData = async () => {
-    if (!formData.value.trim()) {
-      alert("Please enter a value!");
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const entryData = {
-        tab: activeTab,
-        subOption: activeSubOption,
-        value: isNaN(formData.value) ? formData.value : parseFloat(formData.value),
-        userId: auth.currentUser.uid,
-        timestamp: new Date().toISOString(),
-      };
-
-      if (editingEntryId) {
-        await updateDoc(doc(db, 'PlayerInsights', editingEntryId), entryData);
-      } else {
-        await addDoc(collection(db, 'PlayerInsights'), entryData);
-      }
-
-      setFormData({ value: '' });
-      setEditingEntryId(null);
-      setIsModalOpen(false);
-    } catch (err) {
-      console.error("Error saving data:", err);
-      alert("Failed to save data. Please try again.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Handle deleting data
-  const handleDeleteData = async (entryId) => {
-    if (!window.confirm("Are you sure you want to delete this entry?")) return;
-
-    try {
-      await deleteDoc(doc(db, 'PlayerInsights', entryId));
-    } catch (err) {
-      console.error("Error deleting entry:", err);
-      alert("Failed to delete data. Please try again.");
-    }
-  };
-
-  // Handle editing data
-  const handleEditData = (entry) => {
-    setFormData({ value: entry.value.toString() });
-    setEditingEntryId(entry.id);
-    setIsModalOpen(true);
   };
 
   return (
@@ -233,24 +338,11 @@ const Insights = () => {
               <h2 className="text-4xl font-bold text-center mb-6 font-['Alegreya']">
                 {tabs.find((tab) => tab.id === activeTab).label}
               </h2>
-              <div className="flex justify-center mb-6">
-                <button
-                  onClick={() => {
-                    console.log("Button clicked"); // Debugging
-                    setFormData({ value: "", label: "Add Data" });
-                    setEditingEntryId(null);
-                    setIsModalOpen(true);
-                  }}
-                  className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
-                >
-                  Add Data
-                </button>
-              </div>
               <div className="flex overflow-x-auto space-x-4 p-4 scrollbar-thin scrollbar-thumb-cyan-300 scrollbar-track-transparent">
                 {subOptions[activeTab].map((option) => (
                   <button
                     key={option.id}
-                    className={`flex-shrink-0 px-6 py-3 rounded-lg text-base font-['Alegreya'] transition-all duration-300 shadow-[0_10px_30px_rgba(0,0,0,0.8)]} ${
+                    className={`flex-shrink-0 px-6 py-3 rounded-lg text-base font-['Alegreya'] transition-all duration-300 shadow-[0_10px_30px_rgba(0,0,0,0.8)] ${
                       activeSubOption === option.id
                         ? "text-white bg-blue-500"
                         : "text-white hover:bg-blue-600 hover:text-cyan-300"
@@ -272,82 +364,19 @@ const Insights = () => {
             ) : (
               <div>
                 {insightsData[activeTab]?.[activeSubOption]?.length > 0 ? (
-                  insightsData[activeTab][activeSubOption].map((entry) => (
-                    <div key={entry.id} className="flex justify-between items-center mb-2 p-2 border-b border-gray-600">
+                  insightsData[activeTab][activeSubOption].map((entry, index) => (
+                    <div key={index} className="flex justify-between items-center mb-2 p-2 border-b border-gray-600">
                       <p>{entry.value}</p>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleEditData(entry.id)}
-                          className="bg-yellow-500 text-white px-2 py-1 rounded hover:bg-yellow-600 transition"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDeleteData(entry.id)}
-                          className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 transition"
-                        >
-                          Delete
-                        </button>
-                      </div>
                     </div>
                   ))
                 ) : (
-                  <p className="text-gray-300">No data available. Add some data!</p>
+                  <p className="text-gray-300">No data available.</p>
                 )}
               </div>
             )}
           </div>
         </div>
       </div>
-
-      {/* Modal for Adding/Editing Data */}
-      {isModalOpen && (
-        <div className="border-2 border-white fixed inset-0 bg-black bg-opacity-90 flex justify-center items-center z-50">
-          <div
-            className="w-96 rounded-lg p-6 shadow-lg max-h-[80vh] overflow-y-auto"
-            style={{
-              background: 'linear-gradient(140deg, rgba(8,0,6,0.85) 15%, rgba(255,0,119,0.85))',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.75)',
-            }}
-          >
-            <h2 className="text-xl font-bold mb-4 text-white text-center">
-              {editingEntryId ? "Edit Data" : "Add Data"}
-            </h2>
-            <label className="block mb-1 text-white font-semibold" htmlFor="value">
-              {subOptions[activeTab].find((opt) => opt.id === activeSubOption)?.label}
-            </label>
-            <input
-              id="value"
-              type={["matches", "innings", "strike-rate", "30s", "50s", "100s", "4s", "6s", "ducks", "overs", "maiden", "runs", "wickets", "3-wickets", "5-wickets", "economy", "average", "wide", "no-balls", "dots", "catch", "stumping", "run-out", "catch-and-bowl", "matches-captained"].includes(activeSubOption) ? "number" : "text"}
-              placeholder={`Enter ${subOptions[activeTab].find((opt) => opt.id === activeSubOption)?.label}`}
-              value={formData.value}
-              onChange={(e) => setFormData({ value: e.target.value })}
-              className="w-full mb-4 p-2 rounded border border-gray-600 bg-transparent text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-pink-500"
-              disabled={isLoading}
-            />
-            <div className="flex justify-between">
-              <button
-                onClick={() => {
-                  setIsModalOpen(false);
-                  setEditingEntryId(null);
-                  setFormData({ value: "" });
-                }}
-                className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded transition"
-                disabled={isLoading}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSaveData}
-                className="bg-pink-600 hover:bg-pink-700 text-white px-4 py-2 rounded transition"
-                disabled={isLoading}
-              >
-                {isLoading ? "Saving..." : "Save"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
