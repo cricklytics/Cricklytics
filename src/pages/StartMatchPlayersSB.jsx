@@ -11,7 +11,7 @@ import sixAnimation from '../assets/Animation/six.json';
 import fourAnimation from '../assets/Animation/four.json';
 import outAnimation from '../assets/Animation/out.json';
 import { db, auth } from '../firebase';
-import { setDoc, doc, Timestamp } from 'firebase/firestore';
+import { setDoc, doc, Timestamp, collection, query, where, getDocs, updateDoc, arrayUnion } from 'firebase/firestore';
 
 // Error Boundary Component
 class ErrorBoundary extends Component {
@@ -127,27 +127,41 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
       return;
     }
 
+    const currentUserId = auth.currentUser ? auth.currentUser.uid : '';
+
     if (!isChasing) {
       setBattingTeamPlayers(selectedPlayersFromProps.left.map((player, index) => ({
         ...player,
         index: player.name + index,
-        photoUrl: player.image // Map image to photoUrl
+        photoUrl: player.image, // Map image to photoUrl
+        user: player.user, // Include user field
+        playerId: player.playerId, // Use playerId from clubTeams
+        userId: currentUserId // Add current userId
       })));
       setBowlingTeamPlayers(selectedPlayersFromProps.right.map((player, index) => ({
         ...player,
         index: player.name + index,
-        photoUrl: player.image // Map image to photoUrl
+        photoUrl: player.image, // Map image to photoUrl
+        user: player.user, // Include user field
+        playerId: player.playerId, // Use playerId from clubTeams
+        userId: currentUserId // Add current userId
       })));
     } else {
       setBattingTeamPlayers(selectedPlayersFromProps.right.map((player, index) => ({
         ...player,
         index: player.name + index,
-        photoUrl: player.image // Map image to photoUrl
+        photoUrl: player.image, // Map image to photoUrl
+        user: player.user, // Include user field
+        playerId: player.playerId, // Use playerId from clubTeams
+        userId: currentUserId // Add current userId
       })));
       setBowlingTeamPlayers(selectedPlayersFromProps.left.map((player, index) => ({
         ...player,
         index: player.name + index,
-        photoUrl: player.image // Map image to photoUrl
+        photoUrl: player.image, // Map image to photoUrl
+        user: player.user, // Include user field
+        playerId: player.playerId, // Use playerId from clubTeams
+        userId: currentUserId // Add current userId
       })));
     }
     
@@ -270,6 +284,7 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
       const overs = `${overNumber - 1}.${validBalls}`;
       const battingTeam = isChasing ? teamB : teamA;
       const bowlingTeam = isChasing ? teamA : teamB;
+      const currentUserId = auth.currentUser.uid;
 
       const playerStats = battingTeamPlayers.map(player => {
         const stats = batsmenStats[player.index] || {};
@@ -279,6 +294,9 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
           name: player.name || 'Unknown',
           photoUrl: player.image || '',
           role: player.role || '',
+          user: player.user || 'No',
+          playerId: player.playerId || '', // Use playerId from clubTeams
+          userId: currentUserId, // Add current userId
           runs: stats.runs || 0,
           balls: stats.balls || 0,
           dotBalls: stats.dotBalls || 0,
@@ -299,6 +317,9 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
           name: player.name || 'Unknown',
           photoUrl: player.image || '',
           role: player.role || '',
+          user: player.user || 'No',
+          playerId: player.playerId || '', // Use playerId from clubTeams
+          userId: currentUserId, // Add current userId
           wickets: stats.wickets || 0,
           oversBowled: stats.oversBowled || '0.0',
           runsConceded: stats.runsConceded || 0
@@ -307,7 +328,7 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
 
       const matchData = {
         matchId,
-        userId: auth.currentUser.uid,
+        userId: currentUserId,
         createdAt: Timestamp.fromDate(new Date()),
         Format: maxOvers,
         umpire: umpire,
@@ -318,7 +339,10 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
             name: p.name || 'Unknown',
             index: p.name + selectedPlayersFromProps.left.findIndex(pl => pl.name === p.name),
             photoUrl: p.image || '',
-            role: p.role || ''
+            role: p.role || '',
+            user: p.user || 'No',
+            playerId: p.playerId || '', // Use playerId from clubTeams
+            userId: currentUserId // Add current userId
           })),
           totalScore: isChasing ? (firstInningsData?.totalScore || 0) : playerScore,
           wickets: isChasing ? (firstInningsData?.wickets || 0) : outCount,
@@ -332,7 +356,10 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
             name: p.name || 'Unknown',
             index: p.name + selectedPlayersFromProps.right.findIndex(pl => pl.name === p.name),
             photoUrl: p.image || '',
-            role: p.role || ''
+            role: p.role || '',
+            user: p.user || 'No',
+            playerId: p.playerId || '', // Use playerId from clubTeams
+            userId: currentUserId // Add current userId
           })),
           totalScore: isChasing ? playerScore : (firstInningsData?.totalScore || 0),
           wickets: isChasing ? outCount : (firstInningsData?.wickets || 0),
@@ -358,8 +385,183 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
         matchResult: isFinal ? (playerScore < targetScore - 1 ? teamA?.teamName || 'Team A' : playerScore === targetScore - 1 ? 'Tie' : teamB?.teamName || 'Team B') : null
       };
 
+      // Save to scoringpage collection
       await setDoc(doc(db, 'scoringpage', matchId), matchData);
-      console.log('Match data updated successfully:', matchData);
+      console.log('Match data updated successfully in scoringpage:', matchData);
+
+      // Update clubTeams collection when match is finished
+      if (isFinal) {
+        const updateTeamPlayers = async (team, teamPlayers, playerStatsArray, bowlerStatsArray) => {
+          const teamQuery = query(
+            collection(db, 'clubTeams'),
+            where('teamName', '==', team.teamName),
+            where('createdBy', '==', currentUserId)
+          );
+          const teamSnapshot = await getDocs(teamQuery);
+
+          if (!teamSnapshot.empty) {
+            const teamDoc = teamSnapshot.docs[0];
+            const teamData = teamDoc.data();
+            const existingPlayers = teamData.players || [];
+
+            // Create maps for batting and bowling stats using playerId
+            const playerStatsMap = playerStatsArray.reduce((map, stat) => {
+              if (stat.playerId) map[stat.playerId] = stat;
+              return map;
+            }, {});
+            const bowlerStatsMap = bowlerStatsArray.reduce((map, stat) => {
+              if (stat.playerId) map[stat.playerId] = stat;
+              return map;
+            }, {});
+
+            // Update player stats
+            const updatedPlayers = existingPlayers.map(player => {
+              const matchPlayerStats = playerStatsMap[player.playerId] || {};
+              const matchBowlerStats = bowlerStatsMap[player.playerId] || {};
+              const runs = matchPlayerStats.runs || 0;
+              const balls = matchPlayerStats.balls || 0;
+              const fours = matchPlayerStats.fours || 0;
+              const sixes = matchPlayerStats.sixes || 0;
+              const wickets = matchBowlerStats.wickets || 0;
+              const runsConceded = matchBowlerStats.runsConceded || 0;
+              const oversBowled = parseFloat(matchBowlerStats.oversBowled) || 0;
+              const centuries = matchPlayerStats.milestone === 'Century' ? 1 : 0;
+              const fifties = matchPlayerStats.milestone === 'Half-Century' ? 1 : 0;
+
+              // Initialize careerStats if undefined
+              const careerStats = player.careerStats || {
+                batting: {
+                  matches: 0,
+                  innings: 0,
+                  notOuts: 0,
+                  runs: 0,
+                  highest: 0,
+                  fours: 0,
+                  sixes: 0,
+                  centuries: 0,
+                  fifties: 0,
+                  average: 0,
+                  strikeRate: 0
+                },
+                bowling: {
+                  innings: 0,
+                  wickets: 0,
+                  runsConceded: 0,
+                  overs: 0,
+                  best: '0/0',
+                  average: 0,
+                  economy: 0,
+                  strikeRate: 0
+                },
+                fielding: {
+                  catches: 0,
+                  stumpings: 0,
+                  runOuts: 0
+                }
+              };
+
+              return {
+                ...player,
+                userId: currentUserId, // Ensure userId is included
+                matches: (player.matches || 0) + 1,
+                runs: (player.runs || 0) + runs,
+                wickets: (player.wickets || 0) + wickets,
+                careerStats: {
+                  ...careerStats,
+                  batting: {
+                    ...careerStats.batting,
+                    matches: (careerStats.batting.matches || 0) + 1,
+                    innings: (careerStats.batting.innings || 0) + (runs > 0 || balls > 0 ? 1 : 0),
+                    notOuts: (careerStats.batting.notOuts || 0) + (matchPlayerStats.wicketOver ? 0 : balls > 0 ? 1 : 0),
+                    runs: (careerStats.batting.runs || 0) + runs,
+                    highest: Math.max(careerStats.batting.highest || 0, runs),
+                    fours: (careerStats.batting.fours || 0) + fours,
+                    sixes: (careerStats.batting.sixes || 0) + sixes,
+                    centuries: (careerStats.batting.centuries || 0) + centuries,
+                    fifties: (careerStats.batting.fifties || 0) + fifties,
+                    average: 0, // Recalculate if needed
+                    strikeRate: 0 // Recalculate if needed
+                  },
+                  bowling: {
+                    ...careerStats.bowling,
+                    innings: (careerStats.bowling.innings || 0) + (oversBowled > 0 ? 1 : 0),
+                    wickets: (careerStats.bowling.wickets || 0) + wickets,
+                    runsConceded: (careerStats.bowling.runsConceded || 0) + runsConceded,
+                    overs: (careerStats.bowling.overs || 0) + oversBowled,
+                    best: careerStats.bowling.best || '0/0', // Update if needed
+                    average: 0, // Recalculate if needed
+                    economy: 0, // Recalculate if needed
+                    strikeRate: 0 // Recalculate if needed
+                  },
+                  fielding: {
+                    ...careerStats.fielding,
+                    catches: careerStats.fielding.catches || 0,
+                    stumpings: careerStats.fielding.stumpings || 0,
+                    runOuts: careerStats.fielding.runOuts || 0
+                  }
+                }
+              };
+            });
+
+            // Update team with new player data
+            await updateDoc(doc(db, 'clubTeams', teamDoc.id), {
+              players: updatedPlayers,
+              matches: (teamData.matches || 0) + 1,
+              wins: (teamData.wins || 0) + (matchData.matchResult === team.teamName ? 1 : 0),
+              losses: (teamData.losses || 0) + (matchData.matchResult && matchData.matchResult !== team.teamName && matchData.matchResult !== 'Tie' ? 1 : 0),
+              points: (teamData.points || 0) + (matchData.matchResult === team.teamName ? 2 : matchData.matchResult === 'Tie' ? 1 : 0),
+              lastMatch: matchData.matchResult || ''
+            });
+            console.log(`Updated clubTeams for ${team.teamName}`);
+          }
+        };
+
+        // Update both teams, considering both innings
+        const firstInningsBattingTeam = isChasing ? teamA : teamB;
+        const firstInningsBowlingTeam = isChasing ? teamB : teamA;
+        const secondInningsBattingTeam = isChasing ? teamB : teamA;
+        const secondInningsBowlingTeam = isChasing ? teamA : teamB;
+
+        // Combine stats from both innings for each team
+        const allPlayerStats = [...(firstInningsData?.playerStats || []), ...playerStats];
+        const allBowlerStats = [...(firstInningsData?.bowlerStats || []), ...bowlerStatsArray];
+
+        // Update first innings batting team (second innings bowling team)
+        await updateTeamPlayers(
+          firstInningsBattingTeam,
+          selectedPlayersFromProps[isChasing ? 'left' : 'right'].map(p => ({
+            ...p,
+            playerId: p.playerId,
+            runs: allPlayerStats.find(stat => stat.playerId === p.playerId)?.runs || 0,
+            balls: allPlayerStats.find(stat => stat.playerId === p.playerId)?.balls || 0,
+            fours: allPlayerStats.find(stat => stat.playerId === p.playerId)?.fours || 0,
+            sixes: allPlayerStats.find(stat => stat.playerId === p.playerId)?.sixes || 0,
+            milestone: allPlayerStats.find(stat => stat.playerId === p.playerId)?.milestone || null,
+            wicketOver: allPlayerStats.find(stat => stat.playerId === p.playerId)?.wicketOver || null
+          })),
+          allPlayerStats,
+          allBowlerStats
+        );
+
+        // Update first innings bowling team (second innings batting team)
+        await updateTeamPlayers(
+          firstInningsBowlingTeam,
+          selectedPlayersFromProps[isChasing ? 'right' : 'left'].map(p => ({
+            ...p,
+            playerId: p.playerId,
+            runs: allPlayerStats.find(stat => stat.playerId === p.playerId)?.runs || 0,
+            balls: allPlayerStats.find(stat => stat.playerId === p.playerId)?.balls || 0,
+            fours: allPlayerStats.find(stat => stat.playerId === p.playerId)?.fours || 0,
+            sixes: allPlayerStats.find(stat => stat.playerId === p.playerId)?.sixes || 0,
+            milestone: allPlayerStats.find(stat => stat.playerId === p.playerId)?.milestone || null,
+            wicketOver: allPlayerStats.find(stat => stat.playerId === p.playerId)?.wicketOver || null
+          })),
+          allPlayerStats,
+          allBowlerStats
+        );
+
+      }
+
     } catch (error) {
       console.error('Error saving match data:', error);
     }
@@ -617,6 +819,9 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
             name: player.name || 'Unknown',
             photoUrl: player.image || '',
             role: player.role || '',
+            user: player.user || 'No',
+            playerId: player.playerId || '', // Use playerId from clubTeams
+            userId: auth.currentUser ? auth.currentUser.uid : '', // Add current userId
             runs: stats.runs || 0,
             balls: stats.balls || 0,
             dotBalls: stats.dotBalls || 0,
@@ -636,6 +841,9 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
             name: player.name || 'Unknown',
             photoUrl: player.image || '',
             role: player.role || '',
+            user: player.user || 'No',
+            playerId: player.playerId || '', // Use playerId from clubTeams
+            userId: auth.currentUser ? auth.currentUser.uid : '', // Add current userId
             wickets: stats.wickets || 0,
             oversBowled: stats.oversBowled || '0.0',
             runsConceded: stats.runsConceded || 0
