@@ -7,10 +7,9 @@ import backButton from '../assets/kumar/right-chevron.png';
 import { v4 as uuidv4 } from 'uuid'; // Import uuid for generating tournament ID
 
 // Firebase imports
-import { db, auth, storage, serverTimestamp } from '../firebase';
-import { collection, addDoc, query, where, onSnapshot } from 'firebase/firestore';
+import { db, storage, serverTimestamp } from '../firebase';
+import { collection, addDoc, query, onSnapshot } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { onAuthStateChanged } from 'firebase/auth';
 
 const Clubsmain = () => {
   const navigate = useNavigate();
@@ -40,28 +39,17 @@ const Clubsmain = () => {
     achievementsText: '',
     tournamentId: uuidv4() // Initialize with a random UUID
   });
-  const [user, setUser] = useState(null);
   const [loadingClubs, setLoadingClubs] = useState(true);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      if (currentUser) {
-        fetchClubs(currentUser.uid);
-      } else {
-        setClubs([]);
-        setLoadingClubs(false);
-      }
-    });
-
-    return () => unsubscribeAuth();
+    fetchClubs();
   }, []);
 
-  const fetchClubs = (userId) => {
+  const fetchClubs = () => {
     setLoadingClubs(true);
-    const q = query(collection(db, 'clubs'), where('userId', '==', userId));
+    const q = query(collection(db, 'clubs'));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const clubsData = snapshot.docs.map(doc => ({
@@ -92,16 +80,11 @@ const Clubsmain = () => {
     e.preventDefault();
     setError(null);
 
-    if (!user) {
-      setError("You must be logged in to add a club.");
-      return;
-    }
-
     try {
       setUploadingLogo(true);
       let logoDownloadURL = newClub.logoUrl;
       if (newClub.logoFile) {
-        const storageRef = ref(storage, `club_logos/${user.uid}/${newClub.logoFile.name}`);
+        const storageRef = ref(storage, `club_logos/${newClub.tournamentId}/${newClub.logoFile.name}`);
         const uploadTask = await uploadBytes(storageRef, newClub.logoFile);
         logoDownloadURL = await getDownloadURL(uploadTask.ref);
       } else if (!logoDownloadURL) {
@@ -139,7 +122,6 @@ const Clubsmain = () => {
           phone: newClub.phone
         },
         achievements: parseList(newClub.achievementsText),
-        userId: user.uid,
         createdAt: serverTimestamp(),
         tournamentId: newClub.tournamentId // Add tournamentId to club data
       };
@@ -259,15 +241,15 @@ const Clubsmain = () => {
                 Our top-tier clubs with international standard facilities and players.
               </p>
             </motion.div>
-           <motion.div
-      whileHover={{ y: -2 }}
-      className="p-3 bg-gray-700 rounded-lg border border-gray-600"
-    >
-      <h3 className="font-medium text-green-400">Regional Development</h3>
-      <p className="text-sm text-gray-300 mt-1">
-        Clubs across all regions promoting cricket at grassroots level.
-      </p>
-    </motion.div>
+            <motion.div
+              whileHover={{ y: -2 }}
+              className="p-3 bg-gray-700 rounded-lg border border-gray-600"
+            >
+              <h3 className="font-medium text-green-400">Regional Development</h3>
+              <p className="text-sm text-gray-300 mt-1">
+                Clubs across all regions promoting cricket at grassroots level.
+              </p>
+            </motion.div>
             <motion.div
               whileHover={{ y: -2 }}
               className="p-3 bg-gray-750 rounded-lg border border-gray-600"
@@ -315,16 +297,14 @@ const Clubsmain = () => {
                 <span className="text-gray-300">Filters</span>
                 {filterOpen ? <FiChevronDown className="transform rotate-180 text-gray-300" /> : <FiChevronDown className="text-gray-300" />}
               </motion.button>
-              {user && (
-                <motion.button
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => setIsModalOpen(true)}
-                  className="flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors text-white text-sm sm:text-base"
-                >
-                  <FiPlusCircle /> Add Club
-                </motion.button>
-              )}
+              <motion.button
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setIsModalOpen(true)}
+                className="flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors text-white text-sm sm:text-base"
+              >
+                <FiPlusCircle /> Add Club
+              </motion.button>
             </div>
 
             {/* Filter Dropdown */}
@@ -350,7 +330,7 @@ const Clubsmain = () => {
                         >
                           <option value="">All Locations</option>
                           {locations.map(location => (
-                            <option key={location} value={location}>{location}</option>
+                            <option key={location} value={location}>{location}</ option>
                           ))}
                         </select>
                       </motion.div>
@@ -630,7 +610,7 @@ const Clubsmain = () => {
                   ></textarea>
                 </div>
 
-                {/* New Contact Fields */}
+                {/* Contact Fields */}
                 <div className="border-t border-gray-700 pt-4 mt-4">
                   <h3 className="text-lg font-semibold text-white mb-2">Contact Information</h3>
                   <div>
@@ -670,7 +650,7 @@ const Clubsmain = () => {
                   </div>
                 </div>
 
-                {/* Upcoming Matches Input (Textarea for ease of input) */}
+                {/* Upcoming Matches Input */}
                 <div>
                   <label htmlFor="upcomingMatchesText" className="block text-sm font-medium text-gray-300">Upcoming Matches (e.g., Lions CC - May 15 - R. Premadasa Stadium, Titans CC - May 22 - SSC Ground)</label>
                   <textarea
@@ -683,7 +663,7 @@ const Clubsmain = () => {
                   ></textarea>
                 </div>
 
-                {/* Achievements Input (Textarea for ease of input) */}
+                {/* Achievements Input */}
                 <div>
                   <label htmlFor="achievementsText" className="block text-sm font-medium text-gray-300">Achievements (comma-separated)</label>
                   <textarea

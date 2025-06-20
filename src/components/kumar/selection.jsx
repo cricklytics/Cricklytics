@@ -754,11 +754,11 @@ const Selection = () => {
       >
         <div className="flex flex-col items-center">
           <button
-            onClick={() => {
-              if (!hasBye && (format === 'roundRobin' || isCurrentRound || isFinalRound) && !isCompleted) {
-                handleMatchResult(match.id, actualMatch.team1?.name);
-              }
-            }}
+            // onClick={() => {
+            //   if (!hasBye && (format === 'roundRobin' || isCurrentRound || isFinalRound) && !isCompleted) {
+            //     handleMatchResult(match.id, actualMatch.team1?.name);
+            //   }
+            // }}
             className={`w-full p-2 mb-1 rounded ${
               ((format === 'roundRobin' || isCurrentRound || isFinalRound) && !isCompleted && !hasBye) ?
                 'hover:bg-green-100 cursor-pointer' : 'cursor-default'
@@ -774,11 +774,11 @@ const Selection = () => {
           <div className="text-center">vs</div>
 
           <button
-            onClick={() => {
-              if (!hasBye && (format === 'roundRobin' || isCurrentRound || isFinalRound) && !isCompleted) {
-                handleMatchResult(match.id, actualMatch.team2?.name);
-              }
-            }}
+            // onClick={() => {
+            //   if (!hasBye && (format === 'roundRobin' || isCurrentRound || isFinalRound) && !isCompleted) {
+            //     handleMatchResult(match.id, actualMatch.team2?.name);
+            //   }
+            // }}
             className={`w-full p-2 mt-1 rounded ${
               ((format === 'roundRobin' || isCurrentRound || isFinalRound) && !isCompleted && !hasBye) ?
                 'hover:bg-green-100 cursor-pointer' : 'cursor-default'

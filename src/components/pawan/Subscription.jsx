@@ -344,7 +344,7 @@ const Subscription = () => {
         </div>
 
         {/* Feature Comparison Table */}
-        <motion.div
+        {/* <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.8 }}
@@ -381,7 +381,7 @@ const Subscription = () => {
               </tbody>
             </table>
           </div>
-        </motion.div>
+        </motion.div> */}
 
         {/* FAQs Section */}
         <motion.div

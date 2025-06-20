@@ -91,6 +91,10 @@ const TournamentBracket = () => {
     fetchTournament();
   }, [location.state, navigate]);
 
+  const getNearestLowerPowerOfTwo = (n) => {
+    return Math.pow(2, Math.floor(Math.log2(n)));
+  };
+
   const initializeTournament = async (formatType) => {
     setFormat(formatType);
     const teamCount = teams.length;
@@ -117,34 +121,20 @@ const TournamentBracket = () => {
     setTournamentId(newTournamentId);
 
     if (formatType === 'superKnockout') {
-      let byeCount = 0;
-      let preQuarterNeeded = false;
-      let nextPhaseAfterSuperKnockout = '';
+      if (teamCount < 3) {
+        console.error(`Super Knockout requires at least 3 teams, received ${teamCount}.`);
+        alert('Super Knockout requires at least 3 teams.');
+        window.location.reload();
+        return;
+      }
 
-      // Determine bye count and next phase based on team count
-      if (teamCount >= 16) {
-        byeCount = 4; // Top 4 seeds get byes (16 teams case)
-        preQuarterNeeded = true;
-        nextPhaseAfterSuperKnockout = 'preQuarter';
-      } else if (teamCount === 15) {
-        byeCount = 1; // Top seed gets a bye (15 teams case)
-        nextPhaseAfterSuperKnockout = 'quarter';
-      } else if (teamCount >= 13) {
-        byeCount = teamCount - 10; // Get to 10 teams after superKnockout
-        preQuarterNeeded = true;
-        nextPhaseAfterSuperKnockout = 'preQuarter';
-      } else if (teamCount >= 8) {
-        byeCount = teamCount - 8; // Get to 8 teams after superKnockout
-        nextPhaseAfterSuperKnockout = 'quarter';
-      } else if (teamCount >= 4) {
-        byeCount = teamCount - 4; // Get to 4 teams after superKnockout
-        nextPhaseAfterSuperKnockout = 'semi';
-      } else if (teamCount === 2) {
-        byeCount = 0; // No byes, straight to final
-        nextPhaseAfterSuperKnockout = 'final';
-      } else {
-        console.error(`Super Knockout requires at least 2 teams, received ${teamCount}.`);
-        alert('Super Knockout requires at least 2 teams.');
+      const targetTeams = getNearestLowerPowerOfTwo(teamCount);
+      const byeCount = targetTeams - (teamCount - targetTeams);
+      const competingTeamCount = teamCount - byeCount;
+
+      if (byeCount < 0 || competingTeamCount % 2 !== 0) {
+        console.error(`Invalid configuration: byeCount=${byeCount}, competingTeamCount=${competingTeamCount}`);
+        alert('Invalid number of teams for Super Knockout. Please adjust team count.');
         window.location.reload();
         return;
       }
@@ -174,43 +164,21 @@ const TournamentBracket = () => {
         });
       }
 
-      if (competingTeams.length % 2 === 1) {
-        superKnockoutMatches.push({
-          id: `super-knockout-${Math.floor(competingTeams.length / 2)}`,
-          team1: {
-            id: competingTeams[competingTeams.length - 1].id,
-            name: competingTeams[competingTeams.length - 1].name,
-            seed: competingTeams[competingTeams.length - 1].seed,
-            flagUrl: competingTeams[competingTeams.length - 1].flagUrl || '',
-          },
-          team2: {
-            id: generateUUID(),
-            name: 'BYE',
-            isBye: true,
-          },
-          round: 0,
-          phase: 'superKnockout',
-          winner: competingTeams[competingTeams.length - 1].name,
-          played: true,
-        });
-      }
-
       const rounds = [
-        { name: `Round of ${competingTeams.length}`, matches: superKnockoutMatches, roundNumber: 0, stage: 'superKnockout' },
+        { name: `Round of ${competingTeamCount}`, matches: superKnockoutMatches, roundNumber: 0, stage: 'superKnockout' },
+        { name: 'Quarterfinals', matches: [], roundNumber: 1, stage: 'quarter' },
+        { name: 'Semifinals', matches: [], roundNumber: 2, stage: 'semi' },
+        { name: 'Final', matches: [], roundNumber: 3, stage: 'final' },
       ];
 
-      if (teamCount === 2) {
-        rounds.push({ name: 'Final', matches: [], roundNumber: 1, stage: 'final' });
-      } else if (teamCount <= 4) {
-        rounds.push({ name: 'Semifinals', matches: [], roundNumber: 1, stage: 'semi' });
-        rounds.push({ name: 'Final', matches: [], roundNumber: 2, stage: 'final' });
-      } else {
-        if (preQuarterNeeded) {
-          rounds.push({ name: 'Pre-Quarterfinals', matches: [], roundNumber: 1, stage: 'preQuarter' });
-        }
-        rounds.push({ name: 'Quarterfinals', matches: [], roundNumber: preQuarterNeeded ? 2 : 1, stage: 'quarter' });
-        rounds.push({ name: 'Semifinals', matches: [], roundNumber: preQuarterNeeded ? 3 : 2, stage: 'semi' });
-        rounds.push({ name: 'Final', matches: [], roundNumber: preQuarterNeeded ? 4 : 3, stage: 'final' });
+      if (targetTeams <= 4) {
+        rounds.splice(1, 1);
+        rounds[1].roundNumber = 1;
+        rounds[2].roundNumber = 2;
+      }
+      if (targetTeams <= 2) {
+        rounds.splice(1, 1);
+        rounds[1].roundNumber = 1;
       }
 
       try {
@@ -244,8 +212,8 @@ const TournamentBracket = () => {
       const preQuarterMatches = [
         {
           id: 'pre-quarter-1',
-          team1: seededTeams[8], // Seed 9
-          team2: seededTeams[11], // Seed 12
+          team1: seededTeams[8],
+          team2: seededTeams[11],
           round: 0,
           phase: 'preQuarter',
           winner: null,
@@ -253,8 +221,8 @@ const TournamentBracket = () => {
         },
         {
           id: 'pre-quarter-2',
-          team1: seededTeams[9], // Seed 10
-          team2: seededTeams[10], // Seed 11
+          team1: seededTeams[9],
+          team2: seededTeams[10],
           round: 0,
           phase: 'preQuarter',
           winner: null,
@@ -439,18 +407,16 @@ const TournamentBracket = () => {
           return -1;
       }
     } else if (format === 'superKnockout') {
-      const preQuarterNeeded = teams.length >= 13;
+      const targetTeams = getNearestLowerPowerOfTwo(teams.length);
       switch (phase) {
         case 'superKnockout':
           return 0;
-        case 'preQuarter':
-          return 1;
         case 'quarter':
-          return preQuarterNeeded ? 2 : 1;
+          return targetTeams > 4 ? 1 : -1;
         case 'semi':
-          return preQuarterNeeded ? 3 : 2;
+          return targetTeams > 4 ? 2 : targetTeams > 2 ? 1 : -1;
         case 'final':
-          return preQuarterNeeded ? 4 : 3;
+          return targetTeams > 4 ? 3 : targetTeams > 2 ? 2 : 1;
         default:
           return -1;
       }
@@ -574,53 +540,28 @@ const TournamentBracket = () => {
               const winners = await fetchWinnersByRoundFromFirebase(tournamentId, roundNumber, currentPhase);
 
               if (format === 'superKnockout') {
-                const byeCount = teams.length >= 16 ? 4 : teams.length === 15 ? 1 : teams.length >= 13 ? teams.length - 10 : teams.length >= 8 ? teams.length - 8 : teams.length >= 4 ? teams.length - 4 : 0;
+                const targetTeams = getNearestLowerPowerOfTwo(teams.length);
+                const byeCount = targetTeams - (teams.length - targetTeams);
                 const byeTeamsSorted = teams.sort((a, b) => a.seed - b.seed).slice(0, byeCount);
-                
+
                 if (currentPhase === 'superKnockout') {
                   const nextTeams = [...winners, ...byeTeamsSorted];
                   console.log('Advancing from Super Knockout with teams:', nextTeams);
-                  if (nextTeams.length === 10) {
-                    console.log('Initializing Pre-Quarterfinals');
-                    await initializePreQuarter(nextTeams, tournamentId);
-                  } else if (nextTeams.length === 8) {
-                    console.log('Initializing Quarterfinals');
-                    await initializeQuarterFinals(nextTeams, tournamentId);
-                  } else if (nextTeams.length === 6) {
-                    console.log('Trimming from 6 to 4 for Semifinals');
-                    await initializeTrimToFour(nextTeams, tournamentId);
-                  } else if (nextTeams.length === 4) {
-                    console.log('Initializing Semifinals');
-                    await initializeSemiFinals(nextTeams, tournamentId);
-                  } else if (nextTeams.length === 2) {
-                    console.log('Initializing Final');
-                    await initializeFinal(nextTeams, tournamentId);
+                  if (nextTeams.length === targetTeams) {
+                    if (targetTeams === 2) {
+                      console.log('Initializing Final');
+                      await initializeFinal(nextTeams, tournamentId);
+                    } else if (targetTeams === 4) {
+                      console.log('Initializing Semifinals');
+                      await initializeSemiFinals(nextTeams, tournamentId);
+                    } else {
+                      console.log('Initializing Quarterfinals');
+                      await initializeQuarterFinals(nextTeams, tournamentId);
+                    }
+                  } else {
+                    console.error(`Unexpected number of teams (${nextTeams.length}) for target ${targetTeams}`);
+                    alert('Error in tournament progression.');
                   }
-                } else if (currentPhase === 'preQuarter' && winners.length === 2) {
-                  console.log('Advancing from Pre-Quarterfinals to Quarterfinals');
-                  // Fetch the teams from superKnockout phase (winners + byes)
-                  const superKnockoutTeams = await fetchTeamsByRoundFromFirebase(tournamentId, 0, 'superKnockout');
-                  const superKnockoutWinners = superKnockoutTeams.filter((w) => !w.isBye);
-                  const byeTeams = teams.sort((a, b) => a.seed - b.seed).slice(0, byeCount);
-                  // Exclude the teams that played in preQuarter (seeds 7-10)
-                  const remainingSuperKnockoutWinners = superKnockoutWinners
-                    .filter((w) => !winners.some((pw) => pw.name === w.name))
-                    .sort((a, b) => a.seed - b.seed);
-                  // Combine: top 4 byes + 2 remaining superKnockout winners + 2 preQuarter winners
-                  const nextTeams = [...byeTeams, ...remainingSuperKnockoutWinners.slice(0, 2), ...winners];
-                  console.log('Quarterfinal teams:', nextTeams);
-                  await initializeQuarterFinals(nextTeams, tournamentId);
-                } else if (currentPhase === 'trimToFour' && winners.length === 1) {
-                  console.log('Advancing from TrimToFour to Semifinals');
-                  const trimRoundTeams = await fetchTeamsByRoundFromFirebase(tournamentId, getRoundNumberForPhase('superKnockout'), 'superKnockout');
-                  const byeTeams = teams.sort((a, b) => a.seed - b.seed).slice(0, byeCount);
-                  const superKnockoutWinners = trimRoundTeams.filter((w) => !w.isBye);
-                  const remainingTeams = [...byeTeams, ...superKnockoutWinners]
-                    .filter((t) => !t.isBye)
-                    .sort((a, b) => a.seed - b.seed)
-                    .slice(0, 3);
-                  const nextTeams = [...remainingTeams, ...winners];
-                  await initializeSemiFinals(nextTeams, tournamentId);
                 } else if (currentPhase === 'quarter' && winners.length === 4) {
                   console.log('Advancing from Quarterfinals to Semifinals');
                   await initializeSemiFinals(winners, tournamentId);
@@ -784,130 +725,6 @@ const TournamentBracket = () => {
     }
   }, [format, currentPhase, teams, tournamentId, tournamentWinner]);
 
-  const initializePreQuarter = async (nextTeams, tournamentId) => {
-    if (nextTeams.length !== 10) {
-      console.error(`PreQuarter expects 10 teams, received ${nextTeams.length}`);
-      alert('Error: Incorrect number of teams for Pre-Quarter Finals.');
-      return;
-    }
-
-    // Ensure all teams have required properties
-    const validTeams = nextTeams.every(team => team && team.id && team.name && typeof team.seed === 'number');
-    if (!validTeams) {
-      console.error('Invalid team data in nextTeams:', nextTeams);
-      alert('Error: Invalid team data for Pre-Quarter Finals.');
-      return;
-    }
-
-    const sortedTeams = [...nextTeams].sort((a, b) => (a.seed || 0) - (b.seed || 0));
-    const preQuarterMatches = [
-      { id: 'pre-quarter-1', team1: sortedTeams[6], team2: sortedTeams[9], round: 1, phase: 'preQuarter', winner: null, played: false },
-      { id: 'pre-quarter-2', team1: sortedTeams[7], team2: sortedTeams[8], round: 1, phase: 'preQuarter', winner: null, played: false },
-    ];
-
-    try {
-      const tournamentDocRef = doc(db, 'KnockoutTournamentMatches', tournamentId);
-      const tournamentDoc = await getDoc(tournamentDocRef);
-      if (tournamentDoc.exists()) {
-        const existingData = tournamentDoc.data();
-        let updatedRounds = [...existingData.rounds];
-
-        // Ensure the preQuarter stage exists in rounds
-        const preQuarterIndex = updatedRounds.findIndex(round => round.stage === 'preQuarter');
-        if (preQuarterIndex === -1) {
-          console.warn('Pre-Quarter stage missing in rounds. Adding it now.');
-          // Insert preQuarter stage at the correct position (after superKnockout)
-          updatedRounds.splice(1, 0, {
-            name: 'Pre-Quarterfinals',
-            matches: preQuarterMatches,
-            roundNumber: 1,
-            stage: 'preQuarter'
-          });
-          // Adjust round numbers for subsequent rounds
-          for (let i = 2; i < updatedRounds.length; i++) {
-            updatedRounds[i].roundNumber += 1;
-          }
-        } else {
-          updatedRounds = updatedRounds.map((round) => {
-            if (round.stage === 'preQuarter') {
-              return { ...round, matches: preQuarterMatches };
-            }
-            return round;
-          });
-        }
-
-        await setDoc(tournamentDocRef, {
-          rounds: updatedRounds,
-          currentPhase: 'preQuarter',
-        }, { merge: true });
-        console.log('Pre-Quarterfinals initialized in Firebase');
-      } else {
-        console.error('Tournament document not found in Firebase');
-        alert('Error: Tournament data not found. Please restart the tournament.');
-        navigate('/TournamentPage');
-        return;
-      }
-    } catch (error) {
-      console.error('Error initializing Pre-Quarterfinals in Firebase:', error);
-      alert('Failed to initialize Pre-Quarterfinals. Please try again.');
-      navigate('/TournamentPage');
-      return;
-    }
-
-    setMatches(preQuarterMatches);
-    setMatchHistory((prev) => [...prev, ...preQuarterMatches]);
-    setCurrentPhase('preQuarter');
-    setPhaseHistory((prev) => [...prev, 'superKnockout']);
-    setCanAdvanceToNextRound(false);
-  };
-
-  const initializeTrimToFour = async (nextTeams, tournamentId) => {
-    if (nextTeams.length !== 6) {
-      console.error(`TrimToFour expects 6 teams, received ${nextTeams.length}`);
-      alert('Error: Incorrect number of teams for Trim to Four.');
-      return;
-    }
-    const sortedTeams = [...nextTeams].sort((a, b) => (a.seed || 0) - (b.seed || 0));
-    const trimMatches = [
-      { id: 'trim-1', team1: sortedTeams[4], team2: sortedTeams[5], round: 1, phase: 'trimToFour', winner: null, played: false },
-    ];
-    try {
-      const tournamentDocRef = doc(db, 'KnockoutTournamentMatches', tournamentId);
-      const tournamentDoc = await getDoc(tournamentDocRef);
-      if (tournamentDoc.exists()) {
-        const existingData = tournamentDoc.data();
-        const updatedRounds = existingData.rounds.map((round) => {
-          if (round.stage === 'trimToFour') {
-            return { ...round, matches: trimMatches };
-          }
-          return round;
-        });
-        // If trimToFour stage doesn't exist, add it
-        if (!updatedRounds.some((round) => round.stage === 'trimToFour')) {
-          updatedRounds.splice(1, 0, { name: 'Trim to Four', matches: trimMatches, roundNumber: 1, stage: 'trimToFour' });
-          // Adjust round numbers for subsequent rounds
-          for (let i = 2; i < updatedRounds.length; i++) {
-            updatedRounds[i].roundNumber += 1;
-          }
-        }
-        await setDoc(tournamentDocRef, {
-          rounds: updatedRounds,
-          currentPhase: 'trimToFour',
-        }, { merge: true });
-        console.log('Trim to Four initialized in Firebase');
-      }
-    } catch (error) {
-      console.error('Error initializing Trim to Four in Firebase:', error);
-      alert('Failed to initialize Trim to Four. Please try again.');
-      return;
-    }
-    setMatches(trimMatches);
-    setMatchHistory((prev) => [...prev, ...trimMatches]);
-    setCurrentPhase('trimToFour');
-    setPhaseHistory((prev) => [...prev, 'superKnockout']);
-    setCanAdvanceToNextRound(false);
-  };
-
   const initializeQuarterFinals = async (teamsForQuarter, tournamentId) => {
     if (teamsForQuarter.length !== 8) {
       console.error(`Quarter Finals requires exactly 8 teams, got ${teamsForQuarter.length}`);
@@ -915,7 +732,7 @@ const TournamentBracket = () => {
       return;
     }
     const sortedTeams = [...teamsForQuarter].sort((a, b) => (a.seed || 0) - (b?.seed || 0));
-    const roundNumber = format === 'playOff' ? 0 : format === 'knockout' ? 1 : teams.length >= 13 ? 2 : 1;
+    const roundNumber = format === 'playOff' ? 0 : format === 'knockout' ? 1 : 1;
     const matches = [
       { id: 'quarter-1', team1: sortedTeams[0], team2: sortedTeams[7], round: roundNumber, phase: 'quarter', winner: null, played: false },
       { id: 'quarter-2', team1: sortedTeams[1], team2: sortedTeams[6], round: roundNumber, phase: 'quarter', winner: null, played: false },
@@ -947,7 +764,7 @@ const TournamentBracket = () => {
     setMatches(matches);
     setMatchHistory((prev) => [...prev, ...matches]);
     setCurrentPhase('quarter');
-    setPhaseHistory((prev) => [...prev, format === 'knockout' ? 'preQuarter' : teams.length >= 13 ? 'preQuarter' : 'superKnockout']);
+    setPhaseHistory((prev) => [...prev, 'superKnockout']);
     setCanAdvanceToNextRound(false);
   };
 
@@ -958,7 +775,7 @@ const TournamentBracket = () => {
       return;
     }
     const sortedTeams = [...teamsForSemi].sort((a, b) => (a?.seed || 0) - (b?.seed || 0));
-    const roundNumber = format === 'playOff' ? 1 : format === 'knockout' ? 2 : teams.length >= 13 ? 3 : 2;
+    const roundNumber = format === 'playOff' ? 1 : format === 'knockout' ? 2 : getNearestLowerPowerOfTwo(teams.length) > 4 ? 2 : 1;
     const matches = [
       { id: 'semi-1', team1: sortedTeams[0], team2: sortedTeams[3], round: roundNumber, phase: 'semi', winner: null, played: false },
       { id: 'semi-2', team1: sortedTeams[1], team2: sortedTeams[2], round: roundNumber, phase: 'semi', winner: null, played: false },
@@ -988,7 +805,7 @@ const TournamentBracket = () => {
     setMatches(matches);
     setMatchHistory((prevHistory) => [...prevHistory, ...matches]);
     setCurrentPhase('semi');
-    setPhaseHistory((prevPhase) => [...prevPhase, previousPhase => previousPhase === 'trimToFour' ? 'trimToFour' : 'quarter']);
+    setPhaseHistory((prev) => [...prev, 'quarter']);
     setCanAdvanceToNextRound(false);
   };
 
@@ -999,7 +816,7 @@ const TournamentBracket = () => {
       return;
     }
     const sortedTeams = [...winners].sort((a, b) => (a?.seed || 0) - (b?.seed || 0));
-    const roundNumber = format === 'playOff' ? 2 : format === 'knockout' ? 3 : teams.length >= 13 ? 4 : 3;
+    const roundNumber = format === 'playOff' ? 2 : format === 'knockout' ? 3 : getNearestLowerPowerOfTwo(teams.length) > 4 ? 3 : getNearestLowerPowerOfTwo(teams.length) > 2 ? 2 : 1;
     const finalMatch = [
       {
         id: 'final',
@@ -1164,49 +981,28 @@ const TournamentBracket = () => {
     const winners = await fetchWinnersByRoundFromFirebase(tournamentId, roundNumber, currentPhase);
 
     if (format === 'superKnockout') {
-      const byeCount = teams.length >= 16 ? 4 : teams.length === 15 ? 1 : teams.length >= 13 ? teams.length - 10 : teams.length >= 8 ? teams.length - 8 : teams.length >= 4 ? teams.length - 4 : 0;
+      const targetTeams = getNearestLowerPowerOfTwo(teams.length);
+      const byeCount = targetTeams - (teams.length - targetTeams);
       const byeTeamsSorted = teams.sort((a, b) => a.seed - b.seed).slice(0, byeCount);
-      
+
       if (currentPhase === 'superKnockout') {
         const nextTeams = [...winners, ...byeTeamsSorted];
-        if (nextTeams.length === 10) {
-          console.log('Manually advancing from Super Knockout to Pre-Quarterfinals');
-          await initializePreQuarter(nextTeams, tournamentId);
-        } else if (nextTeams.length === 8) {
-          console.log('Manually advancing from Super Knockout to Quarterfinals');
-          await initializeQuarterFinals(nextTeams, tournamentId);
-        } else if (nextTeams.length === 6) {
-          console.log('Manually trimming from 6 to 4 for Semifinals');
-          await initializeTrimToFour(nextTeams, tournamentId);
-        } else if (nextTeams.length === 4) {
-          console.log('Manually advancing from Super Knockout to Semifinals');
-          await initializeSemiFinals(nextTeams, tournamentId);
-        } else if (nextTeams.length === 2) {
-          console.log('Manually advancing from Super Knockout to Final');
-          await initializeFinal(nextTeams, tournamentId);
+        console.log('Manually advancing from Super Knockout with teams:', nextTeams);
+        if (nextTeams.length === targetTeams) {
+          if (targetTeams === 2) {
+            console.log('Manually advancing to Final');
+            await initializeFinal(nextTeams, tournamentId);
+          } else if (targetTeams === 4) {
+            console.log('Manually advancing to Semifinals');
+            await initializeSemiFinals(nextTeams, tournamentId);
+          } else {
+            console.log('Manually advancing to Quarterfinals');
+            await initializeQuarterFinals(nextTeams, tournamentId);
+          }
+        } else {
+          console.error(`Unexpected number of teams (${nextTeams.length}) for target ${targetTeams}`);
+          alert('Error in tournament progression.');
         }
-      } else if (currentPhase === 'preQuarter' && winners.length === 2) {
-        console.log('Manually advancing from Pre-Quarterfinals to Quarterfinals');
-        const superKnockoutTeams = await fetchTeamsByRoundFromFirebase(tournamentId, 0, 'superKnockout');
-        const superKnockoutWinners = superKnockoutTeams.filter((w) => !w.isBye);
-        const byeTeams = teams.sort((a, b) => a.seed - b.seed).slice(0, byeCount);
-        const remainingSuperKnockoutWinners = superKnockoutWinners
-          .filter((w) => !winners.some((pw) => pw.name === w.name))
-          .sort((a, b) => a.seed - b.seed);
-        const nextTeams = [...byeTeams, ...remainingSuperKnockoutWinners.slice(0, 2), ...winners];
-        console.log('Quarterfinal teams:', nextTeams);
-        await initializeQuarterFinals(nextTeams, tournamentId);
-      } else if (currentPhase === 'trimToFour' && winners.length === 1) {
-        console.log('Manually advancing from TrimToFour to Semifinals');
-        const trimRoundTeams = await fetchTeamsByRoundFromFirebase(tournamentId, getRoundNumberForPhase('superKnockout'), 'superKnockout');
-        const byeTeams = teams.sort((a, b) => a.seed - b.seed).slice(0, byeCount);
-        const superKnockoutWinners = trimRoundTeams.filter((w) => !w.isBye);
-        const remainingTeams = [...byeTeams, ...superKnockoutWinners]
-          .filter((t) => !t.isBye)
-          .sort((a, b) => a.seed - b.seed)
-          .slice(0, 3);
-        const nextTeams = [...remainingTeams, ...winners];
-        await initializeSemiFinals(nextTeams, tournamentId);
       } else if (currentPhase === 'quarter' && winners.length === 4) {
         console.log('Manually advancing from Quarterfinals to Semifinals');
         await initializeSemiFinals(winners, tournamentId);
@@ -1367,6 +1163,24 @@ const TournamentBracket = () => {
     </motion.div>
   );
 
+  const isFormatEnabled = (formatType) => {
+    const teamCount = teams.length;
+    switch (formatType) {
+      case 'championship':
+        return teamCount === 2;
+      case 'eliminatorElite':
+        return teamCount === 4;
+      case 'playOff':
+        return teamCount === 8;
+      case 'knockout':
+        return teamCount === 12;
+      case 'superKnockout':
+        return teamCount >= 3;
+      default:
+        return false;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-900 text-gray-100 p-8">
       <div className="max-w-7xl mx-auto">
@@ -1386,11 +1200,16 @@ const TournamentBracket = () => {
           <div className="text-center">
             <h1 className="text-4xl font-bold mb-8 text-blue-400">Select Tournament Format</h1>
             <div className="flex flex-wrap justify-center gap-4">
-              {['superKnockout', 'knockout', 'playOff', 'eliminatorElite', 'championship'].map((formatType) => (
+              {['championship', 'eliminatorElite', 'playOff', 'knockout', 'superKnockout'].map((formatType) => (
                 <button 
                   key={formatType}
-                  onClick={() => initializeTournament(formatType)}
-                  className="px-8 py-3 bg-blue-600 hover:bg-blue-700 rounded-xl text-lg font-semibold mb-2 transition-transform duration-200 hover:scale-105"
+                  onClick={() => isFormatEnabled(formatType) && initializeTournament(formatType)}
+                  disabled={!isFormatEnabled(formatType)}
+                  className={`px-8 py-3 rounded-xl text-lg font-semibold mb-2 transition-transform duration-200 ${
+                    isFormatEnabled(formatType)
+                      ? 'bg-blue-600 hover:bg-blue-700 hover:scale-105'
+                      : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                  }`}
                 >
                   {formatType === 'superKnockout' ? 'Super Knockout' 
                     : formatType === 'knockout' ? 'Knockout' 
@@ -1406,8 +1225,6 @@ const TournamentBracket = () => {
             <div className="mb-8">
               <h1 className="text-3xl font-bold text-blue-400">
                 {currentPhase === 'superKnockout' ? 'Super Knockout' 
-                  : currentPhase === 'preQuarter' ? 'Pre-Quarter Finals' 
-                  : currentPhase === 'trimToFour' ? 'Trim to Four'
                   : currentPhase === 'quarter' ? 'Quarter Finals' 
                   : currentPhase === 'semi' ? 'Semi Finals' 
                   : currentPhase === 'final' ? 'Final' 
@@ -1423,8 +1240,6 @@ const TournamentBracket = () => {
               <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-6 rounded-xl shadow-lg">
                 <h3 className="text-2xl font-bold mb-4 text-blue-400">
                   {currentPhase === 'superKnockout' ? 'Super Knockout' 
-                    : currentPhase === 'preQuarter' ? 'Pre-Quarterfinals' 
-                    : currentPhase === 'trimToFour' ? 'Trim to Four'
                     : currentPhase === 'quarter' ? 'Quarterfinals' 
                     : currentPhase === 'semi' ? 'Semifinals' 
                     : currentPhase === 'final' ? 'Final' 
