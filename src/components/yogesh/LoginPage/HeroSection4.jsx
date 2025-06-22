@@ -288,7 +288,7 @@ function HeroSection4() {
   };
 
   return (
-    <div className="w-full h-[calc(100vh-80px)] overflow-y-auto scrollbar-thin scrollbar-thumb-yellow-400 scrollbar-track-gray-700">
+    <div className="w-full h-screen overflow-y-auto scrollbar-thin scrollbar-thumb-yellow-400 scrollbar-track-gray-700">
       <div className="relative bg-gradient-to-br from-gray-900 via-green-900 to-gray-800 py-12 px-4 sm:px-6 lg:px-8 text-gray-100 flex flex-col items-center min-h-[calc(100vh-80px)] animate-[gradientShift_15s_ease_infinite] bg-[length:200%_200%]">
         <div className="absolute inset-0 bg-black/40 z-0"></div>
 
