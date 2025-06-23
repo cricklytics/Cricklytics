@@ -84,6 +84,15 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
   const [showAnimation, setShowAnimation] = useState(false);
   const [animationType, setAnimationType] = useState(null);
   const [firstInningsData, setFirstInningsData] = useState(null);
+  const [showOutTypeModal, setShowOutTypeModal] = useState(false);
+  const [outType, setOutType] = useState(null);
+  const [showCatcherModal, setShowCatcherModal] = useState(false);
+  const [showFielderModal, setShowFielderModal] = useState(false);
+  const [catcher, setCatcher] = useState(null);
+  const [fielder, setFielder] = useState(null);
+  const [fielderRole, setFielderRole] = useState(null);
+  const [currentOverRuns, setCurrentOverRuns] = useState(0);
+  const [maidenOvers, setMaidenOvers] = useState({});
 
   // Dynamic player data
   const [battingTeamPlayers, setBattingTeamPlayers] = useState([]);
@@ -133,35 +142,35 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
       setBattingTeamPlayers(selectedPlayersFromProps.left.map((player, index) => ({
         ...player,
         index: player.name + index,
-        photoUrl: player.image, // Map image to photoUrl
-        user: player.user, // Include user field
-        playerId: player.playerId, // Use playerId from clubTeams
-        userId: currentUserId // Add current userId
+        photoUrl: player.image,
+        user: player.user,
+        playerId: player.playerId,
+        userId: currentUserId
       })));
       setBowlingTeamPlayers(selectedPlayersFromProps.right.map((player, index) => ({
         ...player,
         index: player.name + index,
-        photoUrl: player.image, // Map image to photoUrl
-        user: player.user, // Include user field
-        playerId: player.playerId, // Use playerId from clubTeams
-        userId: currentUserId // Add current userId
+        photoUrl: player.image,
+        user: player.user,
+        playerId: player.playerId,
+        userId: currentUserId
       })));
     } else {
       setBattingTeamPlayers(selectedPlayersFromProps.right.map((player, index) => ({
         ...player,
         index: player.name + index,
-        photoUrl: player.image, // Map image to photoUrl
-        user: player.user, // Include user field
-        playerId: player.playerId, // Use playerId from clubTeams
-        userId: currentUserId // Add current userId
+        photoUrl: player.image,
+        user: player.user,
+        playerId: player.playerId,
+        userId: currentUserId
       })));
       setBowlingTeamPlayers(selectedPlayersFromProps.left.map((player, index) => ({
         ...player,
         index: player.name + index,
-        photoUrl: player.image, // Map image to photoUrl
-        user: player.user, // Include user field
-        playerId: player.playerId, // Use playerId from clubTeams
-        userId: currentUserId // Add current userId
+        photoUrl: player.image,
+        user: player.user,
+        playerId: player.playerId,
+        userId: currentUserId
       })));
     }
     
@@ -174,6 +183,7 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
     setBatsmenStats({});
     setBowlerStats({});
     setWicketOvers([]);
+    setCurrentOverRuns(0);
   }, [isChasing, selectedPlayersFromProps, teamA, teamB, navigate]);
 
   const displayModal = (title, message) => {
@@ -244,26 +254,54 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
     });
   };
 
-  const updateBowlerStats = (bowlerIndex, isWicket = false, isValidBall = false, runsConceded = 0) => {
+  const updateBowlerStats = (bowlerIndex, isWicket = false, isValidBall = false, runsConceded = 0, isNoBall = false, isWide = false, isDotBall = false) => {
     setBowlerStats(prev => {
-      const currentBowler = prev[bowlerIndex] || { wickets: 0, ballsBowled: 0, oversBowled: '0.0', runsConceded: 0 };
+      const currentBowler = prev[bowlerIndex] || { wickets: 0, ballsBowled: 0, oversBowled: '0.0', runsConceded: 0, maidens: 0, noBalls: 0, wides: 0, dotBalls: 0 };
       const ballsBowled = currentBowler.ballsBowled + (isValidBall ? 1 : 0);
       const overs = Math.floor(ballsBowled / 6) + (ballsBowled % 6) / 10;
+      
       return {
         ...prev,
         [bowlerIndex]: {
+          ...currentBowler,
           wickets: isWicket ? (currentBowler.wickets || 0) + 1 : currentBowler.wickets || 0,
           ballsBowled,
           oversBowled: overs.toFixed(1),
-          runsConceded: (currentBowler.runsConceded || 0) + runsConceded
+          runsConceded: (currentBowler.runsConceded || 0) + runsConceded,
+          maidens: currentBowler.maidens || 0,
+          noBalls: isNoBall ? (currentBowler.noBalls || 0) + 1 : currentBowler.noBalls || 0,
+          wides: isWide ? (currentBowler.wides || 0) + 1 : currentBowler.wides || 0,
+          dotBalls: isDotBall ? (currentBowler.dotBalls || 0) + 1 : currentBowler.dotBalls || 0
         }
       };
     });
   };
 
-  const recordWicketOver = (batsmanIndex) => {
+  const updateMaidenOvers = (bowlerIndex) => {
+    setMaidenOvers(prev => ({
+      ...prev,
+      [bowlerIndex]: (prev[bowlerIndex] || 0) + 1
+    }));
+    
+    setBowlerStats(prev => ({
+      ...prev,
+      [bowlerIndex]: {
+        ...prev[bowlerIndex],
+        maidens: (prev[bowlerIndex]?.maidens || 0) + 1
+      }
+    }));
+  };
+
+  const recordWicketOver = (batsmanIndex, type, bowlerIndex, fielderIndex = null, fielderRole = null) => {
     const currentOver = `${overNumber - 1}.${validBalls}`;
-    setWicketOvers(prev => [...prev, { batsmanIndex, over: currentOver }]);
+    setWicketOvers(prev => [...prev, { 
+      batsmanIndex, 
+      over: currentOver,
+      type,
+      bowlerIndex,
+      fielderIndex,
+      fielderRole
+    }]);
   };
 
   const playAnimation = (type) => {
@@ -295,8 +333,8 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
           photoUrl: player.image || '',
           role: player.role || '',
           user: player.user || 'No',
-          playerId: player.playerId || '', // Use playerId from clubTeams
-          userId: currentUserId, // Add current userId
+          playerId: player.playerId || '',
+          userId: currentUserId,
           runs: stats.runs || 0,
           balls: stats.balls || 0,
           dotBalls: stats.dotBalls || 0,
@@ -306,7 +344,11 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
           fours: stats.fours || 0,
           sixes: stats.sixes || 0,
           milestone: stats.milestone || null,
-          wicketOver: wicket ? wicket.over : null
+          wicketOver: wicket ? wicket.over : null,
+          dismissalType: wicket ? wicket.type : null,
+          bowlerIndex: wicket ? wicket.bowlerIndex : null,
+          fielderIndex: wicket ? wicket.fielderIndex : null,
+          fielderRole: wicket ? wicket.fielderRole : null
         };
       });
 
@@ -318,11 +360,40 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
           photoUrl: player.image || '',
           role: player.role || '',
           user: player.user || 'No',
-          playerId: player.playerId || '', // Use playerId from clubTeams
-          userId: currentUserId, // Add current userId
+          playerId: player.playerId || '',
+          userId: currentUserId,
           wickets: stats.wickets || 0,
           oversBowled: stats.oversBowled || '0.0',
-          runsConceded: stats.runsConceded || 0
+          runsConceded: stats.runsConceded || 0,
+          maidens: stats.maidens || 0,
+          noBalls: stats.noBalls || 0,
+          wides: stats.wides || 0,
+          dotBalls: stats.dotBalls || 0
+        };
+      });
+
+      const fieldingStats = bowlingTeamPlayers.map(player => {
+        const catches = wicketOvers.filter(w => 
+          w.fielderIndex === player.index && w.type === 'catch'
+        ).length;
+        const stumpings = wicketOvers.filter(w => 
+          w.fielderIndex === player.index && w.type === 'stumping' && w.fielderRole === 'wicketKeeper'
+        ).length;
+        const runOuts = wicketOvers.filter(w => 
+          w.fielderIndex === player.index && w.type === 'runout' && w.fielderRole === 'fielder'
+        ).length;
+        
+        return {
+          index: player.index || '',
+          name: player.name || 'Unknown',
+          photoUrl: player.image || '',
+          role: player.role || '',
+          user: player.user || 'No',
+          playerId: player.playerId || '',
+          userId: currentUserId,
+          catches,
+          stumpings,
+          runOuts
         };
       });
 
@@ -341,8 +412,8 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
             photoUrl: p.image || '',
             role: p.role || '',
             user: p.user || 'No',
-            playerId: p.playerId || '', // Use playerId from clubTeams
-            userId: currentUserId // Add current userId
+            playerId: p.playerId || '',
+            userId: currentUserId
           })),
           totalScore: isChasing ? (firstInningsData?.totalScore || 0) : playerScore,
           wickets: isChasing ? (firstInningsData?.wickets || 0) : outCount,
@@ -358,8 +429,8 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
             photoUrl: p.image || '',
             role: p.role || '',
             user: p.user || 'No',
-            playerId: p.playerId || '', // Use playerId from clubTeams
-            userId: currentUserId // Add current userId
+            playerId: p.playerId || '',
+            userId: currentUserId
           })),
           totalScore: isChasing ? playerScore : (firstInningsData?.totalScore || 0),
           wickets: isChasing ? outCount : (firstInningsData?.wickets || 0),
@@ -372,7 +443,8 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
           wickets: outCount,
           overs,
           playerStats,
-          bowlerStats: bowlerStatsArray
+          bowlerStats: bowlerStatsArray,
+          fieldingStats
         },
         secondInnings: isChasing ? {
           teamName: teamB?.teamName || 'Team B',
@@ -380,7 +452,8 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
           wickets: outCount,
           overs,
           playerStats,
-          bowlerStats: bowlerStatsArray
+          bowlerStats: bowlerStatsArray,
+          fieldingStats
         } : null,
         matchResult: isFinal ? (playerScore < targetScore - 1 ? teamA?.teamName || 'Team A' : playerScore === targetScore - 1 ? 'Tie' : teamB?.teamName || 'Team B') : null
       };
@@ -391,7 +464,7 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
 
       // Update clubTeams collection when match is finished
       if (isFinal) {
-        const updateTeamPlayers = async (team, teamPlayers, playerStatsArray, bowlerStatsArray) => {
+        const updateTeamPlayers = async (team, teamPlayers, playerStatsArray, bowlerStatsArray, fieldingStatsArray) => {
           const teamQuery = query(
             collection(db, 'clubTeams'),
             where('teamName', '==', team.teamName),
@@ -404,7 +477,7 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
             const teamData = teamDoc.data();
             const existingPlayers = teamData.players || [];
 
-            // Create maps for batting and bowling stats using playerId
+            // Create maps for batting, bowling, and fielding stats using playerId
             const playerStatsMap = playerStatsArray.reduce((map, stat) => {
               if (stat.playerId) map[stat.playerId] = stat;
               return map;
@@ -413,11 +486,17 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
               if (stat.playerId) map[stat.playerId] = stat;
               return map;
             }, {});
+            const fieldingStatsMap = fieldingStatsArray.reduce((map, stat) => {
+              if (stat.playerId) map[stat.playerId] = stat;
+              return map;
+            }, {});
 
             // Update player stats
             const updatedPlayers = existingPlayers.map(player => {
               const matchPlayerStats = playerStatsMap[player.playerId] || {};
               const matchBowlerStats = bowlerStatsMap[player.playerId] || {};
+              const matchFieldingStats = fieldingStatsMap[player.playerId] || {};
+              
               const runs = matchPlayerStats.runs || 0;
               const balls = matchPlayerStats.balls || 0;
               const fours = matchPlayerStats.fours || 0;
@@ -425,8 +504,15 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
               const wickets = matchBowlerStats.wickets || 0;
               const runsConceded = matchBowlerStats.runsConceded || 0;
               const oversBowled = parseFloat(matchBowlerStats.oversBowled) || 0;
+              const maidens = matchBowlerStats.maidens || 0;
+              const noBalls = matchBowlerStats.noBalls || 0;
+              const wides = matchBowlerStats.wides || 0;
+              const dotBalls = matchBowlerStats.dotBalls || 0;
               const centuries = matchPlayerStats.milestone === 'Century' ? 1 : 0;
               const fifties = matchPlayerStats.milestone === 'Half-Century' ? 1 : 0;
+              const catches = matchFieldingStats.catches || 0;
+              const stumpings = matchFieldingStats.stumpings || 0;
+              const runOuts = matchFieldingStats.runOuts || 0;
 
               // Initialize careerStats if undefined
               const careerStats = player.careerStats || {
@@ -435,6 +521,7 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
                   innings: 0,
                   notOuts: 0,
                   runs: 0,
+                  balls: 0,
                   highest: 0,
                   fours: 0,
                   sixes: 0,
@@ -448,7 +535,11 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
                   wickets: 0,
                   runsConceded: 0,
                   overs: 0,
-                  best: '0/0',
+                  maidens: 0,
+                  noBalls: 0,
+                  wides: 0,
+                  dotBalls: 0,
+                  bestBowling: '0/0',
                   average: 0,
                   economy: 0,
                   strikeRate: 0
@@ -460,9 +551,17 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
                 }
               };
 
+              // Determine best bowling figure
+              const currentBest = careerStats.bowling.bestBowling || '0/0';
+              const [currentWickets, currentRuns] = currentBest.split('/').map(Number);
+              let newBestBowling = currentBest;
+              if (wickets > currentWickets || (wickets === currentWickets && runsConceded < currentRuns)) {
+                newBestBowling = `${wickets}/${runsConceded}`;
+              }
+
               return {
                 ...player,
-                userId: currentUserId, // Ensure userId is included
+                userId: currentUserId,
                 matches: (player.matches || 0) + 1,
                 runs: (player.runs || 0) + runs,
                 wickets: (player.wickets || 0) + wickets,
@@ -474,13 +573,14 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
                     innings: (careerStats.batting.innings || 0) + (runs > 0 || balls > 0 ? 1 : 0),
                     notOuts: (careerStats.batting.notOuts || 0) + (matchPlayerStats.wicketOver ? 0 : balls > 0 ? 1 : 0),
                     runs: (careerStats.batting.runs || 0) + runs,
+                    balls: (careerStats.batting.balls || 0) + balls,
                     highest: Math.max(careerStats.batting.highest || 0, runs),
                     fours: (careerStats.batting.fours || 0) + fours,
                     sixes: (careerStats.batting.sixes || 0) + sixes,
                     centuries: (careerStats.batting.centuries || 0) + centuries,
                     fifties: (careerStats.batting.fifties || 0) + fifties,
-                    average: 0, // Recalculate if needed
-                    strikeRate: 0 // Recalculate if needed
+                    average: 0,
+                    strikeRate: 0
                   },
                   bowling: {
                     ...careerStats.bowling,
@@ -488,16 +588,19 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
                     wickets: (careerStats.bowling.wickets || 0) + wickets,
                     runsConceded: (careerStats.bowling.runsConceded || 0) + runsConceded,
                     overs: (careerStats.bowling.overs || 0) + oversBowled,
-                    best: careerStats.bowling.best || '0/0', // Update if needed
-                    average: 0, // Recalculate if needed
-                    economy: 0, // Recalculate if needed
-                    strikeRate: 0 // Recalculate if needed
+                    maidens: (careerStats.bowling.maidens || 0) + maidens,
+                    noBalls: (careerStats.bowling.noBalls || 0) + noBalls,
+                    wides: (careerStats.bowling.wides || 0) + wides,
+                    dotBalls: (careerStats.bowling.dotBalls || 0) + dotBalls,
+                    bestBowling: newBestBowling,
+                    average: 0,
+                    economy: 0,
+                    strikeRate: 0
                   },
                   fielding: {
-                    ...careerStats.fielding,
-                    catches: careerStats.fielding.catches || 0,
-                    stumpings: careerStats.fielding.stumpings || 0,
-                    runOuts: careerStats.fielding.runOuts || 0
+                    catches: (careerStats.fielding.catches || 0) + catches,
+                    stumpings: (careerStats.fielding.stumpings || 0) + stumpings,
+                    runOuts: (careerStats.fielding.runOuts || 0) + runOuts
                   }
                 }
               };
@@ -525,6 +628,7 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
         // Combine stats from both innings for each team
         const allPlayerStats = [...(firstInningsData?.playerStats || []), ...playerStats];
         const allBowlerStats = [...(firstInningsData?.bowlerStats || []), ...bowlerStatsArray];
+        const allFieldingStats = [...(firstInningsData?.fieldingStats || []), ...fieldingStats];
 
         // Update first innings batting team (second innings bowling team)
         await updateTeamPlayers(
@@ -540,7 +644,8 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
             wicketOver: allPlayerStats.find(stat => stat.playerId === p.playerId)?.wicketOver || null
           })),
           allPlayerStats,
-          allBowlerStats
+          allBowlerStats,
+          allFieldingStats
         );
 
         // Update first innings bowling team (second innings batting team)
@@ -557,11 +662,10 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
             wicketOver: allPlayerStats.find(stat => stat.playerId === p.playerId)?.wicketOver || null
           })),
           allPlayerStats,
-          allBowlerStats
+          allBowlerStats,
+          allFieldingStats
         );
-
       }
-
     } catch (error) {
       console.error('Error saving match data:', error);
     }
@@ -572,6 +676,7 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
 
     let runsToAdd = 0;
     let isValidBall = false;
+    let isDotBall = false;
 
     if (isLabel) {
       setActiveNumber(null);
@@ -579,6 +684,7 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
     } else {
       setActiveLabel(null);
       setActiveNumber(value);
+      isDotBall = value === 0;
     }
 
     // Handle pending wide
@@ -586,9 +692,10 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
       setShowRunInfo(false);
       runsToAdd = 1 + value;
       setPlayerScore(prev => prev + runsToAdd);
+      setCurrentOverRuns(prev => prev + runsToAdd);
       setTopPlays(prev => [...prev, `W+${value}`]);
       setCurrentOverBalls(prev => [...prev, `W+${value}`]);
-      if (selectedBowler) updateBowlerStats(selectedBowler.index, false, false, runsToAdd);
+      if (selectedBowler) updateBowlerStats(selectedBowler.index, false, false, runsToAdd, false, true);
       if (value % 2 !== 0) {
         const temp = striker;
         setStriker(nonStriker);
@@ -604,6 +711,7 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
       setShowRunInfo(false);
       runsToAdd = 1 + value;
       setPlayerScore(prev => prev + runsToAdd);
+      setCurrentOverRuns(prev => prev + runsToAdd);
       setTopPlays(prev => [...prev, `NB+${value}`]);
       setCurrentOverBalls(prev => [...prev, `NB+${value}`]);
       if (striker) {
@@ -611,7 +719,7 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
         updateBatsmanStats(striker.index, value);
         updateBatsmanBalls(striker.index);
       }
-      if (selectedBowler) updateBowlerStats(selectedBowler.index, false, false, runsToAdd);
+      if (selectedBowler) updateBowlerStats(selectedBowler.index, false, false, runsToAdd, true);
       if (value % 2 !== 0) {
         const temp = striker;
         setStriker(nonStriker);
@@ -627,6 +735,7 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
       setShowRunInfo(false);
       runsToAdd = value;
       setPlayerScore(prev => prev + runsToAdd);
+      setCurrentOverRuns(prev => prev + runsToAdd);
       setTopPlays(prev => [...prev, `L+${value}`]);
       setCurrentOverBalls(prev => [...prev, `L+${value}`]);
       setValidBalls(prev => prev + 1);
@@ -648,20 +757,17 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
       setTimeout(() => {
         runsToAdd = value;
         setPlayerScore(prev => prev + runsToAdd);
+        setCurrentOverRuns(prev => prev + runsToAdd);
         setTopPlays(prev => [...prev, `O+${value}`]);
         setCurrentOverBalls(prev => [...prev, `O+${value}`]);
         if (striker) {
           updateBatsmanScore(striker.index, value);
           updateBatsmanStats(striker.index, value);
           updateBatsmanBalls(striker.index);
-          recordWicketOver(striker.index);
         }
         setValidBalls(prev => prev + 1);
         isValidBall = true;
-        if (selectedBowler) {
-          updateBowlerStats(selectedBowler.index, true, true, runsToAdd);
-        }
-        setShowBatsmanDropdown(true);
+        setShowOutTypeModal(true);
         saveMatchData();
       }, 5000);
       setPendingOut(false);
@@ -692,6 +798,7 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
       setShowRunInfo(false);
       runsToAdd = value;
       setPlayerScore(prev => prev + runsToAdd);
+      setCurrentOverRuns(prev => prev + runsToAdd);
       setTopPlays(prev => [...prev, value]);
       setCurrentOverBalls(prev => [...prev, value]);
       setValidBalls(prev => prev + 1);
@@ -701,7 +808,7 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
         updateBatsmanStats(striker.index, value);
         updateBatsmanBalls(striker.index);
       }
-      if (selectedBowler) updateBowlerStats(selectedBowler.index, false, true, runsToAdd);
+      if (selectedBowler) updateBowlerStats(selectedBowler.index, false, true, value, false, false, isDotBall);
       if (value % 2 !== 0) {
         const temp = striker;
         setStriker(nonStriker);
@@ -715,6 +822,54 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
     }
 
     saveMatchData();
+  };
+
+  const handleOutTypeSelect = (type) => {
+    setOutType(type);
+    if (type === 'catch') {
+      setShowCatcherModal(true);
+    } else if (type === 'runout') {
+      setShowFielderModal(true);
+    } else if (type === 'bowled' || type === 'lbw') {
+      recordWicketOver(striker.index, type, selectedBowler.index);
+      if (selectedBowler) {
+        updateBowlerStats(selectedBowler.index, true, true);
+      }
+      setOutCount(prev => prev + 1);
+      setShowBatsmanDropdown(true);
+    }
+    setShowOutTypeModal(false);
+  };
+
+  const handleCatcherSelect = (player) => {
+    setCatcher(player);
+    recordWicketOver(striker.index, 'catch', selectedBowler.index, player.index, 'fielder');
+    if (selectedBowler) {
+      updateBowlerStats(selectedBowler.index, true, true);
+    }
+    setOutCount(prev => prev + 1);
+    setShowCatcherModal(false);
+    setShowBatsmanDropdown(true);
+  };
+
+  const handleFielderSelect = (player) => {
+    setFielder(player);
+    setShowFielderModal(false);
+    setFielderRole(null);
+  };
+
+  const handleFielderRoleSelect = (role) => {
+    setFielderRole(role);
+    if (role === 'wicketKeeper') {
+      recordWicketOver(striker.index, 'stumping', selectedBowler.index, fielder.index, role);
+    } else {
+      recordWicketOver(striker.index, 'runout', selectedBowler.index, fielder.index, role);
+    }
+    if (selectedBowler) {
+      updateBowlerStats(selectedBowler.index, true, true);
+    }
+    setOutCount(prev => prev + 1);
+    setShowBatsmanDropdown(true);
   };
 
   useEffect(() => {
@@ -820,8 +975,8 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
             photoUrl: player.image || '',
             role: player.role || '',
             user: player.user || 'No',
-            playerId: player.playerId || '', // Use playerId from clubTeams
-            userId: auth.currentUser ? auth.currentUser.uid : '', // Add current userId
+            playerId: player.playerId || '',
+            userId: auth.currentUser ? auth.currentUser.uid : '',
             runs: stats.runs || 0,
             balls: stats.balls || 0,
             dotBalls: stats.dotBalls || 0,
@@ -831,7 +986,11 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
             fours: stats.fours || 0,
             sixes: stats.sixes || 0,
             milestone: stats.milestone || null,
-            wicketOver: wicket ? wicket.over : null
+            wicketOver: wicket ? wicket.over : null,
+            dismissalType: wicket ? wicket.type : null,
+            bowlerIndex: wicket ? wicket.bowlerIndex : null,
+            fielderIndex: wicket ? wicket.fielderIndex : null,
+            fielderRole: wicket ? wicket.fielderRole : null
           };
         });
         const bowlerStatsArray = bowlingTeamPlayers.map(player => {
@@ -842,11 +1001,39 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
             photoUrl: player.image || '',
             role: player.role || '',
             user: player.user || 'No',
-            playerId: player.playerId || '', // Use playerId from clubTeams
-            userId: auth.currentUser ? auth.currentUser.uid : '', // Add current userId
+            playerId: player.playerId || '',
+            userId: auth.currentUser ? auth.currentUser.uid : '',
             wickets: stats.wickets || 0,
             oversBowled: stats.oversBowled || '0.0',
-            runsConceded: stats.runsConceded || 0
+            runsConceded: stats.runsConceded || 0,
+            maidens: stats.maidens || 0,
+            noBalls: stats.noBalls || 0,
+            wides: stats.wides || 0,
+            dotBalls: stats.dotBalls || 0
+          };
+        });
+        const fieldingStats = bowlingTeamPlayers.map(player => {
+          const catches = wicketOvers.filter(w => 
+            w.fielderIndex === player.index && w.type === 'catch'
+          ).length;
+          const stumpings = wicketOvers.filter(w => 
+            w.fielderIndex === player.index && w.type === 'stumping' && w.fielderRole === 'wicketKeeper'
+          ).length;
+          const runOuts = wicketOvers.filter(w => 
+            w.fielderIndex === player.index && w.type === 'runout' && w.fielderRole === 'fielder'
+          ).length;
+          
+          return {
+            index: player.index || '',
+            name: player.name || 'Unknown',
+            photoUrl: player.image || '',
+            role: player.role || '',
+            user: player.user || 'No',
+            playerId: player.playerId || '',
+            userId: auth.currentUser ? auth.currentUser.uid : '',
+            catches,
+            stumpings,
+            runOuts
           };
         });
         setFirstInningsData({
@@ -855,7 +1042,8 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
           wickets: outCount,
           overs,
           playerStats,
-          bowlerStats: bowlerStatsArray
+          bowlerStats: bowlerStatsArray,
+          fieldingStats
         });
         setTargetScore(playerScore + 1);
         setIsChasing(true);
@@ -887,9 +1075,27 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
       return;
     }
 
-    if (validBalls === 6) {
+   if (validBalls === 6) {
+      // Check for maiden over (all balls are dot balls with 0 runs)
+      const isMaidenOver = currentOverBalls.every(ball => {
+        if (typeof ball === 'number') return ball === 0;
+        if (typeof ball === 'string') {
+          // Exclude wides and no-balls from maiden consideration
+          if (ball.toLowerCase().includes('w')) return false; // Wide
+          if (ball.toLowerCase().includes('nb')) return false; // No-ball
+          if (ball.toLowerCase().includes('l')) return false; // Leg byes
+          return parseInt(ball.split('+')[1]) === 0; // Check if runs are 0
+        }
+        return false;
+      });
+
+      if (isMaidenOver && selectedBowler) {
+        updateMaidenOvers(selectedBowler.index);
+      }
+      
       setPastOvers(prev => [...prev, currentOverBalls]);
       setCurrentOverBalls([]);
+      setCurrentOverRuns(0);
       setOverNumber(prev => prev + 1);
       setValidBalls(0);
       const temp = striker;
@@ -900,7 +1106,7 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
         setShowBowlerDropdown(true);
       }, 1000);
     }
-  }, [validBalls, currentOverBalls, nonStriker, overNumber, isChasing, targetScore, playerScore, gameFinished, outCount, maxOvers, teamA, teamB]);
+  }, [validBalls, outCount, overNumber, isChasing, targetScore, playerScore, gameFinished, maxOvers, teamA, teamB, currentOverRuns]);
 
   const resetInnings = () => {
     setCurrentOverBalls([]);
@@ -930,6 +1136,11 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
     setActiveLabel(null);
     setActiveNumber(null);
     setShowRunInfo(false);
+    setCurrentOverRuns(0);
+    setOutType(null);
+    setCatcher(null);
+    setFielder(null);
+    setFielderRole(null);
   };
 
   const resetGame = () => {
@@ -997,7 +1208,11 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
         wickets: prev[player.index]?.wickets || 0,
         ballsBowled: prev[player.index]?.ballsBowled || 0,
         oversBowled: prev[player.index]?.oversBowled || '0.0',
-        runsConceded: prev[player.index]?.runsConceded || 0
+        runsConceded: prev[player.index]?.runsConceded || 0,
+        maidens: prev[player.index]?.maidens || 0,
+        noBalls: prev[player.index]?.noBalls || 0,
+        wides: prev[player.index]?.wides || 0,
+        dotBalls: prev[player.index]?.dotBalls || 0
       }
     }));
     setShowBowlerDropdown(false);
@@ -1024,7 +1239,6 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
         milestone: null
       }
     }));
-    setOutCount(prev => prev + 1);
     saveMatchData();
   };
 
@@ -1052,13 +1266,13 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
   const cancelNonStriker = () => {
     setSelectedBatsmenIndices(prev => prev.filter(i => i !== nonStriker?.index));
     const newScores = { ...batsmenScores };
-    delete newScores[nonStriker]?.index;
+    delete newScores[nonStriker?.index];
     setBatsmenScores(newScores);
     const newBalls = { ...batsmenBalls };
-    delete newBalls[nonStriker]?.index;
+    delete newBalls[nonStriker?.index];
     setBatsmenBalls(newBalls);
     const newStats = { ...batsmenStats };
-    delete newStats[nonStriker]?.index;
+    delete newStats[nonStriker?.index];
     setBatsmenStats(newStats);
     setNonStriker(null);
     saveMatchData();
@@ -1087,7 +1301,6 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
       }
 
       const originPage = location.state?.origin;
-      console.log(originPage);
       if (originPage) {
         navigate(originPage, { state: { activeTab: 'Match Results', winner: winnerTeamName, matchId } });
       } else {
@@ -1214,6 +1427,147 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
           </div>
         )}
 
+        {/* Out Type Selection Modal */}
+        {showOutTypeModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-[#4C0025] p-6 rounded-lg max-w-md w-full">
+              <h3 className="text-white text-xl font-bold mb-4">Select Out Type</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  onClick={() => handleOutTypeSelect('catch')}
+                  className="w-full h-12 bg-[#FF62A1] text-white font-bold text-lg rounded-lg border-2 border-white"
+                >
+                  Catch
+                </button>
+                <button
+                  onClick={() => handleOutTypeSelect('bowled')}
+                  className="w-full h-12 bg-[#FF62A1] text-white font-bold text-lg rounded-lg border-2 border-white"
+                >
+                  Bowled
+                </button>
+                <button
+                  onClick={() => handleOutTypeSelect('runout')}
+                  className="w-full h-12 bg-[#FF62A1] text-white font-bold text-lg rounded-lg border-2 border-white"
+                >
+                  Run Out
+                </button>
+                <button
+                  onClick={() => handleOutTypeSelect('lbw')}
+                  className="w-full h-12 bg-[#FF62A1] text-white font-bold text-lg rounded-lg border-2 border-white"
+                >
+                  LBW
+                </button>
+                <button
+                  onClick={() => {
+                    setShowOutTypeModal(false);
+                    setPendingOut(false);
+                    setTopPlays(prev => prev.slice(0, -1));
+                    setCurrentOverBalls(prev => prev.slice(0, -1));
+                    setValidBalls(prev => Math.max(0, prev - 1));
+                  }}
+                  className="w-full h-12 bg-red-600 text-white font-bold text-lg rounded-lg border-2 border-white"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Catcher Selection Modal */}
+        {showCatcherModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-[#4C0025] p-6 rounded-lg max-w-md w-full">
+              <h3 className="text-white text-xl font-bold mb-4">Select Catcher</h3>
+              <div className="grid grid-cols-2 gap-4">
+                {bowlingTeamPlayers.map(player => (
+                  <div
+                    key={player.index}
+                    onClick={() => handleCatcherSelect(player)}
+                    className="cursor-pointer flex flex-col items-center text-white text-center p-2 hover:bg-[#FF62A1] rounded-lg"
+                  >
+                    {getPlayerImage(player, 'w-12 h-12 md:w-16 md:h-16')}
+                    <span className="text-xs md:text-sm">{player.name}</span>
+                    <span className="text-xs">{player.role}</span>
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={() => {
+                  setShowCatcherModal(false);
+                  setShowOutTypeModal(true);
+                }}
+                className="w-full h-12 mt-4 bg-red-600 text-white font-bold text-lg rounded-lg border-2 border-white"
+              >
+                Back
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Fielder Selection Modal */}
+        {showFielderModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-[#4C0025] p-6 rounded-lg max-w-md w-full">
+              <h3 className="text-white text-xl font-bold mb-4">Select Fielder</h3>
+              <div className="grid grid-cols-2 gap-4">
+                {bowlingTeamPlayers.map(player => (
+                  <div
+                    key={player.index}
+                    onClick={() => handleFielderSelect(player)}
+                    className="cursor-pointer flex flex-col items-center text-white text-center p-2 hover:bg-[#FF62A1] rounded-lg"
+                  >
+                    {getPlayerImage(player, 'w-12 h-12 md:w-16 md:h-16')}
+                    <span className="text-xs md:text-sm">{player.name}</span>
+                    <span className="text-xs">{player.role}</span>
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={() => {
+                  setShowFielderModal(false);
+                  setShowOutTypeModal(true);
+                }}
+                className="w-full h-12 mt-4 bg-red-600 text-white font-bold text-lg rounded-lg border-2 border-white"
+              >
+                Back
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Fielder Role Selection Modal */}
+        {fielder && !fielderRole && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-[#4C0025] p-6 rounded-lg max-w-md w-full">
+              <h3 className="text-white text-xl font-bold mb-4">Select Fielder Role</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <button
+                  onClick={() => handleFielderRoleSelect('wicketKeeper')}
+                  className="w-full h-12 bg-[#FF62A1] text-white font-bold text-lg rounded-lg border-2 border-white"
+                >
+                  Wicket Keeper
+                </button>
+                <button
+                  onClick={() => handleFielderRoleSelect('fielder')}
+                  className="w-full h-12 bg-[#FF62A1] text-white font-bold text-lg rounded-lg border-2 border-white"
+                >
+                  Fielder
+                </button>
+              </div>
+              <button
+                onClick={() => {
+                  setFielder(null);
+                  setShowFielderModal(true);
+                }}
+                className="w-full h-12 mt-4 bg-red-600 text-white font-bold text-lg rounded-lg border-2 border-white"
+              >
+                Back
+              </button>
+            </div>
+          </div>
+        )}
+
         {(currentView !== 'toss' || striker || nonStriker || bowlerVisible || showThirdButtonOnly) && (
           <button
             onClick={goBack}
@@ -1280,6 +1634,14 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
                     <div className="flex flex-col items-center">
                       <div className="font-bold text-sm md:text-base">{selectedBowler.name}</div>
                       <div className="text-xs md:text-sm">{selectedBowler.role}</div>
+                      {bowlerStats[selectedBowler.index] && (
+                        <div className="text-xs">
+                          {bowlerStats[selectedBowler.index].oversBowled} - {bowlerStats[selectedBowler.index].runsConceded} - {bowlerStats[selectedBowler.index].wickets}
+                          {bowlerStats[selectedBowler.index].maidens > 0 && (
+                            <span className="text-yellow-300"> (M: {bowlerStats[selectedBowler.index].maidens})</span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1290,6 +1652,14 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
                   <div className="flex flex-col items-center">
                     <div className="font-bold text-sm md:text-base">{selectedBowler.name}</div>
                     <div className="text-xs md:text-sm">{selectedBowler.role}</div>
+                    {bowlerStats[selectedBowler.index] && (
+                      <div className="text-xs">
+                        {bowlerStats[selectedBowler.index].oversBowled} - {bowlerStats[selectedBowler.index].runsConceded} - {bowlerStats[selectedBowler.index].wickets}
+                        {bowlerStats[selectedBowler.index].maidens > 0 && (
+                          <span className="text-yellow-300"> (M: {bowlerStats[selectedBowler.index].maidens})</span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
