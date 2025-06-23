@@ -21,20 +21,13 @@ const ClubDetail = () => {
     // Set up authentication listener
     const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-      if (currentUser) {
-        fetchClubDetails(currentUser.uid);
-      } else {
-        setLoading(false);
-        setError("You must be logged in to view club details.");
-        setClub(null);
-        setClubName(''); // Clear club name if not logged in
-      }
+      fetchClubDetails(); // Fetch club details regardless of user login status
     });
 
     return () => unsubscribeAuth();
   }, [id, setClubName]);
 
-  const fetchClubDetails = async (userId) => {
+  const fetchClubDetails = async () => {
     setLoading(true);
     setError(null);
     try {
@@ -43,15 +36,8 @@ const ClubDetail = () => {
 
       if (docSnap.exists()) {
         const clubData = { id: docSnap.id, ...docSnap.data() };
-        // Check if the club's userId matches the logged-in user's userId
-        if (clubData.userId === userId) {
-          setClub(clubData);
-          setClubName(clubData.name); // Set club name in context
-        } else {
-          setError("You are not authorized to view this club.");
-          setClub(null);
-          setClubName('');
-        }
+        setClub(clubData);
+        setClubName(clubData.name); // Set club name in context
       } else {
         setError("Club not found.");
         setClub(null);
@@ -69,9 +55,7 @@ const ClubDetail = () => {
 
   const handleDetailsAdded = (detailsData) => {
     setIsModalOpen(false);
-    if (user) {
-      fetchClubDetails(user.uid);
-    }
+    fetchClubDetails(); // Refresh club details after adding new details
   };
 
   if (loading) {
@@ -200,8 +184,8 @@ const ClubDetail = () => {
                     </div>
                   </div>
                 )}
-                {/* Add Details Button */}
-                {user && (
+                {/* Add Details Button (only for matching userId) */}
+                {user && club.userId === user.uid && (
                   <div className="p-3 md:p-4 bg-gray-50 rounded-lg">
                     <button
                       onClick={() => setIsModalOpen(true)}
@@ -276,8 +260,8 @@ const ClubDetail = () => {
         </div>
       </main>
 
-      {/* Add Details Modal */}
-      {isModalOpen && user && (
+      {/* Add Details Modal (only for matching userId) */}
+      {isModalOpen && user && club.userId === user.uid && (
         <AddDetailsModal
           onClose={() => setIsModalOpen(false)}
           onDetailsAdded={handleDetailsAdded}

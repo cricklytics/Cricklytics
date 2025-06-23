@@ -1,10 +1,11 @@
-// src/components/modals/AddTournamentModal.jsx
 import React, { useState } from 'react';
 import { db } from '../../../firebase'; // Adjust path based on your file structure
 import { doc, setDoc } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useClub } from './ClubContext'; // Import the context hook
 
-const AddTournamentModal = ({ onClose, onTournamentAdded, currentUserId }) => { // Receive currentUserId
+const AddTournamentModal = ({ onClose, onTournamentAdded, currentUserId }) => {
+  const { clubName } = useClub(); // Get clubName from context
   const [formData, setFormData] = useState({
     name: '',
     location: '',
@@ -31,7 +32,7 @@ const AddTournamentModal = ({ onClose, onTournamentAdded, currentUserId }) => { 
     setError(null);
     setSuccess(false);
 
-    if (!currentUserId) { // Crucial check: make sure we have a user ID
+    if (!currentUserId) {
       setError("No authenticated user found. Please log in.");
       setLoading(false);
       return;
@@ -52,7 +53,8 @@ const AddTournamentModal = ({ onClose, onTournamentAdded, currentUserId }) => { 
         teams: parseInt(formData.teams) || 0,
         matches: parseInt(formData.matches) || 0,
         createdAt: new Date(),
-        userId: currentUserId, // Store the actual current user's ID
+        userId: currentUserId,
+        clubName: clubName || '', // Store clubName from context, default to empty string if undefined
       };
 
       await setDoc(doc(db, "tournaments", tournamentId), dataToSave);
@@ -61,8 +63,15 @@ const AddTournamentModal = ({ onClose, onTournamentAdded, currentUserId }) => { 
 
       setTimeout(() => {
         setFormData({
-          name: '', location: '', season: '', teams: '', matches: '',
-          startDate: '', endDate: '', currentStage: '', defendingChampion: '',
+          name: '',
+          location: '',
+          season: '',
+          teams: '',
+          matches: '',
+          startDate: '',
+          endDate: '',
+          currentStage: '',
+          defendingChampion: '',
         });
         onClose();
       }, 1500);
@@ -94,46 +103,117 @@ const AddTournamentModal = ({ onClose, onTournamentAdded, currentUserId }) => { 
           {success && <p className="text-green-500 text-sm mb-4">Tournament added successfully!</p>}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Form fields (keep as is) */}
             <div>
               <label className="block mb-1 text-gray-300">Tournament Name</label>
-              <input type="text" name="name" value={formData.name} onChange={handleChange} className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500" required />
+              <input
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500"
+                required
+              />
             </div>
             <div>
               <label className="block mb-1 text-gray-300">Location</label>
-              <input type="text" name="location" value={formData.location} onChange={handleChange} className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500" required />
+              <input
+                type="text"
+                name="location"
+                value={formData.location}
+                onChange={handleChange}
+                className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500"
+                required
+              />
             </div>
             <div>
               <label className="block mb-1 text-gray-300">Season (e.g., 2023-24)</label>
-              <input type="text" name="season" value={formData.season} onChange={handleChange} className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500" required />
+              <input
+                type="text"
+                name="season"
+                value={formData.season}
+                onChange={handleChange}
+                className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500"
+                required
+              />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block mb-1 text-gray-300">Number of Teams</label>
-                <input type="number" name="teams" value={formData.teams} onChange={handleChange} className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500" required />
+                <input
+                  type="number"
+                  name="teams"
+                  value={formData.teams}
+                  onChange={handleChange}
+                  className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500"
+                  required
+                />
               </div>
               <div>
                 <label className="block mb-1 text-gray-300">Number of Matches</label>
-                <input type="number" name="matches" value={formData.matches} onChange={handleChange} className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500" required />
+                <input
+                  type="number"
+                  name="matches"
+                  value={formData.matches}
+                  onChange={handleChange}
+                  className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500"
+                  required
+                />
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block mb-1 text-gray-300">Start Date</label>
-                <input type="date" name="startDate" value={formData.startDate} onChange={handleChange} className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500" required />
+                <input
+                  type="date"
+                  name="startDate"
+                  value={formData.startDate}
+                  onChange={handleChange}
+                  className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500"
+                  required
+                />
               </div>
               <div>
                 <label className="block mb-1 text-gray-300">End Date</label>
-                <input type="date" name="endDate" value={formData.endDate} onChange={handleChange} className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500" required />
+                <input
+                  type="date"
+                  name="endDate"
+                  value={formData.endDate}
+                  onChange={handleChange}
+                  className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500"
+                  required
+                />
               </div>
             </div>
             <div>
               <label className="block mb-1 text-gray-300">Current Stage (e.g., Group Stage, Knockout Round)</label>
-              <input type="text" name="currentStage" value={formData.currentStage} onChange={handleChange} className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500" required />
+              <input
+                type="text"
+                name="currentStage"
+                value={formData.currentStage}
+                onChange={handleChange}
+                className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500"
+                required
+              />
             </div>
             <div>
               <label className="block mb-1 text-gray-300">Defending Champion</label>
-              <input type="text" name="defendingChampion" value={formData.defendingChampion} onChange={handleChange} className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500" required />
+              <input
+                type="text"
+                name="defendingChampion"
+                value={formData.defendingChampion}
+                onChange={handleChange}
+                className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-purple-500 focus:border-purple-500"
+                required
+              />
+            </div>
+            <div>
+              <label className="block mb-1 text-gray-300">Club Name (from context)</label>
+              <input
+                type="text"
+                value={clubName || 'No club selected'}
+                className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white opacity-50"
+                disabled
+              />
             </div>
 
             <div className="flex justify-end space-x-3 mt-6">

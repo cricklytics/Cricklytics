@@ -2,8 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import FireworksCanvas from '../../components/sophita/HomePage/FireworksCanvas';
 import { FaChevronDown, FaChevronUp, FaTrophy, FaHeart, FaCommentDots, FaShareAlt } from 'react-icons/fa';
-import { ResponsiveContainer, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Line } from 'recharts';
-import { ScatterChart, Scatter, ZAxis, BarChart, Bar } from 'recharts';
+import { ResponsiveContainer, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Line, Scatter } from 'recharts';
 import logo from '../../assets/sophita/HomePage/Picture3_2.png';
 import trophy from '../../assets/sophita/HomePage/trophy.png';
 import advertisement1 from '../../assets/sophita/HomePage/Advertisement1.webp';
@@ -11,35 +10,35 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import Startmatch from '../RoundRobin/StartmatchRR';
 import nav from '../../assets/kumar/right-chevron.png';
 import placeholderFlag from '../../assets/sophita/HomePage/Netherland.jpeg';
-import { db, storage } from '../../firebase';
-import { collection, addDoc, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
+import { db, storage, auth } from '../../firebase';
+import { collection, addDoc, getDocs, query, where, serverTimestamp, onSnapshot, orderBy } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
-const IPLCards = ({ setActiveTab, tournamentId }) => {
+const IPLCards = ({ setActiveTab }) => {
   const [highlights, setHighlights] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const photoInputRef = useRef(null);
   const videoInputRef = useRef(null);
 
-  // Fetch highlights from Firestore
+  // Fetch highlights from Firestore for the current user
   useEffect(() => {
-    const fetchHighlights = async () => {
-      if (!tournamentId) {
-        setError('No tournament ID provided.');
-        setLoading(false);
-        return;
-      }
-
+    (async () => {
       try {
         setLoading(true);
-        const highlightsRef = collection(db, 'matchstartRR', tournamentId, 'highlights');
+        const user = auth.currentUser;
+        if (!user) {
+          setError('Please log in to view highlights.');
+          setLoading(false);
+          return;
+        }
+        const userId = user.uid;
+        const highlightsRef = query(collection(db, 'match_highlights'), where('userId', '==', userId));
         const snapshot = await getDocs(highlightsRef);
         const fetchedHighlights = snapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data(),
         }));
-        // Sort by uploadedAt descending (newest first)
         fetchedHighlights.sort((a, b) => b.uploadedAt?.seconds - a.uploadedAt?.seconds);
         setHighlights(fetchedHighlights);
       } catch (err) {
@@ -48,10 +47,8 @@ const IPLCards = ({ setActiveTab, tournamentId }) => {
       } finally {
         setLoading(false);
       }
-    };
-
-    fetchHighlights();
-  }, [tournamentId]);
+    })();
+  }, []);
 
   const handlePhotoUploadClick = () => {
     photoInputRef.current.click();
@@ -63,8 +60,8 @@ const IPLCards = ({ setActiveTab, tournamentId }) => {
 
   const handleFileChange = async (event) => {
     const files = event.target.files;
-    if (files.length === 0 || !tournamentId) {
-      alert('No file selected or tournament ID missing.');
+    if (files.length === 0) {
+      alert('No file selected.');
       return;
     }
 
@@ -76,28 +73,34 @@ const IPLCards = ({ setActiveTab, tournamentId }) => {
     }
 
     try {
-      // Upload to Firebase Storage
-      const storagePath = `highlights/${tournamentId}/${Date.now()}_${file.name}`;
+      const user = auth.currentUser;
+      if (!user) {
+        alert('Please log in to upload highlights.');
+        return;
+      }
+      const userId = user.uid;
+
+      const storagePath = `match_highlights/${userId}/${Date.now()}_${file.name}`;
       const storageRef = ref(storage, storagePath);
       await uploadBytes(storageRef, file);
       const downloadURL = await getDownloadURL(storageRef);
 
-      // Save metadata to Firestore
-      const highlightsRef = collection(db, 'matchstartRR', tournamentId, 'highlights');
+      const highlightsRef = collection(db, 'match_highlights');
       await addDoc(highlightsRef, {
         url: downloadURL,
         type: fileType,
-        title: file.name, // Use file name as title (can be enhanced with user input)
+        title: file.name,
         uploadedAt: serverTimestamp(),
+        userId: userId,
       });
 
-      // Update local state to reflect new highlight
       setHighlights(prev => [
         {
           url: downloadURL,
           type: fileType,
           title: file.name,
-          uploadedAt: { seconds: Math.floor(Date.now() / 1000) }, // Approximate for immediate display
+          uploadedAt: { seconds: Math.floor(Date.now() / 1000) },
+          userId: userId,
         },
         ...prev,
       ]);
@@ -108,7 +111,7 @@ const IPLCards = ({ setActiveTab, tournamentId }) => {
       alert('Failed to upload file.');
     }
 
-    event.target.value = null; // Reset input
+    event.target.value = null;
   };
 
   const handleNextClick = () => {
@@ -197,115 +200,242 @@ const IPLCards = ({ setActiveTab, tournamentId }) => {
   );
 };
 
-const WormGraph = () => {
-  const data = [
-    { over: 1, runs: 5 },
-    { over: 2, runs: 15 },
-    { over: 3, runs: 25 },
-    { over: 4, runs: 35 },
-  ];
+const WormGraph = ({ matchData }) => {
+  if (!matchData || !matchData.firstInnings || !matchData.secondInnings) {
+    return <p className="text-white text-center">No match data available.</p>;
+  }
+
+  const { firstInnings, secondInnings } = matchData;
+
+  const parseOvers = (overs) => {
+    if (!overs) return 0;
+    const [whole, decimal] = overs.split('.');
+    return parseFloat(`${whole}.${decimal || 0}`);
+  };
+
+  const teamAData = [];
+  const teamBData = [];
+  const teamAWickets = [];
+  const teamBWickets = [];
+
+  const teamAOvers = parseOvers(firstInnings.overs);
+  const teamBOvers = parseOvers(secondInnings.overs);
+
+  const runsPerOverA = firstInnings.totalScore / (teamAOvers || 1);
+  const runsPerOverB = secondInnings.totalScore / (teamBOvers || 1);
+
+  for (let over = 0.1; over <= teamAOvers; over += 0.1) {
+    const runs = Math.round(runsPerOverA * over);
+    teamAData.push({
+      over: parseFloat(over.toFixed(1)),
+      runs: runs > firstInnings.totalScore ? firstInnings.totalScore : runs
+    });
+  }
+
+  for (let over = 0.1; over <= teamBOvers; over += 0.1) {
+    const runs = Math.round(runsPerOverB * over);
+    teamBData.push({
+      over: parseFloat(over.toFixed(1)),
+      runs: runs > secondInnings.totalScore ? secondInnings.totalScore : runs
+    });
+  }
+
+  firstInnings.playerStats.forEach(player => {
+    if (player.wicketOver) {
+      const over = parseOvers(player.wicketOver);
+      const runsAtWicket = Math.round(runsPerOverA * over);
+      teamAWickets.push({
+        over: parseFloat(over.toFixed(1)),
+        runs: runsAtWicket > firstInnings.totalScore ? firstInnings.totalScore : runsAtWicket,
+        name: player.name
+      });
+    }
+  });
+
+  secondInnings.playerStats.forEach(player => {
+    if (player.wicketOver) {
+      const over = parseOvers(player.wicketOver);
+      const runsAtWicket = Math.round(runsPerOverB * over);
+      teamBWickets.push({
+        over: parseFloat(over.toFixed(1)),
+        runs: runsAtWicket > secondInnings.totalScore ? secondInnings.totalScore : runsAtWicket,
+        name: player.name
+      });
+    }
+  });
 
   return (
     <ResponsiveContainer width="100%" height={300}>
-      <LineChart data={data}>
+      <LineChart margin={{ top: 20, right: 20, bottom: 40, left: 20 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
-        <XAxis dataKey="over" stroke="#cbd5e0" />
-        <YAxis stroke="#cbd5e0" />
-        <Tooltip contentStyle={{ backgroundColor: "#374151", color: "#fff" }} />
-        <Line type="monotone" dataKey="runs" stroke="#ffc658" strokeWidth={2} />
+        <XAxis
+          dataKey="over"
+          type="number"
+          domain={[0.1, Math.max(teamAOvers, teamBOvers)]}
+          stroke="#cbd5e0"
+          label={{ value: 'Over', position: 'bottom', fill: '#fff' }}
+          tickFormatter={(value) => value.toFixed(1)}
+          interval="preserveStartEnd"
+        />
+        <YAxis
+          stroke="#cbd5e0"
+          label={{ value: 'Runs', position: 'insideLeft', angle: -90, fill: '#fff' }}
+        />
+        <Tooltip
+          contentStyle={{ backgroundColor: '#374151', color: '#fff' }}
+          formatter={(value, name, props) => {
+            if (name.includes('Wickets')) {
+              return [`${props.payload.name} out`, null];
+            }
+            return [value, name];
+          }}
+        />
+        <Legend
+          wrapperStyle={{ color: '#fff', marginBottom: '20px' }}
+        />
+        <Line
+          type="monotone"
+          dataKey="runs"
+          data={teamAData}
+          name={firstInnings.teamName}
+          stroke="#3B82F6"
+          strokeWidth={2}
+          dot={false}
+        />
+        <Scatter
+          data={teamAWickets}
+          name={`${firstInnings.teamName} Wickets`}
+          fill="#FF0000"
+          shape="cross"
+          size={8}
+        />
+        <Line
+          type="monotone"
+          dataKey="runs"
+          data={teamBData}
+          name={secondInnings.teamName}
+          stroke="#F97316"
+          strokeWidth={2}
+          dot={false}
+        />
+        <Scatter
+          data={teamBWickets}
+          name={`${secondInnings.teamName} Wickets`}
+          fill="#FF0000"
+          shape="cross"
+          size={8}
+        />
       </LineChart>
     </ResponsiveContainer>
   );
 };
 
-const WagonWheelChart = ({ data }) => (
-  <ResponsiveContainer width="100%" height={300}>
-    <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
-      <CartesianGrid stroke="#4a5568" />
-      <XAxis type="number" dataKey="distance" name="Distance" domain={[0, 10]} stroke="#cbd5e0" />
-      <YAxis type="number" dataKey="angle" name="Angle" domain={[0, 360]} stroke="#cbd5e0" />
-      <Tooltip contentStyle={{ backgroundColor: '#374151', color: '#fff' }} />
-      <Scatter data={data} fill="#8884d8" />
-    </ScatterChart>
-  </ResponsiveContainer>
-);
+const Scorecard = ({ matchData }) => {
+  if (!matchData || !matchData.firstInnings || !matchData.secondInnings) {
+    return <p className="text-white text-center">No match data available.</p>;
+  }
 
-const BatsmanHeatmapChart = ({ data }) => (
-  <ResponsiveContainer width="100%" height={300}>
-    <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
-      <CartesianGrid stroke="#4a5568" />
-      <XAxis type="number" dataKey="x" name="Pitch X" domain={[0, 5]} stroke="#cbd5e0" />
-      <YAxis type="number" dataKey="y" name="Pitch Y" domain={[0, 5]} stroke="#cbd5e0" />
-      <ZAxis type="number" dataKey="intensity" range={[0, 100]} />
-      <Tooltip contentStyle={{ backgroundColor: '#374151', color: '#fff' }} />
-      <Scatter data={data} fill="#ffc658" />
-    </ScatterChart>
-  </ResponsiveContainer>
-);
+  const { firstInnings, secondInnings, teamA, teamB } = matchData;
+  const [activeTeam, setActiveTeam] = useState('teamA');
 
-const BowlerHeatmapChart = ({ data }) => (
-  <ResponsiveContainer width="100%" height={300}>
-    <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
-      <CartesianGrid stroke="#4a5568" />
-      <XAxis type="number" dataKey="x" name="Pitch X" domain={[0, 5]} stroke="#cbd5e0" />
-      <YAxis type="number" dataKey="y" name="Pitch Y" domain={[0, 5]} stroke="#cbd5e0" />
-      <ZAxis type="number" dataKey="intensity" range={[0, 100]} />
-      <Tooltip contentStyle={{ backgroundColor: '#374151', color: '#fff' }} />
-      <Scatter data={data} fill="#82ca9d" />
-    </ScatterChart>
-  </ResponsiveContainer>
-);
+  const getTeamScorecard = (team, innings, opponentInnings) => {
+    const playedPlayers = innings.playerStats.filter(
+      player => player.runs > 0 || player.balls > 0 || player.wicketOver
+    );
 
-const FallOfWicketsChart = () => {
-  const data = [
-    { over: 5, wickets: 1 },
-    { over: 12, wickets: 2 },
-    { over: 18, wickets: 3 },
-  ];
+    const unplayedPlayers = innings.playerStats
+      .filter(player => player.runs === 0 && player.balls === 0 && !player.wicketOver)
+      .map(player => player.name)
+      .join(', ');
 
-  return (
-    <ResponsiveContainer width="100%" height={300}>
-      <BarChart data={data}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
-        <XAxis dataKey="over" stroke="#cbd5e0" />
-        <YAxis stroke="#cbd5e0" />
-        <Tooltip contentStyle={{ backgroundColor: "#374151", color: "#fff" }} />
-        <Bar dataKey="wickets" fill="#d9534f" />
-      </BarChart>
-    </ResponsiveContainer>
-  );
-};
+    const bowlers = opponentInnings.bowlerStats.filter(bowler => bowler.oversBowled !== '0.0');
 
-const FallOfWicketsDetails = () => {
-  const data = [
-    { wicket: 1, batsman: 'Player A', bowler: 'Bowler X', over: 5, score: 30 },
-    { wicket: 2, batsman: 'Player B', bowler: 'Bowler Y', over: 12, score: 65 },
-    { wicket: 3, batsman: 'Player C', bowler: 'Bowler Z', over: 18, score: 95 },
-  ];
+    const getFifties = (runs) => (runs >= 50 && runs < 100 ? 1 : 0);
+    const getHundreds = (runs) => (runs >= 100 ? 1 : 0);
 
-  return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-700">
-        <thead>
-          <tr>
-            <th className="px-4 py-2 text-left">Wicket</th>
-            <th className="px-4 py-2 text-left">Batsman</th>
-            <th className="px-4 py-2 text-left">Bowler</th>
-            <th className="px-4 py-2 text-left">Over</th>
-            <th className="px-4 py-2 text-left">Score</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-700">
-          {data.map((item) => (
-            <tr key={item.wicket}>
-              <td className="px-4 py-2">{item.wicket}</td>
-              <td className="px-4 py-2">{item.batsman}</td>
-              <td className="px-4 py-2">{item.bowler}</td>
-              <td className="px-4 py-2">{item.score}</td>
+    return (
+      <div className="mt-4">
+        <h3 className="text-lg font-semibold mb-4 text-white">{team.name} Innings</h3>
+        <table className="min-w-full divide-y divide-gray-700 mb-4">
+          <thead>
+            <tr className="bg-gray-800">
+              <th className="px-4 py-2 text-left text-white">Batsman</th>
+              <th className="px-4 py-2 text-right text-white">Runs</th>
+              <th className="px-4 py-2 text-right text-white">Balls</th>
+              <th className="px-4 py-2 text-right text-white">4s</th>
+              <th className="px-4 py-2 text-right text-white">6s</th>
+              <th className="px-4 py-2 text-right text-white">50s</th>
+              <th className="px-4 py-2 text-right text-white">100s</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody className="divide-y divide-gray-700">
+            {playedPlayers.map((player, index) => (
+              <tr key={player.index || index} className={index % 2 === 0 ? 'bg-gray-700' : 'bg-gray-600'}>
+                <td className="px-4 py-2 text-white">{player.name}{player.wicketOver ? ' (out)' : ''}</td>
+                <td className="px-4 py-2 text-right text-white">{player.runs}</td>
+                <td className="px-4 py-2 text-right text-white">{player.balls}</td>
+                <td className="px-4 py-2 text-right text-white">{player.fours}</td>
+                <td className="px-4 py-2 text-right text-white">{player.sixes}</td>
+                <td className="px-4 py-2 text-right text-white">{getFifties(player.runs)}</td>
+                <td className="px-4 py-2 text-right text-white">{getHundreds(player.runs)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {unplayedPlayers && (
+          <p className="text-white mb-4">
+            <span className="font-semibold">Next to Bat: </span>{unplayedPlayers}
+          </p>
+        )}
+        <h4 className="text-md font-semibold mb-2 text-white">Bowling ({innings.teamName})</h4>
+        <table className="min-w-full divide-y divide-gray-700">
+          <thead>
+            <tr className="bg-gray-800">
+              <th className="px-4 py-2 text-left text-white">Bowler</th>
+              <th className="px-4 py-2 text-right text-white">Overs</th>
+              <th className="px-4 py-2 text-right text-white">Runs</th>
+              <th className="px-4 py-2 text-right text-white">Wickets</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-700">
+            {bowlers.length > 0 ? (
+              bowlers.map((bowler, index) => (
+                <tr key={bowler.index || index} className={index % 2 === 0 ? 'bg-gray-700' : 'bg-gray-600'}>
+                  <td className="px-4 py-2 text-white">{bowler.name}</td>
+                  <td className="px-4 py-2 text-right text-white">{bowler.oversBowled}</td>
+                  <td className="px-4 py-2 text-right text-white">{bowler.runsConceded}</td>
+                  <td className="px-4 py-2 text-right text-white">{bowler.wickets}</td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan="4" className="px-4 py-2 text-center text-white">No bowling data available</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
+  return (
+    <div className="w-full">
+      <div className="flex border-b border-gray-700 mb-4">
+        <button
+          className={`flex-1 py-2 text-white font-semibold ${activeTeam === 'teamA' ? 'bg-gray-800' : 'bg-gray-600'}`}
+          onClick={() => setActiveTeam('teamA')}
+        >
+          {teamA.name}
+        </button>
+        <button
+          className={`flex-1 py-2 text-white font-semibold ${activeTeam === 'teamB' ? 'bg-gray-800' : 'bg-gray-600'}`}
+          onClick={() => setActiveTeam('teamB')}
+        >
+          {teamB.name}
+        </button>
+      </div>
+      {activeTeam === 'teamA' && getTeamScorecard(teamA, firstInnings, secondInnings)}
+      {activeTeam === 'teamB' && getTeamScorecard(teamB, secondInnings, firstInnings)}
     </div>
   );
 };
@@ -321,8 +451,73 @@ const FixtureGenerator = () => {
   const [generatedFixtures, setGeneratedFixtures] = useState([]);
   const [showFixtures, setShowFixtures] = useState(false);
   const [matchResultWinner, setMatchResultWinner] = useState(null);
+  const [matchData, setMatchData] = useState(null);
+  const [matchDateTime, setMatchDateTime] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
+
+  useEffect(() => {
+    const q = query(collection(db, 'scoringpage'), orderBy('createdAt', 'desc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      if (!snapshot.empty) {
+        const latestMatch = snapshot.docs[0].data();
+        setMatchData(latestMatch);
+
+        setLiveTeamA({
+          name: latestMatch.teamA.name,
+          flag: latestMatch.teamA.flagUrl || placeholderFlag,
+          score: `${latestMatch.teamA.totalScore}/${latestMatch.teamA.wickets}`,
+          overs: `(${latestMatch.teamA.overs} overs)`,
+        });
+        setLiveTeamB({
+          name: latestMatch.teamB.name,
+          flag: latestMatch.teamB.flagUrl || placeholderFlag,
+          score: `${latestMatch.teamB.totalScore}/${latestMatch.teamB.wickets}`,
+          overs: `(${latestMatch.teamB.overs} overs)`,
+        });
+
+        if (latestMatch.createdAt) {
+          const date = latestMatch.createdAt.toDate();
+          setMatchDateTime(
+            date.toLocaleString('en-US', {
+              weekday: 'short',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+            })
+          );
+        }
+
+        if (latestMatch.matchResult) {
+          if (latestMatch.matchResult === 'Tie') {
+            setWinningCaption('Match Tied');
+            setMatchResultWinner('Tie');
+          } else if (latestMatch.teamA.result === 'Win') {
+            const runDiff = latestMatch.teamA.totalScore - latestMatch.teamB.totalScore;
+            if (runDiff > 0) {
+              setWinningCaption(`${latestMatch.teamA.name} won by ${runDiff} runs`);
+              setMatchResultWinner(latestMatch.teamA.name);
+            }
+          } else if (latestMatch.teamB.result === 'Win') {
+            const wicketsRemaining = 10 - latestMatch.teamB.wickets;
+            if (latestMatch.teamB.totalScore >= latestMatch.teamA.totalScore) {
+              setWinningCaption(`${latestMatch.teamB.name} won by ${wicketsRemaining} wickets`);
+              setMatchResultWinner(latestMatch.teamB.name);
+            }
+          }
+        } else {
+          setWinningCaption('Live');
+          setMatchResultWinner(null);
+        }
+      }
+    }, (error) => {
+      console.error('Error fetching match data:', error);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     if (location.state) {
@@ -337,14 +532,18 @@ const FixtureGenerator = () => {
         setLiveTeamA({
           name: location.state.teamA.name,
           flag: location.state.teamA.flagUrl || placeholderFlag,
-          score: `${location.state.teamA.score}/${location.state.teamA.wickets}`,
-          overs: location.state.teamA.balls ? `(${Math.floor(location.state.teamA.balls / 6)}.${location.state.teamA.balls % 6} overs)` : '(0.0 overs)'
+          score: `${location.state.teamA.score || 0}/${location.state.teamA.wickets || 0}`,
+          overs: location.state.teamA.balls
+            ? `(${Math.floor(location.state.teamA.balls / 6)}.${location.state.teamA.balls % 6} overs)`
+            : `(${location.state.teamA.overs || '0.0'} overs)`,
         });
         setLiveTeamB({
           name: location.state.teamB.name,
           flag: location.state.teamB.flagUrl || placeholderFlag,
-          score: `${location.state.teamB.score}/${location.state.teamB.wickets}`,
-          overs: location.state.teamB.balls ? `(${Math.floor(location.state.teamB.balls / 6)}.${location.state.teamB.balls % 6} overs)` : '(0.0 overs)'
+          score: `${location.state.teamB.score || 0}/${location.state.teamB.wickets || 0}`,
+          overs: location.state.teamB.balls
+            ? `(${Math.floor(location.state.teamB.balls / 6)}.${location.state.teamB.balls % 6} overs)`
+            : `(${location.state.teamB.overs || '0.0'} overs)`,
         });
       } else if (location.state.teamA) {
         setLiveTeamA(prevState => ({
@@ -365,13 +564,13 @@ const FixtureGenerator = () => {
   const handleTeamsSelected = (teamAData, teamBData) => {
     setLiveTeamA({
       name: teamAData.name,
-      flag: teamAData.flagUrl,
+      flag: teamAData.flagUrl || placeholderFlag,
       score: teamAData.score || '0/0',
       overs: teamAData.overs || '(0.0)'
     });
     setLiveTeamB({
       name: teamBData.name,
-      flag: teamBData.flagUrl,
+      flag: teamBData.flagUrl || placeholderFlag,
       score: teamBData.score || '0/0',
       overs: teamBData.overs || '(0.0)'
     });
@@ -379,31 +578,6 @@ const FixtureGenerator = () => {
 
   const teamsFromTournament = location.state?.selectedTeams || [];
   const defaultTeams = ['India', 'Australia', 'England', 'Pakistan', 'New Zealand', 'Netherlands', 'South Africa'];
-
-  const runsComparisonData = [
-    { over: 1, teamA: 5, teamB: 6 },
-    { over: 2, teamA: 15, teamB: 10 },
-    { over: 3, teamA: 25, teamB: 20 },
-    { over: 4, teamA: 35, teamB: 30 },
-  ];
-
-  const wagonWheelData = [
-    { distance: 3, angle: 45 },
-    { distance: 5, angle: 90 },
-    { distance: 7, angle: 135 },
-  ];
-
-  const batsmanHeatmapData = [
-    { x: 1, y: 2, intensity: 50 },
-    { x: 2, y: 3, intensity: 80 },
-    { x: 3, y: 1, intensity: 30 },
-  ];
-
-  const bowlerHeatmapData = [
-    { x: 1, y: 4, intensity: 70 },
-    { x: 2, y: 3, intensity: 60 },
-    { x: 3, y: 2, intensity: 40 },
-  ];
 
   const generateFixtures = () => {
     if (!selectedTeamA || !selectedTeamB) {
@@ -462,7 +636,6 @@ const FixtureGenerator = () => {
     return acc;
   }, {});
 
-  console.log('match-start-sb activeTab:', activeTab);
   const allTabs = ['Start Match', 'Live Score', 'Match Results', 'Highlights', 'Match Analytics'];
 
   return (
@@ -532,10 +705,9 @@ const FixtureGenerator = () => {
                 transition={{ duration: 0.6, ease: "easeOut" }}
               >
                 <div className="bg-gradient-to-r from-blue-900 to-blue-700 text-white p-6">
-                  <h3 className="text-2xl font-bold">ICC Cricket World Cup</h3>
-                  <p className="text-sm opacity-90 mt-1">Today • 10:00 AM • Wankhede Stadium, Mumbai</p>
+                  <h3 className="text-2xl font-bold">{liveTeamA.name} vs {liveTeamB.name}</h3>
+                  <p className="text-sm opacity-90 mt-1">{matchDateTime || 'No date available'}</p>
                 </div>
-
                 <div className="p-6 bg-gray-50">
                   <div className="flex justify-around items-center mb-6">
                     <motion.div
@@ -543,38 +715,49 @@ const FixtureGenerator = () => {
                       whileHover={{ scale: 1.05 }}
                       transition={{ type: "spring", stiffness: 300 }}
                     >
-                      <div className="w-20 h-20 mx-auto mb-2 bg-gray-200 rounded-full overflow-hidden shadow-md">
-                        <img
-                          src={liveTeamA.flag || placeholderFlag}
-                          alt={`${liveTeamA.name || 'Team A'} Flag`}
-                          className="w-full h-full object-contain"
-                        />
+                      <div className="w-20 h-20 mx-auto mb-2 rounded-full flex items-center justify-center shadow-md overflow-hidden">
+                        {liveTeamA.flag ? (
+                          <img
+                            src={liveTeamA.flag}
+                            alt={`${liveTeamA.name} Flag`}
+                            className="w-full h-full object-cover"
+                            onError={(e) => (e.target.src = placeholderFlag)}
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                            <span className="text-gray-600">No Flag</span>
+                          </div>
+                        )}
                       </div>
-                      <h4 className="font-bold text-xl text-gray-800">{liveTeamA.name || 'Team A'}</h4>
-                      <p className="text-3xl font-extrabold text-blue-700 mt-1">{liveTeamA.score || '198/6'}</p>
-                      <p className="text-sm text-gray-600">{liveTeamA.overs || '(42.0 overs)'}</p>
+                      <h4 className="font-bold text-xl text-gray-800">{liveTeamA.name}</h4>
+                      <p className="text-3xl font-extrabold text-blue-700 mt-1">{liveTeamA.score}</p>
+                      <p className="text-sm text-gray-600">{liveTeamA.overs}</p>
                     </motion.div>
-
                     <div className="text-3xl font-bold text-gray-600 px-6">vs</div>
-
                     <motion.div
                       className="text-center"
                       whileHover={{ scale: 1.05 }}
                       transition={{ type: "spring", stiffness: 300 }}
                     >
-                      <div className="w-20 h-20 mx-auto mb-2 bg-gray-200 rounded-full overflow-hidden shadow-md">
-                        <img
-                          src={liveTeamB.flag || placeholderFlag}
-                          alt={`${liveTeamB.name || 'Team B'} Flag`}
-                          className="w-full h-full object-contain"
-                        />
+                      <div className="w-20 h-20 mx-auto mb-2 rounded-full flex items-center justify-center shadow-md overflow-hidden">
+                        {liveTeamB.flag ? (
+                          <img
+                            src={liveTeamB.flag}
+                            alt={`${liveTeamB.name} Flag`}
+                            className="w-full h-full object-cover"
+                            onError={(e) => (e.target.src = placeholderFlag)}
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                            <span className="text-gray-600">No Flag</span>
+                          </div>
+                        )}
                       </div>
-                      <h4 className="font-bold text-xl text-gray-800">{liveTeamB.name || 'Team B'}</h4>
-                      <p className="text-3xl font-extrabold text-green-700 mt-1">{liveTeamB.score || '178/3'}</p>
-                      <p className="text-sm text-gray-600">{liveTeamB.overs || '(15.2 overs)'}</p>
+                      <h4 className="font-bold text-xl text-gray-800">{liveTeamB.name}</h4>
+                      <p className="text-3xl font-extrabold text-green-700 mt-1">{liveTeamB.score}</p>
+                      <p className="text-sm text-gray-600">{liveTeamB.overs}</p>
                     </motion.div>
                   </div>
-
                   <motion.div
                     className="bg-white p-5 rounded-xl shadow-inner"
                     initial={{ opacity: 0 }}
@@ -583,23 +766,17 @@ const FixtureGenerator = () => {
                   >
                     <div className="flex justify-between items-center mb-3">
                       <span className="text-gray-700 font-medium">Match Status:</span>
-                      {winningCaption ? (
-                        <motion.span
-                          className="bg-yellow-400 text-black px-4 py-1 rounded-full text-sm font-semibold"
-                          animate={{ scale: [1, 1.1, 1] }}
-                          transition={{ repeat: Infinity, duration: 1.5 }}
-                        >
-                          {winningCaption}
-                        </motion.span>
-                      ) : (
-                        <motion.span
-                          className="bg-green-400 text-black px-4 py-1 rounded-full text-sm font-semibold"
-                          animate={{ scale: [1, 1.1, 1] }}
-                          transition={{ repeat: Infinity, duration: 1.5 }}
-                        >
-                          Live
-                        </motion.span>
-                      )}
+                      <motion.span
+                        className={`px-4 py-1 rounded-full text-sm font-semibold ${
+                          winningCaption === 'Live'
+                            ? 'bg-green-600 text-white'
+                            : 'bg-yellow-400 text-black'
+                        }`}
+                        animate={{ scale: [1, 1.1, 1] }}
+                        transition={{ repeat: Infinity, duration: 1.5 }}
+                      >
+                        {winningCaption || 'Live'}
+                      </motion.span>
                     </div>
                   </motion.div>
                 </div>
@@ -612,55 +789,66 @@ const FixtureGenerator = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.5 }}
-              className="relative w-full min-h-[60vh] rounded-xl shadow-lg flex flex-col bg-white items-center justify-center overflow-hidden"
+              className="relative w-full min-h-[60vh] rounded-xl shadow-lg flex flex-col bg-white items-center overflow-hidden"
               style={{
-                background: 'linear-gradient(to bottom right, #ffe4e6, #ffc1cc)'
+                background: 'linear-gradient(to bottom right, #ffe4e6, #ffc1cc)',
               }}
             >
               <FireworksCanvas />
-              <div className="absolute top-4 right-4 z-30">
-                <motion.button
-                  onClick={() => setActiveTab('Start Match')}
-                  className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-full shadow-md transition-all"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  Next
-                </motion.button>
-              </div>
-              <div className="relative z-20 text-center p-8">
-                {matchResultWinner && matchResultWinner !== 'Tie' && (
-                  <div className="mb-4">
-                    {liveTeamA.name === matchResultWinner && liveTeamA.flag && (
-                      <img
-                        src={liveTeamA.flag}
-                        alt={`${liveTeamA.name} Flag`}
-                        className="w-24 h-24 mx-auto object-cover shadow-lg"
-                      />
-                    )}
-                    {liveTeamB.name === matchResultWinner && liveTeamB.flag && (
-                      <img
-                        src={liveTeamB.flag}
-                        alt={`${liveTeamB.name} Flag`}
-                        className="w-24 h-24 mx-auto object-cover shadow-lg"
-                      />
-                    )}
-                  </div>
-                )}
-                <img
-                  src={trophy}
-                  alt="Trophy"
-                  className="w-[300px] h-auto mb-8 drop-shadow-lg mx-auto"
-                />
-                {matchResultWinner && matchResultWinner !== 'Tie' && (
-                  <h1 className="text-4xl text-green-400 font-bold drop-shadow-[0_0_10px_#22c55e]">{matchResultWinner} won the match!</h1>
-                )}
-                {matchResultWinner === 'Tie' && (
-                  <h1 className="text-xl text-green-400 font-bold drop-shadow-[0_0_10px_#22c55e]">The match was a Tie!</h1>
-                )}
-                {!matchResultWinner && (
-                  <p>No match results available yet.</p>
-                )}
+              <div className="relative z-20 text-center p-8 flex flex-col items-center justify-between h-full w-full">
+                <div>
+                  {matchData && matchData.matchResult && matchData.matchResult !== 'Tie' && (
+                    <div className="mb-4">
+                      {liveTeamA.name === matchData.matchResult ? (
+                        <div className="w-24 h-24 mx-auto flex items-center justify-center rounded-full shadow-lg overflow-hidden">
+                          <img
+                            src={liveTeamA.flag}
+                            alt={`${liveTeamA.name} Flag`}
+                            className="w-full h-full object-cover"
+                            onError={(e) => (e.target.src = placeholderFlag)}
+                          />
+                        </div>
+                      ) : liveTeamB.name === matchData.matchResult ? (
+                        <div className="w-24 h-24 mx-auto flex items-center justify-center rounded-full shadow-lg overflow-hidden">
+                          <img
+                            src={liveTeamB.flag}
+                            alt={`${liveTeamB.name} Flag`}
+                            className="w-full h-full object-cover"
+                            onError={(e) => (e.target.src = placeholderFlag)}
+                          />
+                        </div>
+                      ) : null}
+                    </div>
+                  )}
+                  <img
+                    src={trophy}
+                    alt="Trophy"
+                    className="w-[300px] h-auto mb-8 drop-shadow-lg mx-auto"
+                  />
+                  {matchData && matchData.matchResult && matchData.matchResult !== 'Tie' && (
+                    <h1 className="text-4xl text-green-400 font-bold drop-shadow-[0_0_10px_#22c55e]">
+                      {matchData.matchResult} won the match!
+                    </h1>
+                  )}
+                  {matchData && matchData.matchResult === 'Tie' && (
+                    <h1 className="text-xl text-green-400 font-bold drop-shadow-[0_0_10px_#22c55e]">
+                      The match was a Tie!
+                    </h1>
+                  )}
+                  {!matchData && (
+                    <p>No match results available yet.</p>
+                  )}
+                </div>
+                <div className="self-end">
+                  <motion.button
+                    onClick={() => setActiveTab('Start Match')}
+                    className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-full shadow-md transition-all"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    Next
+                  </motion.button>
+                </div>
               </div>
             </motion.div>
           )}
@@ -671,7 +859,7 @@ const FixtureGenerator = () => {
               animate={{ opacity: 1 }}
               transition={{ duration: 0.5 }}
             >
-              <IPLCards setActiveTab={setActiveTab} tournamentId={location.state?.tournamentId || ''} />
+              <IPLCards setActiveTab={setActiveTab} />
             </motion.div>
           )}
 
@@ -679,84 +867,26 @@ const FixtureGenerator = () => {
             <div className="rounded-lg p-6 text-white">
               <div className="flex border-b border-gray-700 mb-6">
                 <button
-                  className={`py-2 px-4 mr-2 ${activeAnalyticsTab === 'scorecard' ? 'border-b-2 border-yellow-500 font-semibold' : 'text-gray-300'}`}
+                  className={`py-2 px-4 mr-2 ${
+                    activeAnalyticsTab === 'scorecard'
+                      ? 'border-b-2 border-blue-600 font-semibold'
+                      : 'text-blue-400'
+                  }`}
                   onClick={() => setActiveAnalyticsTab('scorecard')}
                 >
                   Scorecard
                 </button>
-                <button
-                  className={`py-2 px-4 mr-2 ${activeAnalyticsTab === 'wagonwheel' ? 'border-b-2 border-yellow-500 font-semibold' : 'text-gray-300'}`}
-                  onClick={() => setActiveAnalyticsTab('wagonwheel')}
-                >
-                  Wagon Wheel & Heat Map
-                </button>
-                <button
-                  className={`py-2 px-4 ${activeAnalyticsTab === 'fallofwickets' ? 'border-b-2 border-yellow-500 font-semibold' : 'text-gray-300'}`}
-                  onClick={() => setActiveAnalyticsTab('fallofwickets')}
-                >
-                  Fall of Wickets
-                </button>
               </div>
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {activeAnalyticsTab === 'scorecard' && (
                   <>
-                    <div className="bg-gray-800 rounded-lg p-4">
+                    <div className="bg-gray-700 rounded-lg p-4 md:col-span-2">
                       <h3 className="text-lg font-semibold mb-4">Worm Graph</h3>
-                      <WormGraph />
+                      <WormGraph matchData={matchData} />
                     </div>
-                    <div className="bg-gray-800 rounded-lg p-4">
-                      <h3 className="text-lg font-semibold mb-4">Bowling Economy</h3>
-                      <div className="h-48 bg-gray-700 rounded flex items-end justify-around p-4">
-                        <div className="bg-teal-500 h-1/3 w-1/5 rounded-t-md"></div>
-                        <div className="bg-teal-500 h-2/3 w-1/5 rounded-t-md"></div>
-                        <div className="bg-teal-500 h-1/2 w-1/5 rounded-t-md"></div>
-                        <div className="bg-teal-500 h-full w-1/5 rounded-t-md"></div>
-                      </div>
-                    </div>
-                    <div className="bg-gray-800 rounded-lg p-4 md:col-span-2">
-                      <h3 className="text-lg font-semibold mb-4">Runs Comparison</h3>
-                      <ResponsiveContainer width="100%" height={300}>
-                        <LineChart data={runsComparisonData}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
-                          <XAxis dataKey="over" stroke="#cbd5e0" />
-                          <YAxis stroke="#cbd5e0" />
-                          <Tooltip contentStyle={{ backgroundColor: "#374151", color: "#fff" }} />
-                          <Legend wrapperStyle={{ color: "#fff" }} />
-                          <Line type="monotone" dataKey="teamA" stroke="#ffc658" strokeWidth={2} />
-                          <Line type="monotone" dataKey="teamB" stroke="#a4add3" strokeWidth={2} />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </>
-                )}
-
-                {activeAnalyticsTab === 'wagonwheel' && (
-                  <>
-                    <div className="bg-gray-800 rounded-lg p-4">
-                      <h3 className="text-lg font-semibold mb-4">Wagon Wheel</h3>
-                      <WagonWheelChart data={wagonWheelData} />
-                    </div>
-                    <div className="bg-gray-800 rounded-lg p-4">
-                      <h3 className="text-lg font-semibold mb-4">Batsman Heatmap</h3>
-                      <BatsmanHeatmapChart data={batsmanHeatmapData} />
-                    </div>
-                    <div className="bg-gray-800 rounded-lg p-4 md:col-span-2">
-                      <h3 className="text-lg font-semibold mb-4">Bowler Heatmap</h3>
-                      <BowlerHeatmapChart data={bowlerHeatmapData} />
-                    </div>
-                  </>
-                )}
-
-                {activeAnalyticsTab === 'fallofwickets' && (
-                  <>
-                    <div className="bg-gray-800 rounded-lg p-4">
-                      <h3 className="text-lg font-semibold mb-4">Fall of Wickets Chart</h3>
-                      <FallOfWicketsChart />
-                    </div>
-                    <div className="bg-gray-800 rounded-lg p-4">
-                      <h3 className="text-lg font-semibold mb-4">Fall of Wickets Details</h3>
-                      <FallOfWicketsDetails />
+                    <div className="bg-gray-700 rounded-lg p-4 md:col-span-2">
+                      <h3 className="text-lg font-semibold mb-4">Scorecard</h3>
+                      <Scorecard matchData={matchData} />
                     </div>
                   </>
                 )}

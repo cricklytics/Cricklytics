@@ -4,8 +4,8 @@ import HeaderComponent from '../../components/kumar/startMatchHeader';
 import backButton from '../../assets/kumar/right-chevron.png';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import { Player } from '@lottiefiles/react-lottie-player';
-import { db } from '../../firebase'; // Import Firebase
-import { doc, getDoc, updateDoc, increment } from 'firebase/firestore'; // Firebase Firestore functions
+import { db, auth } from '../../firebase';
+import { doc, getDoc, updateDoc, increment, setDoc, Timestamp } from 'firebase/firestore';
 import sixAnimation from '../../assets/Animation/six.json';
 import fourAnimation from '../../assets/Animation/four.json';
 import outAnimation from '../../assets/Animation/out.json';
@@ -31,7 +31,7 @@ class ErrorBoundary extends Component {
   }
 }
 
-function StartMatchPlayers({ initialTeamA, initialTeamB, origin }) {
+function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -41,8 +41,8 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin }) {
   const teamA = location.state?.teamA;
   const teamB = location.state?.teamB;
   const tournamentId = location.state?.tournamentId;
-  const matchId = location.state?.matchId; // e.g., "group_1_1", "semi_1", "final_1"
-  const phase = location.state?.phase; // e.g., "Group Stage 1", "Semi-Final 1", "Final"
+  const matchId = location.state?.matchId;
+  const phase = location.state?.phase;
   const selectedPlayersFromProps = location.state?.selectedPlayers || { left: [], right: [] };
 
   const [playedOvers, setPlayedOvers] = useState(0);
@@ -70,6 +70,9 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin }) {
   const [targetScore, setTargetScore] = useState(0);
   const [batsmenScores, setBatsmenScores] = useState({});
   const [batsmenBalls, setBatsmenBalls] = useState({});
+  const [batsmenStats, setBatsmenStats] = useState({});
+  const [bowlerStats, setBowlerStats] = useState({}); // New state for bowler stats
+  const [wicketOvers, setWicketOvers] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [modalContent, setModalContent] = useState({ title: '', message: '' });
   const [gameFinished, setGameFinished] = useState(false);
@@ -82,13 +85,13 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin }) {
   const [showAnimation, setShowAnimation] = useState(false);
   const [animationType, setAnimationType] = useState(null);
   const [pendingLegBy, setPendingLegBy] = useState(false);
+  const [firstInningsData, setFirstInningsData] = useState(null);
 
   // Dynamic player data
   const [battingTeamPlayers, setBattingTeamPlayers] = useState([]);
   const [bowlingTeamPlayers, setBowlingTeamPlayers] = useState([]);
 
   useEffect(() => {
-    // Log the selected match and tournament ID
     console.log('Selected Match:', { matchId, phase });
     console.log('Tournament ID:', tournamentId);
 
@@ -101,20 +104,24 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin }) {
     if (!isChasing) {
       setBattingTeamPlayers(selectedPlayersFromProps.left.map((player, index) => ({
         ...player,
-        index: player.name + index
+        index: player.name + index,
+        photoUrl: player.photoUrl
       })));
       setBowlingTeamPlayers(selectedPlayersFromProps.right.map((player, index) => ({
         ...player,
-        index: player.name + index
+        index: player.name + index,
+        photoUrl: player.photoUrl
       })));
     } else {
       setBattingTeamPlayers(selectedPlayersFromProps.right.map((player, index) => ({
         ...player,
-        index: player.name + index
+        index: player.name + index,
+        photoUrl: player.photoUrl
       })));
       setBowlingTeamPlayers(selectedPlayersFromProps.left.map((player, index) => ({
         ...player,
-        index: player.name + index
+        index: player.name + index,
+        photoUrl: player.photoUrl
       })));
     }
     
@@ -124,6 +131,9 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin }) {
     setSelectedBatsmenIndices([]);
     setBatsmenScores({});
     setBatsmenBalls({});
+    setBatsmenStats({});
+    setBowlerStats({});
+    setWicketOvers([]);
   }, [isChasing, selectedPlayersFromProps, teamA, teamB, navigate, tournamentId, matchId, phase]);
 
   const displayModal = (title, message) => {
@@ -157,16 +167,186 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin }) {
     }));
   };
 
+  const updateBatsmanStats = (batsmanIndex, runs, isDotBall = false) => {
+    setBatsmenStats(prev => {
+      const currentStats = prev[batsmanIndex] || {
+        runs: 0,
+        balls: 0,
+        dotBalls: 0,
+        ones: 0,
+        twos: 0,
+        threes: 0,
+        fours: 0,
+        sixes: 0,
+        milestone: null
+      };
+      
+      const newRuns = currentStats.runs + runs;
+      let milestone = currentStats.milestone;
+      if (newRuns >= 100 && currentStats.runs < 100) milestone = 100;
+      else if (newRuns >= 50 && currentStats.runs < 50) milestone = 50;
+
+      return {
+        ...prev,
+        [batsmanIndex]: {
+          ...currentStats,
+          runs: newRuns,
+          balls: currentStats.balls + (isDotBall || runs > 0 ? 1 : 0),
+          dotBalls: isDotBall ? currentStats.dotBalls + 1 : currentStats.dotBalls,
+          ones: runs === 1 ? currentStats.ones + 1 : currentStats.ones,
+          twos: runs === 2 ? currentStats.twos + 1 : currentStats.twos,
+          threes: runs === 3 ? currentStats.threes + 1 : currentStats.threes,
+          fours: runs === 4 ? currentStats.fours + 1 : currentStats.fours,
+          sixes: runs === 6 ? currentStats.sixes + 1 : currentStats.sixes,
+          milestone
+        }
+      };
+    });
+  };
+
+  const updateBowlerStats = (bowlerIndex, isWicket = false, isValidBall = false, runsConceded = 0) => {
+    setBowlerStats(prev => {
+      const currentBowler = prev[bowlerIndex] || { wickets: 0, ballsBowled: 0, oversBowled: '0.0', runsConceded: 0 };
+      const ballsBowled = currentBowler.ballsBowled + (isValidBall ? 1 : 0);
+      const overs = Math.floor(ballsBowled / 6) + (ballsBowled % 6) / 10;
+      return {
+        ...prev,
+        [bowlerIndex]: {
+          wickets: isWicket ? (currentBowler.wickets || 0) + 1 : currentBowler.wickets || 0,
+          ballsBowled,
+          oversBowled: overs.toFixed(1),
+          runsConceded: (currentBowler.runsConceded || 0) + runsConceded
+        }
+      };
+    });
+  };
+
+  const recordWicket = (batsmanIndex) => {
+    const currentOver = `${overNumber - 1}.${validBalls + 1}`;
+    setWicketOvers(prev => [...prev, { batsmanIndex, over: currentOver }]);
+  };
+
   const playAnimation = (type) => {
     setAnimationType(type);
     setShowAnimation(true);
     setTimeout(() => {
       setShowAnimation(false);
-    }, 3000); // Animation duration
+    }, 3000);
+  };
+
+  const saveMatchData = async (isFinal = false) => {
+    try {
+      if (!auth.currentUser) {
+        console.error('No authenticated user found.');
+        return;
+      }
+
+      const overs = `${overNumber - 1}.${validBalls}`;
+      const battingTeam = isChasing ? teamB : teamA;
+      const bowlingTeam = isChasing ? teamA : teamB;
+
+      const playerStats = battingTeamPlayers.map(player => {
+        const stats = batsmenStats[player.index] || {};
+        const wicket = wicketOvers.find(w => w.batsmanIndex === player.index);
+        return {
+          index: player.index || '',
+          name: player.name || 'Unknown',
+          photoUrl: player.photoUrl || '',
+          role: player.role || '',
+          runs: stats.runs || 0,
+          balls: stats.balls || 0,
+          dotBalls: stats.dotBalls || 0,
+          ones: stats.ones || 0,
+          twos: stats.twos || 0,
+          threes: stats.threes || 0,
+          fours: stats.fours || 0,
+          sixes: stats.sixes || 0,
+          milestone: stats.milestone || null,
+          wicketOver: wicket ? wicket.over : null
+        };
+      });
+
+      const bowlerStatsArray = bowlingTeamPlayers.map(player => {
+        const stats = bowlerStats[player.index] || {};
+        return {
+          index: player.index || '',
+          name: player.name || 'Unknown',
+          photoUrl: player.photoUrl || '',
+          role: player.role || '',
+          wickets: stats.wickets || 0,
+          oversBowled: stats.oversBowled || '0.0',
+          runsConceded: stats.runsConceded || 0
+        };
+      });
+
+      const matchData = {
+        matchId,
+        tournamentId,
+        userId: auth.currentUser.uid,
+        createdAt: Timestamp.fromDate(new Date()),
+        tournamentName: 'Round Robin',
+        umpire: 'naga',
+        phase: phase || 'Unknown',
+        Format: maxOvers,
+        teamA: {
+          name: teamA?.name || 'Team A',
+          flagUrl: teamA?.flagUrl || '',
+          players: selectedPlayersFromProps.left.map(p => ({
+            name: p.name || 'Unknown',
+            index: p.name + selectedPlayersFromProps.left.findIndex(pl => pl.name === p.name),
+            photoUrl: p.photoUrl || '',
+            role: p.role || ''
+          })),
+          totalScore: isChasing ? (firstInningsData?.totalScore || 0) : playerScore,
+          wickets: isChasing ? (firstInningsData?.wickets || 0) : outCount,
+          overs: isChasing ? (firstInningsData?.overs || '0.0') : overs,
+          result: isFinal ? (playerScore < targetScore - 1 ? 'Win' : playerScore === targetScore - 1 ? 'Tie' : 'Loss') : null
+        },
+        teamB: {
+          name: teamB?.name || 'Team B',
+          flagUrl: teamB?.flagUrl || '',
+          players: selectedPlayersFromProps.right.map(p => ({
+            name: p.name || 'Unknown',
+            index: p.name + selectedPlayersFromProps.right.findIndex(pl => pl.name === p.name),
+            photoUrl: p.photoUrl || '',
+            role: p.role || ''
+          })),
+          totalScore: isChasing ? playerScore : (firstInningsData?.totalScore || 0),
+          wickets: isChasing ? outCount : (firstInningsData?.wickets || 0),
+          overs: isChasing ? overs : (firstInningsData?.overs || '0.0'),
+          result: isFinal ? (playerScore < targetScore - 1 ? 'Loss' : playerScore === targetScore - 1 ? 'Tie' : 'Win') : null
+        },
+        firstInnings: firstInningsData || {
+          teamName: teamA?.name || 'Team A',
+          totalScore: playerScore,
+          wickets: outCount,
+          overs,
+          playerStats,
+          bowlerStats: bowlerStatsArray
+        },
+        secondInnings: isChasing ? {
+          teamName: teamB?.name || 'Team B',
+          totalScore: playerScore,
+          wickets: outCount,
+          overs,
+          playerStats,
+          bowlerStats: bowlerStatsArray
+        } : null,
+        matchResult: isFinal ? (playerScore < targetScore - 1 ? teamA?.name || 'Team A' : playerScore === targetScore - 1 ? 'Tie' : teamB?.name || 'Team B') : null
+      };
+      const docId = `${tournamentId}_${matchId}`;
+      await setDoc(doc(db, 'scoringpage', docId), matchData);
+      console.log('Match data updated successfully:', matchData);
+    } catch (error) {
+      console.error('Error saving match data:', error);
+    }
   };
 
   const handleScoreButtonClick = (value, isLabel) => {
     if (gameFinished) return;
+
+    let runsToAdd = 0;
+    let isValidBall = false;
 
     if (isLabel) {
       setActiveNumber(null);
@@ -178,53 +358,75 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin }) {
 
     // Handle pending actions first
     if (pendingWide && !isLabel && typeof value === 'number') {
-      setPlayerScore(prev => prev + value + 1);
+      runsToAdd = value + 1;
+      setPlayerScore(prev => prev + runsToAdd);
       setTopPlays(prev => [...prev, `W+${value}`]);
       setCurrentOverBalls(prev => [...prev, `W+${value}`]);
-      if (striker) updateBatsmanScore(striker.index, value + 1);
+      if (striker) {
+        updateBatsmanScore(striker.index, value + 1);
+        updateBatsmanStats(striker.index, value + 1);
+      }
+      if (selectedBowler) updateBowlerStats(selectedBowler.index, false, false, runsToAdd);
       setPendingWide(false);
+      saveMatchData();
       return;
     }
 
     if (pendingNoBall && !isLabel && typeof value === 'number') {
-      setPlayerScore(prev => prev + value + 1);
+      runsToAdd = value + 1;
+      setPlayerScore(prev => prev + runsToAdd);
       setTopPlays(prev => [...prev, `NB+${value}`]);
       setCurrentOverBalls(prev => [...prev, `NB+${value}`]);
-      if (striker) updateBatsmanScore(striker.index, value + 1);
+      if (striker) {
+        updateBatsmanScore(striker.index, value + 1);
+        updateBatsmanStats(striker.index, value + 1);
+      }
+      if (selectedBowler) updateBowlerStats(selectedBowler.index, false, false, runsToAdd);
       setPendingNoBall(false);
+      saveMatchData();
       return;
     }
 
     if (pendingLegBy && !isLabel && typeof value === 'number') {
-      setPlayerScore(prev => prev + value);
+      runsToAdd = value;
+      setPlayerScore(prev => prev + runsToAdd);
       setTopPlays(prev => [...prev, `L+${value}`]);
       setCurrentOverBalls(prev => [...prev, `L+${value}`]);
-      // Do not update batsman score for leg-by runs
-      setPendingLegBy(false);
       setValidBalls(prev => prev + 1);
+      isValidBall = true;
       if (striker) updateBatsmanBalls(striker.index);
+      if (selectedBowler) updateBowlerStats(selectedBowler.index, false, true, runsToAdd);
       if (value % 2 !== 0) {
         const temp = striker;
         setStriker(nonStriker);
         setNonStriker(temp);
       }
+      setPendingLegBy(false);
+      saveMatchData();
       return;
     }
 
     if (pendingOut && !isLabel && typeof value === 'number') {
       if (value !== 0 && value !== 1 && value !== 2) {
-        // Only allow 0, 1, or 2 runs when pendingOut is true
         return;
       }
       playAnimation('out');
       setTimeout(() => {
-        setPlayerScore(prev => prev + value);
+        runsToAdd = value;
+        setPlayerScore(prev => prev + runsToAdd);
         setTopPlays(prev => [...prev, `O+${value}`]);
         setCurrentOverBalls(prev => [...prev, `O+${value}`]);
-        if (striker) updateBatsmanScore(striker.index, value);
+        if (striker) {
+          updateBatsmanScore(striker.index, value);
+          updateBatsmanStats(striker.index, value, value === 0);
+          updateBatsmanBalls(striker.index);
+          recordWicket(striker.index);
+        }
         setValidBalls(prev => prev + 1);
-        if (striker) updateBatsmanBalls(striker.index);
+        isValidBall = true;
+        if (selectedBowler) updateBowlerStats(selectedBowler.index, true, true, runsToAdd);
         setShowBatsmanDropdown(true);
+        saveMatchData();
       }, 5000);
       setPendingOut(false);
       return;
@@ -242,20 +444,34 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin }) {
 
       if (value === 'Six') {
         playAnimation('six');
-        setPlayerScore(prev => prev + 6);
+        runsToAdd = 6;
+        setPlayerScore(prev => prev + runsToAdd);
         setTopPlays(prev => [...prev, 6]);
         setCurrentOverBalls(prev => [...prev, 6]);
-        if (striker) updateBatsmanScore(striker.index, 6);
+        if (striker) {
+          updateBatsmanScore(striker.index, 6);
+          updateBatsmanStats(striker.index, 6);
+          updateBatsmanBalls(striker.index);
+        }
         setValidBalls(prev => prev + 1);
-        if (striker) updateBatsmanBalls(striker.index);
+        isValidBall = true;
+        if (selectedBowler) updateBowlerStats(selectedBowler.index, false, true, runsToAdd);
+        saveMatchData();
       } else if (value === 'Four') {
         playAnimation('four');
-        setPlayerScore(prev => prev + 4);
+        runsToAdd = 4;
+        setPlayerScore(prev => prev + runsToAdd);
         setTopPlays(prev => [...prev, 4]);
         setCurrentOverBalls(prev => [...prev, 4]);
-        if (striker) updateBatsmanScore(striker.index, 4);
+        if (striker) {
+          updateBatsmanScore(striker.index, 4);
+          updateBatsmanStats(striker.index, 4);
+          updateBatsmanBalls(striker.index);
+        }
         setValidBalls(prev => prev + 1);
-        if (striker) updateBatsmanBalls(striker.index);
+        isValidBall = true;
+        if (selectedBowler) updateBowlerStats(selectedBowler.index, false, true, runsToAdd);
+        saveMatchData();
       } else if (value === 'Wide') {
         setPendingWide(true);
         return;
@@ -275,17 +491,22 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin }) {
         if (striker && value !== 'Wide' && value !== 'No-ball') {
           updateBatsmanBalls(striker.index);
         }
+        saveMatchData();
       }
     } else {
       setShowRunInfo(false);
-      setPlayerScore(prev => prev + value);
+      runsToAdd = value;
+      setPlayerScore(prev => prev + runsToAdd);
       setTopPlays(prev => [...prev, value]);
       setCurrentOverBalls(prev => [...prev, value]);
       setValidBalls(prev => prev + 1);
+      isValidBall = true;
       if (striker) {
         updateBatsmanScore(striker.index, value);
+        updateBatsmanStats(striker.index, value, value === 0);
         updateBatsmanBalls(striker.index);
       }
+      if (selectedBowler) updateBowlerStats(selectedBowler.index, false, true, runsToAdd);
       if (value % 2 !== 0) {
         const temp = striker;
         setStriker(nonStriker);
@@ -296,6 +517,7 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin }) {
       } else if (value === 4) {
         playAnimation('four');
       }
+      saveMatchData();
     }
   };
 
@@ -385,13 +607,58 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin }) {
   }, [modalContent.title]);
 
   useEffect(() => {
-    if (gameFinished) return;
+    if (gameFinished) {
+      saveMatchData(true);
+      return;
+    }
 
     if (outCount >= 10 || (validBalls === 6 && overNumber > maxOvers - 1)) {
       if (!isChasing) {
+        const overs = `${overNumber - 1}.${validBalls}`;
+        const playerStats = battingTeamPlayers.map(player => {
+          const stats = batsmenStats[player.index] || {};
+          const wicket = wicketOvers.find(w => w.batsmanIndex === player.index);
+          return {
+            index: player.index || '',
+            name: player.name || 'Unknown',
+            photoUrl: player.photoUrl || '',
+            role: player.role || '',
+            runs: stats.runs || 0,
+            balls: stats.balls || 0,
+            dotBalls: stats.dotBalls || 0,
+            ones: stats.ones || 0,
+            twos: stats.twos || 0,
+            threes: stats.threes || 0,
+            fours: stats.fours || 0,
+            sixes: stats.sixes || 0,
+            milestone: stats.milestone || null,
+            wicketOver: wicket ? wicket.over : null
+          };
+        });
+        const bowlerStatsArray = bowlingTeamPlayers.map(player => {
+          const stats = bowlerStats[player.index] || {};
+          return {
+            index: player.index || '',
+            name: player.name || 'Unknown',
+            photoUrl: player.photoUrl || '',
+            role: player.role || '',
+            wickets: stats.wickets || 0,
+            oversBowled: stats.oversBowled || '0.0',
+            runsConceded: stats.runsConceded || 0
+          };
+        });
+        setFirstInningsData({
+          teamName: teamA?.name || 'Team A',
+          totalScore: playerScore,
+          wickets: outCount,
+          overs,
+          playerStats,
+          bowlerStats: bowlerStatsArray
+        });
         setTargetScore(playerScore + 1);
         setIsChasing(true);
         resetInnings();
+        saveMatchData();
         displayModal('Innings Break', `You need to chase ${playerScore + 1} runs`);
       } else {
         let winnerTeamName = '';
@@ -408,6 +675,7 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin }) {
           displayModal('Match Result', `${teamB.name} wins by ${10 - outCount} wickets!`);
           setGameFinished(true);
         }
+        saveMatchData(true);
       }
       return;
     }
@@ -415,6 +683,7 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin }) {
     if (isChasing && playerScore >= targetScore && targetScore > 0) {
       displayModal('Match Result', `${teamB.name} wins by ${10 - outCount} wickets!`);
       setGameFinished(true);
+      saveMatchData(true);
       return;
     }
 
@@ -430,6 +699,7 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin }) {
       setTimeout(() => {
         setShowBowlerDropdown(true);
       }, 1000);
+      saveMatchData();
     }
   }, [validBalls, currentOverBalls, nonStriker, overNumber, isChasing, targetScore, playerScore, gameFinished, outCount, maxOvers, teamA, teamB, playedOvers, playedWickets]);
 
@@ -450,6 +720,9 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin }) {
     setShowThirdButtonOnly(false);
     setBatsmenScores({});
     setBatsmenBalls({});
+    setBatsmenStats({});
+    setBowlerStats({});
+    setWicketOvers([]);
     setGameFinished(false);
     setPendingWide(false);
     setPendingNoBall(false);
@@ -479,17 +752,56 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin }) {
       setSelectedBatsmenIndices(prev => [...prev, player.index]);
       setBatsmenScores(prev => ({ ...prev, [player.index]: 0 }));
       setBatsmenBalls(prev => ({ ...prev, [player.index]: 0 }));
+      setBatsmenStats(prev => ({
+        ...prev,
+        [player.index]: {
+          runs: 0,
+          balls: 0,
+          dotBalls: 0,
+          ones: 0,
+          twos: 0,
+          threes: 0,
+          fours: 0,
+          sixes: 0,
+          milestone: null
+        }
+      }));
     } else if (!nonStriker && striker.index !== player.index) {
       setNonStriker(player);
       setSelectedBatsmenIndices(prev => [...prev, player.index]);
       setBatsmenScores(prev => ({ ...prev, [player.index]: 0 }));
       setBatsmenBalls(prev => ({ ...prev, [player.index]: 0 }));
+      setBatsmenStats(prev => ({
+        ...prev,
+        [player.index]: {
+          runs: 0,
+          balls: 0,
+          dotBalls: 0,
+          ones: 0,
+          twos: 0,
+          threes: 0,
+          fours: 0,
+          sixes: 0,
+          milestone: null
+        }
+      }));
     }
+    saveMatchData();
   };
 
   const handleBowlerSelect = (player) => {
     setSelectedBowler(player);
+    setBowlerStats(prev => ({
+      ...prev,
+      [player.index]: {
+        wickets: prev[player.index]?.wickets || 0,
+        ballsBowled: prev[player.index]?.ballsBowled || 0,
+        oversBowled: prev[player.index]?.oversBowled || '0.0',
+        runsConceded: prev[player.index]?.runsConceded || 0
+      }
+    }));
     setShowBowlerDropdown(false);
+    saveMatchData();
   };
 
   const handleBatsmanSelect = (player) => {
@@ -498,7 +810,22 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin }) {
     setShowBatsmanDropdown(false);
     setBatsmenScores(prev => ({ ...prev, [player.index]: 0 }));
     setBatsmenBalls(prev => ({ ...prev, [player.index]: 0 }));
+    setBatsmenStats(prev => ({
+      ...prev,
+      [player.index]: {
+        runs: 0,
+        balls: 0,
+        dotBalls: 0,
+        ones: 0,
+        twos: 0,
+        threes: 0,
+        fours: 0,
+        sixes: 0,
+        milestone: null
+      }
+    }));
     setOutCount(prev => prev + 1);
+    saveMatchData();
   };
 
   const getAvailableBatsmen = () => {
@@ -515,7 +842,11 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin }) {
     const newBalls = { ...batsmenBalls };
     delete newBalls[striker?.index];
     setBatsmenBalls(newBalls);
+    const newStats = { ...batsmenStats };
+    delete newStats[striker?.index];
+    setBatsmenStats(newStats);
     setStriker(null);
+    saveMatchData();
   };
 
   const cancelNonStriker = () => {
@@ -526,7 +857,11 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin }) {
     const newBalls = { ...batsmenBalls };
     delete newBalls[nonStriker?.index];
     setBatsmenBalls(newBalls);
+    const newStats = { ...batsmenStats };
+    delete newStats[nonStriker?.index];
+    setBatsmenStats(newStats);
     setNonStriker(null);
+    saveMatchData();
   };
 
   const cancelBatsmanDropdown = () => {
@@ -535,6 +870,8 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin }) {
     setTopPlays(prev => prev.slice(0, -1));
     setCurrentOverBalls(prev => prev.slice(0, -1));
     setValidBalls(prev => Math.max(0, prev - 1));
+    setWicketOvers(prev => prev.filter(w => w.batsmanIndex !== striker?.index));
+    saveMatchData();
   };
 
   const updateWinnerInFirebase = async (winnerTeamName) => {
@@ -544,7 +881,6 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin }) {
     }
 
     try {
-      // Step 1: Find the tournament document
       const tournamentRef = doc(db, 'roundrobin', tournamentId);
       const tournamentDoc = await getDoc(tournamentRef);
       if (!tournamentDoc.exists()) {
@@ -557,7 +893,6 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin }) {
       let phaseKey = '';
       let matchIndex = -1;
 
-      // Step 2: Determine the phase and matches to update
       if (phase.includes('Group Stage')) {
         const groupNumber = phase.match(/Group Stage (\d+)/)?.[1];
         if (!groupNumber) {
@@ -577,7 +912,6 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin }) {
         return;
       }
 
-      // Step 3: Find the match to update
       matchIndex = matchesToUpdate.findIndex(match =>
         match.id === matchId &&
         ((match.team1 === teamA.name && match.team2 === teamB.name) ||
@@ -589,17 +923,13 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin }) {
         return;
       }
 
-      // Step 4: Update the winner field in the matches array
       if (phase.includes('Group Stage')) {
-        // Clone the matches array to avoid mutating the original data
         const updatedMatches = [...matchesToUpdate];
-        // Update the winner field for the specific match
         updatedMatches[matchIndex] = {
           ...updatedMatches[matchIndex],
           winner: winnerTeamName === 'Tie' ? 'Tie' : winnerTeamName
         };
 
-        // Update the entire group_stage_X array in Firestore
         const groupNumber = phase.match(/Group Stage (\d+)/)?.[1];
         await updateDoc(tournamentRef, {
           [`roundRobin.group_stage_${groupNumber}`]: updatedMatches
@@ -616,7 +946,6 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin }) {
         });
       }
 
-      // Step 5: Update points in the teams array (if not a tie)
       if (winnerTeamName !== 'Tie') {
         const teams = tournamentData.teams || [];
         const teamIndex = teams.findIndex(team => team.teamName === winnerTeamName);
@@ -625,7 +954,6 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin }) {
           return;
         }
 
-        // Update the points for the winning team
         const updatedTeams = [...teams];
         const currentPoints = updatedTeams[teamIndex].points || 0;
         updatedTeams[teamIndex] = {
@@ -633,7 +961,6 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin }) {
           points: currentPoints + 2
         };
 
-        // Update the teams array in the document
         await updateDoc(tournamentRef, {
           teams: updatedTeams
         });
@@ -665,7 +992,6 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin }) {
         winningDifference = `${10 - outCount} wickets`;
       }
 
-      // Update the winner in Firebase
       updateWinnerInFirebase(winnerTeamName);
 
       if (originPage) {
@@ -734,7 +1060,6 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin }) {
       >
         {HeaderComponent ? <HeaderComponent /> : <div className="text-white">Header Missing</div>}
 
-        {/* Animation Overlay */}
         {showAnimation && (
           <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
             <div className="w-full h-full flex items-center justify-center">
@@ -869,7 +1194,7 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin }) {
                     )}
                   </div>
                   <div>
-                    <button className="w-28 h-12 text-white text-lg md:w-25 md:h-10 font-bold bg-gradient-to-l from-[#12BFA5] to-[#000000] rounded-[1rem] shadow-lg">
+                    <button className="w-28 h-12 text-white text-lg md:w-nbsp:h-10 md:h-10 font-bold bg-gradient-to-l from-[#12BFA5] to-[#000000] rounded-[1rem] shadow-lg">
                       Non-Striker
                     </button>
                     {nonStriker && (
@@ -878,17 +1203,18 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin }) {
                           <img
                             src={nonStriker.photoUrl} 
                             alt="Non-striker"
-                            className="w-20 h-20 md:w-15 md:h-15 lg:w-10 lg:h-10 rounded-full mx-auto object-cover aspect-square"
+                            className="w-20 h-20 md:w-15 md:h-15 lg:w-10 lg:h-10 w-full"
                             onError={(e) => (e.target.src = '')}
                           />
                           <button
                             onClick={cancelNonStriker}
-                            className="absolute -top-2 right-4 w-6 h-6 text-white font-bold flex items-center justify-center text-xl"
+                            className="absolute -top-0 right-0 w-6 h-6 text-white font-bold flex items-center justify-center text-xl"
                           >
                             ×
                           </button>
                         </div>
                         <div>{nonStriker.name}</div>
+                        <div className="text-sm">{nonStriker.wheels}</div>
                         <div className="text-sm">{nonStriker.role}</div>
                       </div>
                     )}
@@ -903,9 +1229,9 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin }) {
                   <div
                     key={player.index}
                     onClick={() => handlePlayerSelect(player)}
-                    className={`cursor-pointer flex flex-col items-center text-white text-center ${selectedBatsmenIndices.includes(player.index) ? 'opacity-50' : ''}`}
+                    className={`cursor-pointer flex flex-col items-center text-white text-center ${selectedBatsmenIndices.includes(player.index)} ? 'opacity-50' : ''}`}
                   >
-                    <div className="w-20 h-20 md:w-15 md:h-15 lg:w-15 lg:h-15 rounded-full border-[5px] border-[#F0167C] overflow-hidden flex items-center justify-center aspect-square">
+                    <div className="w-20 h-20 md:w-15 md:h-15 lg:w-15 lg:h-15 w-full rounded-full border-[5px] border-[#F0167C] overflow-hidden items-center justify-center aspect-square">
                       <img
                         src={player.photoUrl}
                         alt="Player"
@@ -958,7 +1284,7 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin }) {
                       className={`cursor-pointer flex flex-col items-center text-white text-center ${selectedBowler?.index === player.index ? 'opacity-50' : ''}`}
                     >
                       <div
-                        className={`w-20 h-20 md:w-15 md:h-15 lg:w-15 lg:h-15 rounded-full border-[5px] border-[#12BFA5] overflow-hidden flex items-center justify-center aspect-square`}
+                        className={`w-20 h-20 md:w-15 md:h-15 lg:w-15 md:w-15 h-15 rounded-full border-[5px] border-[#12BFA5] overflow-hidden flex items-center justify-center aspect-square w-full h-full`}
                       >
                         <img
                           src={player.photoUrl}
@@ -976,7 +1302,7 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin }) {
                 {selectedBowler && (
                   <button
                     onClick={() => handleButtonClick('start')}
-                    className="w-30 h-10 mt-4 text-white text-lg font-bold rounded-3xl bg-black bg-[url('../assets/kumar/button.png')] bg-cover bg-center shadow-lg transform transition duration-200 hover:scale-105 hover:shadow-xl active:scale-95 active:shadow-md"
+                    className="w-30 h-10 mt-4 text-white font-bold rounded-3xl bg-black bg-[url('../assets/kumar/button.png')] bg-cover bg-center shadow-lg transform transition duration-200 hover:scale-105 hover:shadow-xl active:scale-95 active:shadow-md"
                   >
                     Let's Play
                   </button>
@@ -988,44 +1314,44 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin }) {
 
         {showThirdButtonOnly && (
           <div id="start" className="relative flex flex-col w-full h-full items-center px-4 mt-20 md:mt-10">
-            <h2 className="gap-5 text-4xl md:text-3xl lg:text-5xl text-white font-bold text-center">Score Board</h2>
-            <div className="mt-4 flex md:flex-row w-full md:w-1/2 justify-around gap-20 h-fit pt-2">
+            <h2 className="gap-5 text-white font-bold text-center text-4xl md:text-3xl lg:text-5xl">Score Board</h2>
+            <div className="mt-4 flex w-full md:flex-row w-full md:w-1/2 justify-around gap-20 h-fit pt-2">
               <div className="flex items-center justify-center mb-4 md:mb-0">
                 <img
-                  src={isChasing ? teamB.flagUrl : teamA.flagUrl} 
+                  src={isChasing ? teamB.flagUrl : teamA.flagUrl}
                   className="w-16 h-16 md:w-30 md:h-30 aspect-square"
-                  alt="Flag"
+                  alt="Team A Flag"
                   onError={(e) => (e.target.src = '')}
                 />
                 <div className="ml-4 md:ml-10">
-                  <h3 className="text-sm md:text-2xl md:text-3xl lg:text-4xl text-white font-bold text-center">
+                  <h3 className="text-white font-bold text-center text-sm md:text-2xl sm:text-3xl lg:text-4xl">
                     {playerScore} - {outCount}
-                    <h2 className="text-base md:text-lg lg:text-xl">{overNumber > maxOvers ? maxOvers : overNumber - 1}.{validBalls}</h2>
+                    <h2 className="text-base md:text-lg lg:text-xl sm:text-sm">{overNumber > maxOvers ? maxOvers : overNumber - 1}.{validBalls}</h2>
                   </h3>
                 </div>
               </div>
               <div className="flex items-center justify-center mb-4 md:mb-0">
                 <div className="mr-4 md:mr-10">
-                  <h3 className="text-lg md:text-2xl md:text-3xl lg:text-4xl text-white font-bold text-center text-yellow-300 underline">
+                  <h3 className="text-white font-bold text-center text-lg md:text-2xl sm:text-3xl lg:text-4xl text-center text-yellow-300 underline">
                     {isChasing ? `Target: ${targetScore}` : 'Not yet'}
                   </h3>
                 </div>
                 <img
-                  src={isChasing ? teamA.flagUrl : teamB.flagUrl} 
+                  src={isChasing ? teamA.flagUrl : teamB.flagUrl}
                   className="w-16 h-16 md:w-30 md:h-30 aspect-square"
-                  alt="Flag"
+                  alt="Team B Flag"
                   onError={(e) => (e.target.src = '')}
                 />
               </div>
             </div>
 
-            <div className="w-full flex flex-col md:justify-between md:flex-row md:w-[50%] justify-around mt-2 md:pr-15">
-              <div className="flex flex-row px-[4.8%] md:p-0 justify-between md:flex-row md:items-center gap-4 md:gap-8 mb-4 md:mb-0">
-                <div className="text-white text-center">
-                  <h3 className={`text-lg md:text-xl font-bold ${striker ? 'text-yellow-300' : 'text-gray-400'}`}>Striker</h3>
+            <div className="w-full flex flex-col md:flex-row md:w-[50%] justify-around items-center justify-between mt-12">
+              <div className="flex flex-row px-[4.8%] md:p-0 flex-row md:flex-row items-center justify-between gap-4 md:gap-8 mb-4 md:mb-0">
+                <div className="text-center text-white">
+                  <h3 className={`text-lg md:text-xl font-bold ${striker ? 'text-yellow-300' : ''}`}>Striker</h3>
                   {striker && (
-                    <div className="flex flex-col items-center w-full">
-                      <div className="font-bold text-sm md:text-base">{striker.name}</div>
+                    <div className="flex flex-col items-center justify-center w-full">
+                      <div className="font-bold text-sm md:text-base sm">{striker.name}</div>
                       <div className="text-xs md:text-sm">{striker.role}</div>
                       <div className="text-xs md:text-sm">
                         {batsmenScores[striker.index] || 0} ({batsmenBalls[striker.index] || 0})
@@ -1035,7 +1361,7 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin }) {
                   )}
                 </div>
                 <div className="hidden sm:block text-white text-center">
-                  <h3 className={`text-lg md:text-xl font-bold ${!striker ? 'text-yellow-300' : 'text-gray-400'}`}>Non-Striker</h3>
+                  <h3 className={`text-lg md:text-xl font-bold ${!striker ? 'text-yellow-300' : ''}`}>Non-Striker</h3>
                   {nonStriker && (
                     <div className="flex flex-col items-center w-full">
                       <div className="font-bold text-sm md:text-base">{nonStriker.name}</div>
@@ -1047,7 +1373,7 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin }) {
                     </div>
                   )}
                 </div>
-                <div className="sm:hidden text-white text-center md:ml-10">
+                <div className="sm:hidden text-white text-center">
                   <h3 className="text-lg md:text-xl font-bold">Bowler</h3>
                   {selectedBowler && (
                     <div className="flex flex-col items-center">
@@ -1057,11 +1383,11 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin }) {
                   )}
                 </div>
               </div>
-              <div className="flex flex-col justify-center items-center w-full md:w-[20%] mb-4 md:mb-0">
+              <div className="flex flex-col items-end w-full md:w-[20%] mb-0 md:mb-4">
                 <div className="flex justify-center">
                   <button
-                    onClick={() => setShowPastOvers(!showPastOvers)}
-                    className="w-24 md:w-32 h-10 md:h-12 bg-[#4C0025] text-white font-bold text-sm md:text-lg rounded-lg border-2 border-white"
+                    onClick={() => setShowPastOvers(showPastOvers => !showPastOvers)}
+                    className="w-full md:w-32 h-10 md:h-12 bg-[#4C0025] text-white font-bold text-sm md:text-lg rounded-lg border-2 border-white"
                   >
                     {showPastOvers ? 'Hide Overs' : 'Show Overs'}
                   </button>
@@ -1097,7 +1423,6 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin }) {
                                   </span>
                                 );
                               })}
-                              {/* Add | only if not the last over */}
                               {index !== pastOvers.length + (currentOverBalls.length > 0 ? 0 : -1) && (
                                 <span className="text-white font-bold text-lg px-1">|</span>
                               )}
@@ -1135,29 +1460,28 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin }) {
                   >
                     {num}
                   </button>
-                );
+                )
               })}
             </div>
 
             <div className="mt-2 flex flex-wrap justify-center gap-2 md:gap-4">
-              {['Wide', 'No-ball', 'OUT', 'Leg By', 'lbw'].map((label) => {
+              {['Wide', 'No-ball', 'OUT', 'Leg By', 'nb'].map((label) => {
                 const isActive = activeLabel === label;
                 return (
                   <button
                     key={label}
                     onClick={() => handleScoreButtonClick(label, true)}
-                    className={`w-20 h-10 md:w-24 md:h-12
-                      ${isActive ? 'bg-red-600' : 'bg-[#4C0025] hover:bg-red-400'}
-                      text-white font-bold text-sm md:text-lg rounded-lg border-2 border-white
-                      flex items-center justify-center transition-colors duration-300`}
+                    className={`w-20 h-10 md:w-20 h-12 md:h-12
+                      ${isActive ? 'bg-red-600' : 'bg-[#4C0025] hover:bg-gray-300'}
+                      text-white font-bold text-sm md:text-lg sm:text-sm font-semibold rounded-lg border-2 border-white items-center justify-center cursor-pointer transition-opacity hover:opacity-80`}
                   >
                     {label}
                   </button>
-                );
+                )
               })}
             </div>
             {showRunInfo && (
-              <p className="text-yellow-300 text-sm mt-2 text-center font-medium">
+              <p className="text-yellow-400 text-sm mt-2 text-center font-medium">
                 {pendingOut ? 'Please select 0, 1, or 2 for runs on out' : 'Please select run, if not select 0'}
               </p>
             )}
@@ -1198,9 +1522,9 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin }) {
               <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
                 <div className="bg-[#4C0025] p-4 md:p-6 rounded-lg max-w-md w-full mx-4 relative">
                   <button
-                    onClick={() => setShowBowlerDropdown(false)}
                     className="absolute top-2 right-2 w-6 h-6 text-white font-bold flex items-center justify-center text-xl"
-                  >
+                    onClick={() => setShowBowlerDropdown(false)}
+                    >
                     ×
                   </button>
                   <h3 className="text-white text-lg md:text-xl font-bold mb-4">Select Next Bowler</h3>
@@ -1232,10 +1556,11 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin }) {
           <div className="text-center text-white">
             <h2 className="text-4xl font-bold mb-6">Innings Break</h2>
             <div className="text-2xl mb-8">
-              <p>First Innings Score: {playerScore}/{outCount}</p>
-              <p>Overs: {overNumber - 1}</p>
+              <p className="text-center">First Innings Score: {playerScore}/{outCount}</p>
+              <p className="text-center">Overs: {overNumber - 1}</p>
             </div>
             <button
+              className="w-40 h-14 text-white text-lg font-bold bg-[url('../assets/kumar/button.png')] bg-cover bg-center shadow-lg"
               onClick={() => {
                 setIsChasing(true);
                 setTargetScore(playerScore + 1);
@@ -1243,8 +1568,8 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin }) {
                 setPlayedWickets(outCount);
                 resetInnings();
                 handleButtonClick('toss');
+                saveMatchData();
               }}
-              className="w-40 h-14 text-white text-lg font-bold bg-[url('../assets/button.png')] bg-cover bg-center shadow-lg"
             >
               Start Chase
             </button>
@@ -1255,4 +1580,4 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin }) {
   );
 }
 
-export default StartMatchPlayers;
+export default StartMatchPlayersRoundRobin;

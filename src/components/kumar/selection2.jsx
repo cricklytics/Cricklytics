@@ -253,7 +253,7 @@ const Selection2 = () => {
       <div className="z-20 flex overflow-hidden justify-center w-full p-2 md:px-[5rem] md:pt-[1rem] relative">
         <div className="z-30 gap-5 md:gap-10 bg-[#1A2B4C] rounded-xl md:rounded-[2rem] shadow-[8px_-5px_0px_2px_#253A6E] md:shadow-[22px_-14px_0px_5px_#253A6E] flex flex-col items-center justify-around w-full max-w-[70rem] m-2 md:m-4 p-4 md:pl-[5rem] md:pr-[5rem] md:pt-[5rem] md:pb-[1rem] text-start">
           <button
-            onClick={() => navigate('/tournament')}
+            onClick={() => navigate('/TournamentPage')}
             className="text-sm cursor-pointer absolute top-4 left-4 md:top-10 md:left-10"
           >
             <img src={nav} className="w-8 h-8 md:w-10 md:h-10 -scale-x-100" alt="Back" />

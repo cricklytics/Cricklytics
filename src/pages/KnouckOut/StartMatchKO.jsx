@@ -67,7 +67,7 @@ const PlayerSelector = ({ teamA, teamB, overs, origin, matchId, currentPhase, to
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',
         backgroundAttachment: 'fixed',
-        minHeight: 'calc(100vh - H - N)',
+        height: '100vh',
       }}
     >
       <div className="w-full px-4 md:px-8 pb-8 mx-auto max-w-7xl">
@@ -420,7 +420,7 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '' }) => {
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',
         backgroundAttachment: 'fixed',
-        minHeight: 'calc(100vh - H - N)',
+        height: '100vh',
       }}
     >
       <motion.div
