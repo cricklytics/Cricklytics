@@ -80,6 +80,8 @@ const Insights = () => {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       let playerFound = false;
       let playerData = null;
+      let teamWins = 0;
+      let teamLosses = 0;
 
       for (const doc of snapshot.docs) {
         const teamData = doc.data();
@@ -92,7 +94,12 @@ const Insights = () => {
         if (player) {
           playerData = player;
           playerFound = true;
+          // Calculate wins: use teamData.wins if available, else matches - losses
+          teamWins = teamData.wins !== undefined ? teamData.wins : (teamData.matches || 0) - (teamData.losses || 0);
+          teamLosses = teamData.losses || 0;
           console.log("Player Found:", JSON.stringify(playerData, null, 2));
+          console.log("Team Wins Calculated:", teamWins);
+          console.log("Team Losses:", teamLosses);
           break;
         }
       }
@@ -172,8 +179,8 @@ const Insights = () => {
         // Batting stats
         data.batting.runs = [{ value: battingRuns }],
         data.batting["high-score"] = [{ value: careerStats.batting.highest ?? 0 }],
-        data.batting.win = [{ value: playerData.wins ?? 0 }],
-        data.batting.lose = [{ value: playerData.losses ?? 0 }],
+        data.batting.win = [{ value: teamWins }],
+        data.batting.lose = [{ value: teamLosses }],
         data.batting.matches = [{ value: careerStats.batting.matches ?? 0 }],
         data.batting.innings = [{ value: battingInnings }],
         data.batting["strike-rate"] = [{ value: battingStrikeRate }],
