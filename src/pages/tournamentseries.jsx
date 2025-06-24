@@ -22,7 +22,7 @@ function Tournamentseries() {
       
       const isFormValid = (
         tournamentName.trim() !== '' && 
-        selectedLocation !== '' && 
+        selectedLocation.trim() !== '' && 
         noOfTeams.trim() !== '' && 
         startDate !== '' && 
         endDate !== '' && 
@@ -39,7 +39,7 @@ function Tournamentseries() {
         setShowValidationError(true);
         return;
       }
-      navigate('/next');
+      navigate('/next', { state: { noOfTeams } });
     };
 
     const handleCancel = (e) => {
@@ -91,7 +91,6 @@ function Tournamentseries() {
     const categoryoption = ['community', 'corporate', 'open', 'school', 'others', 'series', 'college', 'university'];
     const matchtypeoption = ['limited overs', 'Box cricket', 'Pair Cricket', 'Test match', 'the hundered'];
     const wpoption = ['Cash', 'Trophies', 'Both'];
-    const locationOptions = ['New York', 'Los Angeles', 'Chicago', 'San Francisco', 'Miami'];
     const timingOptions = ['Morning', 'Noon', 'Night'];
 
     const handlePitchClick = (pitch) => {
@@ -213,23 +212,18 @@ function Tournamentseries() {
                     </div>
 
                     <div className="w-full md:w-[80%] lg:w-[50%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-5">
-                        <label htmlFor="location" className="flex text-lg font-medium text-white mb-2">Choose your location*</label>
-                        <select 
-                          id="location" 
-                          name="location" 
-                          className="block w-[16rem] bg-white-900 px-4 py-2 border border-white rounded-md text-gray-200 focus:ring-blue-500 cursor-pointer"
+                        <label className="text-xl text-white">Venue*</label>
+                        <input 
+                          className="w-64 h-12 border-2 border-white text-white p-2 rounded-xl mt-[.5rem]" 
+                          type="text" 
+                          placeholder="" 
                           value={selectedLocation}
                           onChange={(e) => {
                             setSelectedLocation(e.target.value);
                             setShowValidationError(false);
                           }}
-                        >
-                            <option value="">Select a location</option>
-                            {locationOptions.map(loc => (
-                              <option key={loc} value={loc} className='bg-blue-400 text-white'>{loc}</option>
-                            ))}
-                        </select>
-                        {showValidationError && !selectedLocation && (
+                        />
+                        {showValidationError && !selectedLocation.trim() && (
                           <p className="text-red-500 text-sm absolute bottom-[-20px] right-0">This field is required</p>
                         )}
                     </div>
@@ -257,7 +251,7 @@ function Tournamentseries() {
                             <div className="flex items-center w-[30%]">
                                 <label className="text-xl text-white">Start Date</label>
                                 <input 
-                                  className="w-40 h-12 border-2 border-white text-white p-2 rounded-xl ml-[.5rem]" 
+                                  className="w-40 h-12 border-2 border-white text-white p-2 rounded-xl ml-[.5rem]"
                                   type="date" 
                                   value={startDate}
                                   onChange={(e) => {
@@ -387,7 +381,9 @@ function Tournamentseries() {
                           <img src={others} alt="" className='w-20 h-20' />
                         </a>
                         <a
-                          className={`animate-rotate flex items-center justify-center w-25 h-25 rounded-full ${selectedBall === 'ball2' ? 'bg-blue-100' : 'bg-transparent'}  hover:text-white mt-4 cursor-pointer`}
+                          className={`animate-rotate flex items-center justify-center
+
+ w-25 h-25 rounded-full ${selectedBall === 'ball2' ? 'bg-blue-100' : 'bg-transparent'}  hover:text-white mt-4 cursor-pointer`}
                           onClick={() => handleBallClick('ball2')}
                         >
                           <img src={ball2} alt="" className='w-18 h-18' />

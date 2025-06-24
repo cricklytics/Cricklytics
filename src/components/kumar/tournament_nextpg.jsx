@@ -1,11 +1,13 @@
 import React from 'react';
 import HeaderComponent from '../kumar/header';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import scanner from '../../assets/kumar/icons8-qr-code-52.png';
 import { useState } from 'react';
 
 function Tournament_nextpg() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { noOfTeams } = location.state || {};
   const [isRulesVisible, setIsRulesVisible] = useState(false);
   const [ispriceVisible, setIspriceVisible] = useState(false);
   const [showValidationError, setShowValidationError] = useState(false);
@@ -38,7 +40,7 @@ function Tournament_nextpg() {
       setShowValidationError(true);
       return;
     }
-    navigate('/TournamentPage');
+    navigate('/TournamentPage', { state: { noOfTeams, selectedBall } });
   };
 
   const handleCancel = (e) => {
@@ -63,6 +65,7 @@ function Tournament_nextpg() {
   };
 
   const [value, setValue] = useState('');
+  const [selectedBall, setSelectedBall] = useState(null); // State for selected ball type
   const home = () => {
     navigate('/');
   };
@@ -116,7 +119,7 @@ function Tournament_nextpg() {
   return (
     <section className="min-h-screen w-full overflow-hidden z-0 bg-gradient-to-b from-[#0D171E] to-[#283F79] relative">
       <HeaderComponent />
-      <div className="absolute left-[-25%] top-[30%] w-[80rem] min-h-screenrounded-full bg-[radial-gradient(circle,rgba(69,218,255,0.5)_40%,rgba(69,218,255,0.1)_60%,rgba(69,218,255,0.1)_100%)] blur-lg -z-10"></div>
+      <div className="absolute left-[-25%] top-[30%] w-[80rem] min-h-screen rounded-full bg-[radial-gradient(circle,rgba(69,218,255,0.5)_40%,rgba(69,218,255,0.1)_60%,rgba(69,218,255,0.1)_100%)] blur-lg -z-10"></div>
       
       {ispriceVisible && (
         <div 
@@ -143,7 +146,7 @@ function Tournament_nextpg() {
             </ul>
             <div className="bg-gray-800 p-3 md:p-4 rounded-lg">
               <p className="text-sm md:text-lg text-white font-bold">Instructions for Subscription:</p>
-              <p className="text-white text-sm">To start your subscription, follow these simple steps:</p>
+              <p className="text-white text-sm"> Beesubscription, follow these simple steps:</p>
               <ol className="list-decimal pl-5 md:pl-6 text-white mb-3 md:mb-4 text-sm">
                 <li className="mb-1 md:mb-2">Create an account or log in if you already have one.</li>
                 <li className="mb-1 md:mb-2">Choose your subscription plan based on your preference and budget.</li>
@@ -151,14 +154,14 @@ function Tournament_nextpg() {
               </ol>
             </div>
             <div className="mt-4 md:mt-6">
-              <h3 className="text-lg md:text-2xl font-bold text-white mb-2 md:mb-3">Additional Pricing Information</h3>
+              <h3 className="text-lg md:text-2xl font-bold text-white mb-2 md:mb-5 md:mb-3">Additional Pricing Information</h3>
               <p className="text-white text-sm">Here are a few additional details to help you understand the pricing better:</p>
-              <ul className="list-inside list-circle text-white text-sm">
-                <li className="mb-1 md:mb-2">Higher-tier players may qualify for additional perks and bonuses.</li>
-                <li className="mb-1 md:mb-2">Players with significant achievements will be offered custom pricing packages.</li>
-                <li className="mb-1 md:mb-2">For special cases, please reach out to our support team for personalized offers.</li>
-              </ul>
-            </div>
+<ul className="list-disc md:text-white list:ml-5 md:mb-4 text-sm">
+  <li className="mb-1 md:ml-5 mb-2">Higher-tier players may qualify for additional perks and bonuses.</li>
+  <li className="mb-1 md:mb-2">Players with significant achievements will be offered custom pricing packages.</li>
+  <li className="mb-1 md:mb-2">For special cases, please reach out to our support team for personalized offers.</li>
+</ul>
+</div>
           </div>
         </div>
       )}
@@ -305,6 +308,12 @@ function Tournament_nextpg() {
       <div className="z-20 flex overflow-hidden justify-center w-full -mt-5 px-[1rem] pt-[1rem] pb-[1rem] md:px-[5rem] md:pt-[1rem] md:pb-[1rem] relative">
         <form onSubmit={handleSubmit} className="z-30 gap-4 md:gap-5 bg-[#1A2B4C] rounded-xl md:rounded-[2rem] shadow-[8px_-5px_0px_2px_#253A6E] md:shadow-[22px_-14px_0px_5px_#253A6E] flex flex-col items-start justify-around w-full max-w-[90rem] pl-[1rem] pr-[1rem] pt-[2rem] pb-[1rem] md:pl-[3rem] md:pr-[5rem] md:pt-[3rem] md:pb-[2rem]">
           <h1 className="text-2xl md:text-4xl text-white font-bold mt-1 md:mt-1 w-full text-center md:text-left">Add Tournament/Series</h1>
+          
+          {noOfTeams && (
+            <div className="w-1/3 text-white p-2 rounded-lg mb-4 text-sm md:text-base">
+              Number of Teams: {noOfTeams}
+            </div>
+          )}
 
           {showValidationError && (
             <div className="w-full bg-red-500 text-white p-2 rounded-lg mb-4 text-sm md:text-base">

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import nav from '../../assets/kumar/right-chevron.png';
 import frd1 from '../../assets/kumar/frd1.jpg';
 import frd2 from '../../assets/kumar/frd2.jpg';
@@ -8,6 +8,8 @@ import { collection, getDocs } from "firebase/firestore";
 
 const TournamentPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { noOfTeams = 2, selectedBall } = location.state || {}; // Default to 2 teams if noOfTeams is not provided
   const [step, setStep] = useState('menu');
   const [teams, setTeams] = useState([]);
   const [sharedLink, setSharedLink] = useState('');
@@ -52,7 +54,11 @@ const TournamentPage = () => {
 
   const handleCardClick = (teamName) => {
     if (!selectedTeams.includes(teamName)) {
-      setSelectedTeams([...selectedTeams, teamName]);
+      if (selectedTeams.length < noOfTeams) {
+        setSelectedTeams([...selectedTeams, teamName]);
+      } else {
+        alert(`You cannot select more than ${noOfTeams} teams!`);
+      }
     }
   };
 
@@ -67,8 +73,13 @@ const TournamentPage = () => {
   };
 
   const handleAccept = (team) => {
-    setAcceptedTeams([...acceptedTeams, team]);
-    setPendingTeams(pendingTeams.filter((t) => t.id !== team.id));
+    if (selectedTeams.length < noOfTeams) {
+      setAcceptedTeams([...acceptedTeams, team]);
+      setPendingTeams(pendingTeams.filter((t) => t.id !== team.id));
+      setSelectedTeams([...selectedTeams, team.name]);
+    } else {
+      alert(`You cannot accept more than ${noOfTeams} teams!`);
+    }
   };
 
   const handleReject = (team) => {
@@ -105,6 +116,18 @@ const TournamentPage = () => {
       <div className="z-20 flex overflow-hidden justify-center w-full p-2 md:px-[5rem] md:pt-[1rem] relative">
         <form className="z-30 gap-5 md:gap-10 bg-[#1A2B4C] rounded-xl md:rounded-[2rem] shadow-[8px_-5px_0px_2px_#253A6E] md:shadow-[22px_-14px_0px_5px_#253A6E] flex flex-col items-center justify-around w-full max-w-[70rem] m-2 md:m-4 p-4 md:pl-[5rem] md:pr-[5rem] md:pt-[5rem] md:pb-[1rem] text-start">
           <h1 className="text-2xl md:text-5xl font-bold mb-4 md:mb-2 mt-4 md:-mt-8 text-center">Tournament Setup</h1>
+
+          {noOfTeams && (
+            <div className="w-1/3 text-white p-2 rounded-lg mb-4 text-sm md:text-base">
+              Number of Teams: {noOfTeams}
+            </div>
+          )}
+
+          {selectedBall && (
+            <div className="w-full bg-blue-500 text-white p-2 rounded-lg mb-4 text-sm md:text-base">
+              Ball Type: {selectedBall}
+            </div>
+          )}
 
           {step === 'menu' && (
             <div className="flex flex-row md:flex-col gap-4 md:gap-10 w-[50%] justify-center">
@@ -176,7 +199,7 @@ const TournamentPage = () => {
                   handleAddTeamMode();
                 }}
                 className="mt-2 md:mt-4 bg-[linear-gradient(120deg,_#000000,_#001A80)] px-4 py-2 md:px-5 md:py-2 rounded hover:bg-yellow-700 cursor-pointer text-sm md:text-base"
-              forti>
+              >
                 + Add Team
               </button>
 
@@ -326,7 +349,7 @@ const TournamentPage = () => {
                 <button
                   type="button"
                   onClick={handleStartMatch}
-                  className="rounded-xl w-32 md:w-44 bg-gradient-to-l from-[#5DE0E6] to-[#004AAD] h-8 md:h-9 text-white cursor-pointer hover:shadow-[0px_0px_13px_0px_#5DE0E6] text-sm md:text-base"
+                  className="rounded-xl w-32 md:w-44 bg-gradient-to-l from-[#5DE0E6] to-[#004AAD] h-8 md:h-9 text-white cursor-pointer text-sm md:text-base"
                 >
                   Next
                 </button>
