@@ -2,128 +2,84 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Picture3 from '../../../assets/sophita/HomePage/Picture3.png';
 import { motion } from 'framer-motion';
-import { FaCrown, FaChevronLeft, FaPlus, FaStar, FaTrash } from 'react-icons/fa';
-import { collection, getDocs, doc, setDoc, deleteDoc } from "firebase/firestore";
+import { FaCrown, FaChevronLeft, FaStar } from 'react-icons/fa';
+import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { db, auth } from '../../../firebase';
 
 const FieldingStatsPage = () => {
   const [stats, setStats] = useState([]);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [formData, setFormData] = useState({
-    name: '',
-    matches: '',
-    dismissals: '',
-    catches: '',
-    overs: '',
-    rank: '',
-    stars: '',
-    isPro: false,
-    avatarInputType: 'url',
-    avatarUrl: '',
-    avatarFile: null,
-    avatarBase64: ''
-  });
-
   const navigate = useNavigate();
 
   useEffect(() => {
-    (async () => {
-      try {
-        if (!auth.currentUser) return;
-
-        const snap = await getDocs(collection(db, "fieldingStats"));
-        const statsList = snap.docs
-          .map(doc => ({ id: doc.id, ...doc.data() }))
-          .filter(stat => stat.userId === auth.currentUser.uid);
-        setStats(statsList);
-      } catch (error) {
-        console.error("Error fetching fielding stats:", error);
-      }
-    })();
-  }, [showAddModal]);
-
-  const handleChange = e => {
-    const { name, value, type, checked, files } = e.target;
-
-    if (name === "avatarFile" && files && files[0]) {
-      const file = files[0];
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData(prev => ({
-          ...prev,
-          avatarFile: file,
-          avatarBase64: reader.result,
-          avatarUrl: ''
-        }));
-      };
-      reader.readAsDataURL(file);
-    } else if (name === "avatarInputType") {
-      setFormData(prev => ({
-        ...prev,
-        avatarInputType: value,
-        avatarUrl: '',
-        avatarFile: null,
-        avatarBase64: ''
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: type === 'checkbox' ? checked : value
-      }));
+    if (!auth.currentUser) {
+      console.log("No authenticated user found.");
+      setStats([]);
+      return;
     }
-  };
 
-  const handleDeleteStat = async (statId) => {
-    if (!window.confirm("Are you sure you want to delete this player's fielding stats?")) return;
+    const q = query(
+      collection(db, 'clubTeams'),
+      where('createdBy', '==', auth.currentUser.uid)
+    );
 
-    try {
-      await deleteDoc(doc(db, "fieldingStats", statId));
-      setStats(stats.filter(stat => stat.id !== statId));
-    } catch (err) {
-      console.error("Error deleting fielding stat:", err);
-      alert("Failed to delete fielding stat");
-    }
-  };
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const statsList = [];
 
-  const handleSubmit = async e => {
-    e.preventDefault();
-    const id = formData.name.toLowerCase().replace(/\s+/g, '_');
-    const avatarToSave = formData.avatarBase64 || formData.avatarUrl || '';
+      snapshot.docs.forEach((doc) => {
+        const teamData = doc.data();
+        const teamPlayers = teamData.players || [];
 
-    try {
-      await setDoc(doc(db, "fieldingStats", id), {
-        name: formData.name,
-        matches: formData.matches,
-        dismissals: formData.dismissals,
-        catches: formData.catches,
-        overs: formData.overs,
-        rank: formData.rank,
-        stars: Number(formData.stars),
-        isPro: Boolean(formData.isPro),
-        avatar: avatarToSave,
-        userId: auth.currentUser.uid
+        teamPlayers.forEach((player) => {
+          if (player.userId === auth.currentUser.uid) {
+            const fieldingStats = player.careerStats?.fielding || {};
+            const matches = player.careerStats?.batting?.matches || 0;
+            const totalPoints = (fieldingStats.runOuts || 0) + (fieldingStats.catches || 0);
+            const rankScore = matches > 0 ? totalPoints / matches : 0;
+
+            statsList.push({
+              id: player.playerId?.toString() || `${doc.id}-${player.name}`,
+              playerId: player.playerId || "N/A",
+              name: player.name || 'Unknown',
+              matches,
+              runOuts: fieldingStats.runOuts || 0,
+              catches: fieldingStats.catches || 0,
+              overs: Math.floor(player.careerStats?.bowling?.overs || 0),
+              rankScore,
+              stars: player.stars || 0,
+              avatar: player.avatar || player.image || '',
+              userId: player.userId,
+              teamName: player.teamName || "Unknown"
+            });
+          }
+        });
       });
 
-      setFormData({
-        name: '',
-        matches: '',
-        dismissals: '',
-        catches: '',
-        overs: '',
-        rank: '',
-        stars: '',
-        isPro: false,
-        avatarInputType: 'url',
-        avatarUrl: '',
-        avatarFile: null,
-        avatarBase64: ''
+      const sortedStats = statsList.sort((a, b) => b.rankScore - a.rankScore);
+
+      let rank = 1;
+      let prevScore = null;
+
+      sortedStats.forEach((player) => {
+        if (prevScore !== null && player.rankScore !== prevScore) {
+          rank++;
+        }
+        player.rank = rank;
+        prevScore = player.rankScore;
       });
-      setShowAddModal(false);
-    } catch (err) {
-      console.error("Error adding fielding stat:", err);
-      alert("Failed to add fielding stat");
-    }
-  };
+
+      // Top 5 get Pro tag
+      sortedStats.forEach((player, index) => {
+        player.isPro = index < 5;
+      });
+
+      setStats(sortedStats);
+    }, (error) => {
+      console.error("Error fetching fielding stats:", error);
+      setStats([]);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#03001e] via-[#7303c0] to-[#ec38bc] text-white">
@@ -139,12 +95,6 @@ const FieldingStatsPage = () => {
             <img src={Picture3} alt="Logo" className="h-8 w-8" />
             <span className="text-xl font-bold">Cricklytics</span>
           </div>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-full"
-          >
-            <FaPlus /> Add Fielding Stats
-          </button>
         </div>
       </nav>
 
@@ -160,11 +110,10 @@ const FieldingStatsPage = () => {
               <tr className="border-b border-gray-400">
                 <th className="text-left p-2">Player</th>
                 <th className="text-center p-2">Mat</th>
-                <th className="text-center p-2">Dismissal</th>
+                <th className="text-center p-2">Runouts</th>
                 <th className="text-center p-2">Catches</th>
                 <th className="text-center p-2">Overs</th>
                 <th className="text-center p-2">Rank</th>
-                <th className="text-center p-2">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -180,7 +129,7 @@ const FieldingStatsPage = () => {
                         <img
                           src={p.avatar}
                           alt={p.name}
-                          className="w-10 h-10 rounded-full object-cover bg-gray-700 flex items-center justify-center text-white uppercase"
+                          className="w-10 h-10 rounded-full object-cover bg-gray-700"
                           onError={(e) => { e.currentTarget.src = ""; }}
                         />
                       ) : (
@@ -196,6 +145,9 @@ const FieldingStatsPage = () => {
                     </div>
                     <div>
                       <div className="font-medium">{p.name}</div>
+                      <div className="text-xs text-gray-300">
+                        ID: {p.playerId} | {p.teamName}
+                      </div>
                       <div className="flex items-center">
                         {Array.from({ length: p.stars }).map((_, i) => (
                           <FaStar key={i} className="text-yellow-400 text-xs" />
@@ -204,137 +156,16 @@ const FieldingStatsPage = () => {
                     </div>
                   </td>
                   <td className="p-2 text-center">{p.matches}</td>
-                  <td className="p-2 text-center">{p.dismissals}</td>
+                  <td className="p-2 text-center">{p.runOuts}</td>
                   <td className="p-2 text-center">{p.catches}</td>
                   <td className="p-2 text-center">{p.overs}</td>
                   <td className="p-2 text-center font-bold text-yellow-400">{p.rank}</td>
-                  <td className="p-2 text-center">
-                    <FaTrash
-                      className="text-white hover:text-red-500 cursor-pointer"
-                      onClick={() => handleDeleteStat(p.id)}
-                    />
-                  </td>
                 </motion.tr>
               ))}
             </tbody>
           </table>
         </motion.div>
       </main>
-
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 overflow-auto">
-          <div className="bg-gray-800 rounded-lg p-6 max-w-md w-full space-y-4 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center sticky top-0 bg-gray-800 py-2 z-20">
-              <h3 className="text-xl font-bold">Add Fielding Stats</h3>
-              <button onClick={() => setShowAddModal(false)} className="text-gray-400 text-2xl">×</button>
-            </div>
-            <form onSubmit={handleSubmit} className="space-y-3">
-              {["name", "matches", "dismissals", "catches", "overs", "rank"].map((key) => (
-                <div key={key}>
-                  <label className="block text-white mb-1 capitalize">{key}</label>
-                  <input
-                    name={key}
-                    value={formData[key]}
-                    onChange={handleChange}
-                    required
-                    className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white"
-                  />
-                </div>
-              ))}
-
-              <div>
-                <label className="block text-white mb-1">Stars (1–5)</label>
-                <input
-                  name="stars"
-                  type="number"
-                  min="1"
-                  max="5"
-                  value={formData.stars}
-                  onChange={handleChange}
-                  required
-                  className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white"
-                />
-              </div>
-
-              <div className="text-white mb-2">Select Avatar Input Type:</div>
-              <div className="flex gap-4 mb-4 text-white">
-                <label className="flex items-center gap-1 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="avatarInputType"
-                    value="url"
-                    checked={formData.avatarInputType === 'url'}
-                    onChange={handleChange}
-                  />
-                  URL
-                </label>
-                <label className="flex items-center gap-1 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="avatarInputType"
-                    value="file"
-                    checked={formData.avatarInputType === 'file'}
-                    onChange={handleChange}
-                  />
-                  Upload
-                </label>
-              </div>
-
-              {formData.avatarInputType === 'url' ? (
-                <div>
-                  <label className="block text-white mb-1">Avatar URL (optional)</label>
-                  <input
-                    name="avatarUrl"
-                    type="text"
-                    value={formData.avatarUrl}
-                    onChange={handleChange}
-                    placeholder="Enter image URL"
-                    className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white"
-                  />
-                </div>
-              ) : (
-                <div>
-                  <label className="block text-white mb-1">Upload Avatar Image (optional)</label>
-                  <input
-                    name="avatarFile"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleChange}
-                    className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white"
-                  />
-                  {formData.avatarBase64 && (
-                    <img src={formData.avatarBase64} alt="Preview" className="mt-2 w-20 h-20 rounded-full object-cover" />
-                  )}
-                </div>
-              )}
-
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  name="isPro"
-                  checked={formData.isPro}
-                  onChange={handleChange}
-                  id="isPro"
-                />
-                <label htmlFor="isPro" className="text-white">Pro (show crown?)</label>
-              </div>
-
-              <div className="flex justify-end space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowAddModal(false)}
-                  className="bg-gray-600 px-4 py-2 rounded"
-                >
-                  Cancel
-                </button>
-                <button type="submit" className="bg-blue-600 px-4 py-2 rounded text-white">
-                  Add
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       <motion.div
         initial={{ y: 20, opacity: 0 }}
