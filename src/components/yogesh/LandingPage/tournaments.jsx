@@ -5,6 +5,7 @@ import AddTournamentModal from '../LandingPage/AddTournamentModal';
 import { db, auth } from '../../../firebase';
 import { collection, query, where, onSnapshot, getDocs } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
+import { useClub } from './ClubContext';
 
 // Helper function to parse DD-MMM-YY to Date object for sorting
 const parseDateString = (dateStr) => {
@@ -32,6 +33,9 @@ const parseDateString = (dateStr) => {
 };
 
 const Tournament = () => {
+  const { clubName } = useClub();
+  const [isClubCreator, setIsClubCreator] = useState(false);
+
   const [showRoleModal, setShowRoleModal] = useState(() => {
     const storedRole = sessionStorage.getItem('userRole');
     return !storedRole; // Show modal if no role is stored
@@ -89,6 +93,7 @@ const Tournament = () => {
         setTopBattingPerformers([]);
         setTopBowlingPerformers([]);
         setTournamentError("You must be logged in to view tournaments.");
+        setIsClubCreator(false);
       }
       setAuthLoading(false);
     });
@@ -96,9 +101,32 @@ const Tournament = () => {
     return () => unsubscribeAuth();
   }, []);
 
-  // Fetch all tournaments for the user
+  // Fetch club ownership to determine if current user is the creator
   useEffect(() => {
-    if (!currentUserId) {
+    if (!currentUserId || !clubName) {
+      setIsClubCreator(false);
+      return;
+    }
+
+    const q = query(
+      collection(db, "clubs"),
+      where("name", "==", clubName),
+      where("userId", "==", currentUserId)
+    );
+
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      setIsClubCreator(!querySnapshot.empty);
+    }, (err) => {
+      console.error("Error checking club ownership:", err);
+      setIsClubCreator(false);
+    });
+
+    return () => unsubscribe();
+  }, [currentUserId, clubName]);
+
+  // Fetch all tournaments for the club
+  useEffect(() => {
+    if (!clubName) {
       setLoadingTournament(false);
       setTournaments([]);
       return;
@@ -109,7 +137,7 @@ const Tournament = () => {
 
     const q = query(
       collection(db, "tournaments"),
-      where("userId", "==", currentUserId)
+      where("clubName", "==", clubName)
     );
 
     const unsubscribeSnapshot = onSnapshot(q, (querySnapshot) => {
@@ -142,7 +170,7 @@ const Tournament = () => {
         setTournamentData(null);
         setSelectedTournamentId(null);
         sessionStorage.removeItem('selectedTournamentId');
-        setTournamentError("No tournaments found for this user.");
+        setTournamentError("No tournaments found for this club.");
       }
       setLoadingTournament(false);
     }, (err) => {
@@ -152,7 +180,7 @@ const Tournament = () => {
     });
 
     return () => unsubscribeSnapshot();
-  }, [currentUserId]);
+  }, [clubName]);
 
   // Handle tournament selection
   const handleTournamentChange = (event) => {
@@ -177,7 +205,6 @@ const Tournament = () => {
 
     const matchesQuery = query(
       collection(db, "tournamentMatches"),
-      where("createdBy", "==", currentUserId),
       where("tournamentId", "==", tournamentData.id)
     );
 
@@ -219,7 +246,7 @@ const Tournament = () => {
     });
 
     return () => unsubscribeMatches();
-  }, [tournamentData, currentUserId]);
+  }, [tournamentData]);
 
   // Fetch top performers and calculate tournament statistics
   useEffect(() => {
@@ -230,11 +257,11 @@ const Tournament = () => {
       setStatsError(null);
 
       try {
-        // Filter clubPlayers by tournamentName
+        // Filter clubPlayers by tournamentName and clubName
         const playersQuery = query(
           collection(db, 'clubPlayers'),
           where('tournamentName', '==', tournamentData.name),
-          where('userId', '==', currentUserId)
+          where('clubName', '==', clubName)
         );
 
         const querySnapshot = await getDocs(playersQuery);
@@ -316,7 +343,7 @@ const Tournament = () => {
       }
     };
 
-    if (currentUserId && tournamentData?.name) {
+    if (clubName && tournamentData?.name) {
       fetchData();
     } else {
       setLoadingPerformers(false);
@@ -324,7 +351,7 @@ const Tournament = () => {
       setPerformersError("You must be logged in and select a tournament to view performers.");
       setStatsError("You must be logged in and select a tournament to view statistics.");
     }
-  }, [tournamentData, currentUserId]);
+  }, [tournamentData, clubName]);
 
   if (authLoading) {
     return (
@@ -400,7 +427,7 @@ const Tournament = () => {
                   No tournaments found. {userRole === 'admin' ? 'Add one below.' : 'Check back later.'}
                 </div>
               )}
-              {userRole === 'admin' && currentUserId && (
+              {userRole === 'admin' && currentUserId && isClubCreator && (
                 <button
                   onClick={() => setShowAddTournamentModal(true)}
                   className="mt-6 md:mt-0 px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors self-start md:self-center"
@@ -415,7 +442,7 @@ const Tournament = () => {
             <div className="text-center text-gray-400 text-xl py-8">
               {userRole === 'admin'
                 ? 'No tournaments found. Add a new tournament to get started.'
-                : 'No active tournaments found for your account.'}
+                : 'No active tournaments found for your club.'}
             </div>
           )}
 
@@ -580,6 +607,7 @@ const Tournament = () => {
             setShowAddTournamentModal(false);
           }}
           currentUserId={currentUserId}
+          clubName={clubName}
         />
       )}
     </div>

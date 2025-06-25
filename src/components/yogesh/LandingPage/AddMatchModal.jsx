@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { db } from '../../../firebase'; // Adjust path as needed
 import { collection, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
+import { useClub } from './ClubContext'; // Import the context hook
 
 const AddMatchModal = ({ onClose, onMatchAdded, tournamentId, tournamentName, currentUserId }) => {
+  const { clubName } = useClub(); // Get clubName from context
   const [matchData, setMatchData] = useState({
     tournamentId: tournamentId || '', // Pre-fill with prop or empty
     tournamentName: tournamentName || '', // Pre-fill with prop or empty
@@ -92,7 +94,9 @@ const AddMatchModal = ({ onClose, onMatchAdded, tournamentId, tournamentName, cu
       await addDoc(collection(db, "tournamentMatches"), {
         ...matchData,
         createdAt: serverTimestamp(),
+        userId: currentUserId,
         createdBy: currentUserId, // Store the ID of the admin who added the match
+        clubName: clubName || '', // Store clubName from context, default to empty string if undefined
       });
       onMatchAdded(); // Close modal and potentially refresh data
     } catch (err) {
@@ -144,6 +148,16 @@ const AddMatchModal = ({ onClose, onMatchAdded, tournamentId, tournamentName, cu
                 </option>
               ))}
             </select>
+          </div>
+          <div>
+            <label htmlFor="clubName" className="block text-gray-300 text-sm font-bold mb-2">Club Name (from context):</label>
+            <input
+              type="text"
+              id="clubName"
+              value={clubName || 'No club selected'}
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-300 leading-tight bg-gray-700 border-gray-600 opacity-50"
+              disabled
+            />
           </div>
           <div>
             <label htmlFor="location" className="block text-gray-300 text-sm font-bold mb-2">Location:</label>

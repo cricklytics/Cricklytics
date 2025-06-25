@@ -5,9 +5,11 @@ import AddMatchModal from '../LandingPage/AddMatchModal';
 import { db, auth } from '../../../firebase';
 import { collection, query, onSnapshot, where } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
+import { useClub } from './ClubContext';
 
 const Matches = () => {
-  // Initialize showRoleModal and userRole from sessionStorage
+  const { clubName } = useClub();
+
   const [showRoleModal, setShowRoleModal] = useState(() => {
     const storedRole = sessionStorage.getItem('userRole');
     return !storedRole;
@@ -15,6 +17,8 @@ const Matches = () => {
   const [userRole, setUserRole] = useState(() => {
     return sessionStorage.getItem('userRole') || null;
   });
+  const [isClubCreator, setIsClubCreator] = useState(false);
+  const [clubCreatorLoading, setClubCreatorLoading] = useState(true);
 
   const [showAddMatchModal, setShowAddMatchModal] = useState(false);
   const [currentUserId, setCurrentUserId] = useState(null);
@@ -29,21 +33,18 @@ const Matches = () => {
   const [loadingMatches, setLoadingMatches] = useState(true);
   const [matchesError, setMatchesError] = useState(null);
 
-  // Function to handle role selection
   const handleSelectRole = (role) => {
     setUserRole(role);
     sessionStorage.setItem('userRole', role);
     setShowRoleModal(false);
   };
 
-  // Effect to listen for auth state changes
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       if (user) {
         setCurrentUserId(user.uid);
       } else {
         setCurrentUserId(null);
-        setTournamentsFromDb([]);
         setMatchesData([]);
         setMatchesError('Please log in to view matches.');
       }
@@ -53,25 +54,71 @@ const Matches = () => {
     return () => unsubscribeAuth();
   }, []);
 
-  // Effect to fetch tournaments from DB for the current user
   useEffect(() => {
-    if (!currentUserId) {
+    if (!currentUserId || !clubName) {
+      setIsClubCreator(false);
+      setClubCreatorLoading(false);
+      return;
+    }
+
+    setClubCreatorLoading(true);
+
+    const q = query(
+      collection(db, 'clubs'),
+      where('name', '==', clubName),
+      where('userId', '==', currentUserId)
+    );
+
+    const unsubscribeSnapshot = onSnapshot(q, (querySnapshot) => {
+      setIsClubCreator(!querySnapshot.empty);
+      if (querySnapshot.empty && !sessionStorage.getItem('userRole')) {
+        setUserRole('viewer');
+        sessionStorage.setItem('userRole', 'viewer');
+        setShowRoleModal(false);
+      } else if (!querySnapshot.empty && !sessionStorage.getItem('userRole')) {
+        setShowRoleModal(true);
+      }
+      setClubCreatorLoading(false);
+    }, (err) => {
+      console.error("Error checking club creator status:", err);
+      setIsClubCreator(false);
+      if (!sessionStorage.getItem('userRole')) {
+        setUserRole('viewer');
+        sessionStorage.setItem('userRole', 'viewer');
+        setShowRoleModal(false);
+      }
+      setClubCreatorLoading(false);
+    });
+
+    return () => unsubscribeSnapshot();
+  }, [currentUserId, clubName]);
+
+  useEffect(() => {
+    if (!clubName) {
       setTournamentsFromDb([]);
       return;
     }
 
     const q = query(
       collection(db, 'tournaments'),
-      where('userId', '==', currentUserId)
+      where('clubName', '==', clubName)
     );
 
     const unsubscribeSnapshot = onSnapshot(q, (querySnapshot) => {
-      const fetchedTournaments = querySnapshot.docs.map(doc => ({
+      let fetchedTournaments = querySnapshot.docs.map(doc => ({
         id: doc.id,
-        name: doc.data().name
+        name: doc.data().name,
+        userId: doc.data().userId
       }));
+
+      // If the current user is not the club creator, exclude tournaments created by the current user
+      if (!isClubCreator && currentUserId) {
+        fetchedTournaments = fetchedTournaments.filter(
+          tournament => tournament.userId !== currentUserId
+        );
+      }
+
       setTournamentsFromDb(fetchedTournaments);
-      // Automatically select the first tournament if available
       if (fetchedTournaments.length > 0 && !selectedTournamentId) {
         setSelectedTournamentId(fetchedTournaments[0].id);
         setSelectedTournamentName(fetchedTournaments[0].name);
@@ -85,11 +132,10 @@ const Matches = () => {
     });
 
     return () => unsubscribeSnapshot();
-  }, [currentUserId, selectedTournamentId]);
+  }, [clubName, isClubCreator, currentUserId, selectedTournamentId]);
 
-  // Effect to fetch matches for the selected tournament
   useEffect(() => {
-    if (!currentUserId || !selectedTournamentName) {
+    if (!currentUserId || !selectedTournamentName || !clubName) {
       setMatchesData([]);
       setLoadingMatches(false);
       return;
@@ -101,15 +147,20 @@ const Matches = () => {
     const q = query(
       collection(db, 'tournamentMatches'),
       where('tournamentName', '==', selectedTournamentName),
-      where('createdBy', '==', currentUserId)
+      where('clubName', '==', clubName)
     );
 
     const unsubscribeSnapshot = onSnapshot(q, (querySnapshot) => {
-      const fetchedMatches = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setMatchesData(fetchedMatches);
+      if (querySnapshot.empty) {
+        setMatchesData([]);
+        setMatchesError(`No matches found for ${selectedTournamentName} in ${clubName}.`);
+      } else {
+        const fetchedMatches = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setMatchesData(fetchedMatches);
+      }
       setLoadingMatches(false);
     }, (err) => {
       console.error("Error fetching matches:", err);
@@ -118,9 +169,8 @@ const Matches = () => {
     });
 
     return () => unsubscribeSnapshot();
-  }, [currentUserId, selectedTournamentName]);
+  }, [currentUserId, selectedTournamentName, clubName]);
 
-  // Handle tournament selection change
   const handleTournamentChange = (e) => {
     const tournamentId = e.target.value;
     setSelectedTournamentId(tournamentId);
@@ -128,7 +178,6 @@ const Matches = () => {
     setSelectedTournamentName(selectedTournament ? selectedTournament.name : '');
   };
 
-  // Filter tabs
   const filterTabs = [
     { id: 'all', label: 'ALL' },
     { id: 'live', label: 'LIVE' },
@@ -136,7 +185,6 @@ const Matches = () => {
     { id: 'past', label: 'PAST' },
   ];
 
-  // Function to filter matches based on activeFilter
   const filteredMatches = matchesData.filter(match => {
     if (activeFilter === 'all') {
       return true;
@@ -144,10 +192,13 @@ const Matches = () => {
     return match.status && match.status.toLowerCase() === activeFilter;
   });
 
-  if (authLoading) {
+  const selectedTournament = tournamentsFromDb.find(t => t.id === selectedTournamentId);
+  const canAddMatch = userRole === 'admin' && currentUserId && selectedTournamentId && selectedTournament && selectedTournament.userId === currentUserId && isClubCreator;
+
+  if (authLoading || clubCreatorLoading) {
     return (
       <div className="bg-gray-900 min-h-screen flex items-center justify-center text-white text-xl">
-        Loading authentication...
+        Loading...
       </div>
     );
   }
@@ -160,10 +211,18 @@ const Matches = () => {
     );
   }
 
+  if (!clubName) {
+    return (
+      <div className="bg-gray-900 min-h-screen flex items-center justify-center text-white text-xl">
+        No club selected. Please select a club to view matches.
+      </div>
+    );
+  }
+
   return (
     <div className="bg-gray-900 p-4 min-h-screen text-gray-100">
       <AnimatePresence>
-        {showRoleModal && (
+        {showRoleModal && isClubCreator && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -177,7 +236,6 @@ const Matches = () => {
 
       {userRole && (
         <>
-          {/* Tournament Selection and Add Match Button */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 bg-gray-800 p-4 rounded-lg border border-gray-700">
             {tournamentsFromDb.length > 0 ? (
               <div className="flex items-center gap-4 w-full sm:w-auto">
@@ -200,7 +258,7 @@ const Matches = () => {
               <p className="text-gray-400">No tournaments available. Add one from the Tournament page.</p>
             )}
 
-            {userRole === 'admin' && currentUserId && selectedTournamentId && (
+            {canAddMatch && (
               <button
                 onClick={() => setShowAddMatchModal(true)}
                 className="mt-4 sm:mt-0 px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors self-start sm:self-center"
@@ -210,7 +268,6 @@ const Matches = () => {
             )}
           </div>
 
-          {/* Filter Tabs */}
           <div className="flex flex-wrap gap-2 mb-6">
             {filterTabs.map((tab) => (
               <button
@@ -227,7 +284,6 @@ const Matches = () => {
             ))}
           </div>
 
-          {/* Matches List */}
           <div className="space-y-4">
             <h1 className="text-2xl font-bold text-purple-400 mb-4">{selectedTournamentName || 'Select a Tournament'} Matches</h1>
 
@@ -274,8 +330,7 @@ const Matches = () => {
         </>
       )}
 
-      {/* Add Match Modal */}
-      {showAddMatchModal && currentUserId && selectedTournamentId && (
+      {showAddMatchModal && canAddMatch && (
         <AddMatchModal
           onClose={() => setShowAddMatchModal(false)}
           onMatchAdded={() => {

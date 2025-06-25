@@ -3,14 +3,17 @@ import { motion, AnimatePresence } from 'framer-motion';
 import RoleSelectionModal from '../LandingPage/RoleSelectionModal';
 import AddTeamModal from '../LandingPage/AddTeamModal';
 import TeamSquadModal from '../LandingPage/TeamSquadModal';
-import AddPlayerModal from '../../../pages/AddClubPlayer';
+import AddClubPlayer from '../../../pages/AddClubPlayer';
 import { db, auth, storage } from '../../../firebase';
-import { collection, onSnapshot, query, updateDoc, doc, deleteDoc, where } from 'firebase/firestore';
+import { collection, onSnapshot, query, doc, deleteDoc, where } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
-import { FiPlusCircle, FiEdit, FiTrash2 } from 'react-icons/fi';
+import { FiPlusCircle, FiTrash2 } from 'react-icons/fi';
+import { useClub } from './ClubContext';
 
 const Teams = () => {
+  const { clubName } = useClub();
+
   const [showRoleModal, setShowRoleModal] = useState(() => {
     const storedRole = sessionStorage.getItem('userRole');
     return !storedRole;
@@ -20,14 +23,12 @@ const Teams = () => {
   });
   const [currentUserId, setCurrentUserId] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [isClubCreator, setIsClubCreator] = useState(false);
+  const [clubCreatorLoading, setClubCreatorLoading] = useState(true);
 
   const [showAddTeamModal, setShowAddTeamModal] = useState(false);
   const [isAddPlayerModalOpen, setIsAddPlayerModalOpen] = useState(false);
   const [selectedTeamForPlayer, setSelectedTeamForPlayer] = useState(null);
-  const [isEditPlayerModalOpen, setIsEditPlayerModalOpen] = useState(false);
-  const [selectedPlayer, setSelectedPlayer] = useState(null);
-  const [selectedTeamForEdit, setSelectedTeamForEdit] = useState(null);
-  const [showDeletePlayerConfirm, setShowDeletePlayerConfirm] = useState(false);
   const [showDeleteTeamConfirm, setShowDeleteTeamConfirm] = useState(false);
   const [teamToDelete, setTeamToDelete] = useState(null);
   const [showTeamSquadModal, setShowTeamSquadModal] = useState(false);
@@ -38,9 +39,9 @@ const Teams = () => {
   const [teamsError, setTeamsError] = useState(null);
 
   const [tournaments, setTournaments] = useState([]);
-  const [selectedTournamentId, setSelectedTournamentId] = useState(() => {
-    return sessionStorage.getItem('selectedTournamentId') || null;
-  });
+  const [selectedTournamentId, setSelectedTournamentId] = useState(() =>
+    sessionStorage.getItem('selectedTournamentId') || null
+  );
   const [selectedTournament, setSelectedTournament] = useState(null);
   const [loadingTournaments, setLoadingTournaments] = useState(true);
   const [tournamentsError, setTournamentsError] = useState(null);
@@ -64,11 +65,6 @@ const Teams = () => {
     setShowTeamSquadModal(true);
   };
 
-  const handlePlayerAdded = () => {
-    setIsAddPlayerModalOpen(false);
-    setSelectedTeamForPlayer(null);
-  };
-
   const handleOpenAddPlayer = (team) => {
     setSelectedTeamForPlayer(team);
     setIsAddPlayerModalOpen(true);
@@ -86,15 +82,15 @@ const Teams = () => {
             await uploadString(storageRef, base64Image, 'base64');
             const downloadURL = await getDownloadURL(storageRef);
             resolve(downloadURL);
-          } catch (error) {
-            console.error('Error uploading image: ', error);
-            reject(error);
+          } catch (err) {
+            console.error('Error uploading image: ', err);
+            reject(err);
           }
         };
         reader.readAsDataURL(file);
       });
-    } catch (error) {
-      console.error('Error uploading image: ', error);
+    } catch (err) {
+      console.error('Error uploading image: ', err);
       return null;
     }
   };
@@ -103,7 +99,7 @@ const Teams = () => {
     const tournamentId = event.target.value;
     setSelectedTournamentId(tournamentId);
     sessionStorage.setItem('selectedTournamentId', tournamentId);
-    const selected = tournaments.find(t => t.id === tournamentId);
+    const selected = tournaments.find((t) => t.id === tournamentId);
     setSelectedTournament(selected || null);
   };
 
@@ -118,7 +114,7 @@ const Teams = () => {
         setPlayers([]);
         setMatches([]);
         setTeamsError('Please log in to view teams.');
-        setTournamentsError('Please log in to view tournaments.');
+        setTournamentsError('Please log in to view trophies.');
         setPlayersError('Please log in to view players.');
         setMatchesError('Please log in to view matches.');
       }
@@ -129,61 +125,106 @@ const Teams = () => {
   }, []);
 
   useEffect(() => {
-    if (!currentUserId) {
-      setLoadingTournaments(false);
+    if (!currentUserId || !clubName) {
+      setIsClubCreator(false);
+      setClubCreatorLoading(false);
+      return;
+    }
+
+    setClubCreatorLoading(true);
+
+    const q = query(
+      collection(db, 'clubs'),
+      where('name', '==', clubName),
+      where('userId', '==', currentUserId)
+    );
+
+    const unsubscribeSnapshot = onSnapshot(q, (querySnapshot) => {
+      setIsClubCreator(!querySnapshot.empty);
+      if (querySnapshot.empty && !sessionStorage.getItem('userRole')) {
+        setUserRole('viewer');
+        sessionStorage.setItem('userRole', 'viewer');
+        setShowRoleModal(false);
+      } else if (!querySnapshot.empty && !sessionStorage.getItem('userRole')) {
+        setShowRoleModal(true);
+      }
+      setClubCreatorLoading(false);
+    }, (err) => {
+      console.error("Error checking club creator status:", err);
+      setIsClubCreator(false);
+      if (!sessionStorage.getItem('userRole')) {
+        setUserRole('viewer');
+        sessionStorage.setItem('userRole', 'viewer');
+        setShowRoleModal(false);
+      }
+      setClubCreatorLoading(false);
+    });
+
+    return () => unsubscribeSnapshot();
+  }, [currentUserId, clubName]);
+
+  useEffect(() => {
+    if (!clubName) {
       setTournaments([]);
+      setLoadingTournaments(false);
       return;
     }
 
     setLoadingTournaments(true);
     setTournamentsError(null);
 
-    const q = query(
-      collection(db, 'tournaments'),
-      where('userId', '==', currentUserId)
-    );
+    const q = query(collection(db, 'tournaments'), where('clubName', '==', clubName));
 
-    const unsubscribeSnapshot = onSnapshot(q, (querySnapshot) => {
-      if (!querySnapshot.empty) {
-        const fetchedTournaments = querySnapshot.docs.map(doc => ({
+    const unsubscribeSnapshot = onSnapshot(
+      q,
+      (querySnapshot) => {
+        let fetchedTournaments = querySnapshot.docs.map((doc) => ({
           id: doc.id,
-          ...doc.data()
+          name: doc.data().name,
+          userId: doc.data().userId,
+          location: doc.data().location,
         }));
+
+        if (!isClubCreator && currentUserId) {
+          fetchedTournaments = fetchedTournaments.filter(
+            (tournament) => tournament.userId !== currentUserId
+          );
+        }
+
         setTournaments(fetchedTournaments);
 
         const storedTournamentId = sessionStorage.getItem('selectedTournamentId');
-        const isValidTournament = fetchedTournaments.some(t => t.id === storedTournamentId);
+        const isValidTournament = fetchedTournaments.some((t) => t.id === storedTournamentId);
 
         if (storedTournamentId && isValidTournament) {
           setSelectedTournamentId(storedTournamentId);
-          const selected = fetchedTournaments.find(t => t.id === storedTournamentId);
+          const selected = fetchedTournaments.find((t) => t.id === storedTournamentId);
           setSelectedTournament(selected || null);
+        } else if (fetchedTournaments.length > 0) {
+          setSelectedTournamentId(fetchedTournaments[0].id);
+          setSelectedTournament(fetchedTournaments[0]);
+          sessionStorage.setItem('selectedTournamentId', fetchedTournaments[0].id);
         } else {
-          if (fetchedTournaments.length > 0) {
-            setSelectedTournamentId(fetchedTournaments[0].id);
-            setSelectedTournament(fetchedTournaments[0]);
-            sessionStorage.setItem('selectedTournamentId', fetchedTournaments[0].id);
-          }
+          setSelectedTournamentId(null);
+          setSelectedTournament(null);
+          sessionStorage.removeItem('selectedTournamentId');
+          setTournamentsError('No trophies available.');
         }
-      } else {
-        setTournaments([]);
-        setSelectedTournamentId(null);
-        setSelectedTournament(null);
-        sessionStorage.removeItem('selectedTournamentId');
-        setTournamentsError('No tournaments found.');
+
+        setLoadingTournaments(false);
+      },
+      (err) => {
+        console.error('Error fetching trophies for dropdown:', err);
+        setTournamentsError('Failed to load trophies: ' + err.message);
+        setLoadingTournaments(false);
       }
-      setLoadingTournaments(false);
-    }, (err) => {
-      console.error('Error fetching tournaments:', err);
-      setTournamentsError('Failed to load tournaments: ' + err.message);
-      setLoadingTournaments(false);
-    });
+    );
 
     return () => unsubscribeSnapshot();
-  }, [currentUserId]);
+  }, [clubName, isClubCreator, currentUserId]);
 
   useEffect(() => {
-    if (!currentUserId || !selectedTournamentId) {
+    if (!clubName || !selectedTournamentId) {
       setLoadingTeams(false);
       setTeams([]);
       return;
@@ -194,8 +235,8 @@ const Teams = () => {
 
     const q = query(
       collection(db, 'clubTeams'),
-      where('createdBy', '==', currentUserId),
-      where('tournamentId', '==', selectedTournamentId)
+      where('tournamentId', '==', selectedTournamentId),
+      where('clubName', '==', clubName)
     );
 
     const unsubscribe = onSnapshot(
@@ -208,18 +249,18 @@ const Teams = () => {
         setTeams(fetchedTeams);
         setLoadingTeams(false);
       },
-      (error) => {
-        console.error('Error fetching teams: ', error);
-        setTeamsError('Failed to load teams: ' + error.message);
+      (err) => {
+        console.error('Error fetching teams: ', err);
+        setTeamsError('Failed to load teams: ' + err.message);
         setLoadingTeams(false);
       }
     );
 
     return () => unsubscribe();
-  }, [currentUserId, selectedTournamentId]);
+  }, [clubName, selectedTournamentId]);
 
   useEffect(() => {
-    if (!currentUserId || !selectedTournament?.name) {
+    if (!clubName || !selectedTournament?.name) {
       setLoadingPlayers(false);
       setPlayers([]);
       return;
@@ -230,8 +271,8 @@ const Teams = () => {
 
     const q = query(
       collection(db, 'clubPlayers'),
-      where('userId', '==', currentUserId),
-      where('tournamentName', '==', selectedTournament.name)
+      where('tournamentName', '==', selectedTournament.name),
+      where('clubName', '==', clubName)
     );
 
     const unsubscribe = onSnapshot(
@@ -244,18 +285,18 @@ const Teams = () => {
         setPlayers(fetchedPlayers);
         setLoadingPlayers(false);
       },
-      (error) => {
-        console.error('Error fetching players: ', error);
-        setPlayersError('Failed to load players: ' + error.message);
+      (err) => {
+        console.error('Error fetching players: ', err);
+        setPlayersError('Failed to load players: ' + err.message);
         setLoadingPlayers(false);
       }
     );
 
     return () => unsubscribe();
-  }, [currentUserId, selectedTournament]);
+  }, [clubName, selectedTournament]);
 
   useEffect(() => {
-    if (!currentUserId || !selectedTournament?.name) {
+    if (!currentUserId || !selectedTournament?.name || !clubName) {
       setLoadingMatches(false);
       setMatches([]);
       return;
@@ -266,8 +307,8 @@ const Teams = () => {
 
     const q = query(
       collection(db, 'tournamentMatches'),
-      where('createdBy', '==', currentUserId),
-      where('tournamentName', '==', selectedTournament.name)
+      where('tournamentName', '==', selectedTournament.name),
+      where('clubName', '==', clubName)
     );
 
     const unsubscribe = onSnapshot(
@@ -280,24 +321,23 @@ const Teams = () => {
         setMatches(fetchedMatches);
         setLoadingMatches(false);
       },
-      (error) => {
-        console.error('Error fetching matches: ', error);
-        setMatchesError('Failed to load matches: ' + error.message);
+      (err) => {
+        console.error('Error fetching matches: ', err);
+        setMatchesError('Failed to load matches: ' + err.message);
         setLoadingMatches(false);
       }
     );
 
     return () => unsubscribe();
-  }, [currentUserId, selectedTournament]);
+  }, [currentUserId, selectedTournament, clubName]);
 
-  // Process match data to extract highest, lowest totals, and biggest victories
   const getMatchStats = () => {
     const teamTotals = [];
     const victories = [];
 
-    matches.forEach(match => {
+    matches.forEach((match) => {
       if (match.score1 && match.team1) {
-        const [runs, wickets] = match.score1.split('/').map(s => parseInt(s)) || [0, 0];
+        const [runs, wickets] = match.score1.split('/').map((s) => parseInt(s)) || [0, 0];
         teamTotals.push({
           score: match.score1,
           runs,
@@ -307,7 +347,7 @@ const Teams = () => {
         });
       }
       if (match.score2 && match.team2) {
-        const [runs, wickets] = match.score2.split('/').map(s => parseInt(s)) || [0, 0];
+        const [runs, wickets] = match.score2.split('/').map((s) => parseInt(s)) || [0, 0];
         teamTotals.push({
           score: match.score2,
           runs,
@@ -331,15 +371,11 @@ const Teams = () => {
       }
     });
 
-    // Sort team totals by runs for highest
     const highestTotals = teamTotals.sort((a, b) => b.runs - a.runs).slice(0, 3);
-
-    // For lowest totals, prioritize all-out scores, then fill with lowest non-all-out scores
-    const allOutTotals = teamTotals.filter(t => t.wickets === 10).sort((a, b) => a.runs - b.runs);
-    const nonAllOutTotals = teamTotals.filter(t => t.wickets < 10).sort((a, b) => a.runs - b.runs);
+    const allOutTotals = teamTotals.filter((t) => t.wickets === 10).sort((a, b) => a.runs - b.runs);
+    const nonAllOutTotals = teamTotals.filter((t) => t.wickets < 10).sort((a, b) => a.runs - b.runs);
     const lowestTotals = [...allOutTotals, ...nonAllOutTotals].slice(0, 3);
 
-    // Sort victories by margin (runs first, then wickets)
     const sortedVictories = victories.sort((a, b) => {
       const aIsRuns = a.margin.includes('runs');
       const bIsRuns = b.margin.includes('runs');
@@ -359,7 +395,7 @@ const Teams = () => {
 
   const { highestTotals, lowestTotals, victories } = getMatchStats();
 
-  if (authLoading || loadingTournaments || loadingPlayers || loadingMatches) {
+  if (authLoading || loadingTournaments || loadingPlayers || loadingMatches || clubCreatorLoading) {
     return (
       <div className="bg-gray-900 min-h-screen flex items-center justify-center text-white text-xl">
         Loading...
@@ -371,6 +407,14 @@ const Teams = () => {
     return (
       <div className="bg-gray-900 min-h-screen flex items-center justify-center text-white text-xl">
         <p>Please log in to manage teams as an admin.</p>
+      </div>
+    );
+  }
+
+  if (!clubName) {
+    return (
+      <div className="bg-gray-900 min-h-screen flex items-center justify-center text-white text-xl">
+        No club selected. Please select a club to view teams.
       </div>
     );
   }
@@ -396,7 +440,7 @@ const Teams = () => {
             <div>
               <h1 className="text-3xl font-bold text-purple-400">Teams</h1>
               <p className="text-gray-400 mt-2">
-                {selectedTournament ? `${selectedTournament.name} • ${selectedTournament.location}` : 'Select a tournament'}
+                {selectedTournament ? `${selectedTournament.name} • ${selectedTournament.location}` : 'Select a trophy'}
               </p>
               <select
                 value={selectedTournamentId || ''}
@@ -405,18 +449,23 @@ const Teams = () => {
                 disabled={tournaments.length === 0}
               >
                 {tournaments.length === 0 ? (
-                  <option value="">No tournaments available</option>
+                  <option value="">No trophies available</option>
                 ) : (
-                  tournaments.map(tournament => (
-                    <option key={tournament.id} value={tournament.id}>
-                      {tournament.name}
+                  <>
+                    <option value="" disabled>
+                      Select a Trophy
                     </option>
-                  ))
+                    {tournaments.map((tournament) => (
+                      <option key={tournament.id} value={tournament.id}>
+                        {tournament.name}
+                      </option>
+                    ))}
+                  </>
                 )}
               </select>
               {tournamentsError && <p className="text-red-500 text-sm mt-2">{tournamentsError}</p>}
             </div>
-            {userRole === 'admin' && currentUserId && (
+            {userRole === 'admin' && (
               <div className="flex gap-4">
                 <motion.button
                   whileHover={{ scale: 1.05 }}
@@ -444,15 +493,18 @@ const Teams = () => {
             <div className="text-center text-red-500 text-xl py-8">{teamsError}</div>
           ) : teams.length === 0 ? (
             <div className="text-center text-gray-400 text-xl py-8">
-              No teams found for this tournament. {userRole === 'admin' && 'Add some teams!'}
+              No teams found for this trophy. {userRole === 'admin' && 'Add some teams!'}
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {teams.map((team) => {
-                const teamPlayers = players.filter(player => player.teamName === team.teamName);
+                const teamPlayers = players.filter((player) => player.teamName === team.teamName);
                 return (
-                  <div key={team.id} className="bg-gray-800 rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow border border-gray-700 relative">
-                    {userRole === 'admin' && currentUserId && (
+                  <div
+                    key={team.id}
+                    className="bg-gray-800 rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow border border-gray-700 relative"
+                  >
+                    {userRole === 'admin' && (
                       <button
                         onClick={() => {
                           setTeamToDelete(team);
@@ -485,14 +537,20 @@ const Teams = () => {
                       </div>
                       <div className="mb-4">
                         <p className="text-sm font-medium text-gray-400">Last Match</p>
-                        <p className={`text-sm ${team.lastMatch && team.lastMatch.toLowerCase().startsWith('won') ? 'text-green-400' : 'text-red-400'}`}>
+                        <p
+                          className={`text-sm ${
+                            team.lastMatch && team.lastMatch.toLowerCase().startsWith('won')
+                              ? 'text-green-400'
+                              : 'text-red-400'
+                          }`}
+                        >
                           {team.lastMatch}
                         </p>
                       </div>
                       <div>
                         <div className="flex justify-between items-center mb-2">
                           <p className="text-sm font-medium text-gray-400">Key Players</p>
-                          {userRole === 'admin' && currentUserId && (
+                          {userRole === 'admin' && (
                             <button
                               onClick={() => handleOpenAddPlayer(team)}
                               className="text-green-400 hover:text-green-500"
@@ -552,14 +610,30 @@ const Teams = () => {
                 <table className="min-w-full divide-y divide-gray-700">
                   <thead className="bg-gray-700">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Position</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Team</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Played</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Won</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Lost</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Points</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">NRR</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Form</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                        Position
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                        Team
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                        Played
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                        Won
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                        Lost
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                        Points
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                        NRR
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                        Form
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="bg-gray-800 divide-y divide-gray-700">
@@ -567,12 +641,18 @@ const Teams = () => {
                       .sort((a, b) => b.points - a.points)
                       .map((team, index) => (
                         <tr key={team.id} className="hover:bg-gray-700">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-200">{index + 1}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-purple-400">{team.teamName}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-200">
+                            {index + 1}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-purple-400">
+                            {team.teamName}
+                          </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{team.matches}</td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{team.wins}</td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{team.losses}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-200">{team.points}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-200">
+                            {team.points}
+                          </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
                             {team.nrr || 'N/A'}
                           </td>
@@ -610,9 +690,14 @@ const Teams = () => {
               ) : (
                 <div className="space-y-3">
                   {highestTotals.map((total, index) => (
-                    <div key={index} className="flex justify-between items-center pb-2 border-b border-gray-700">
+                    <div
+                      key={index}
+                      className="flex justify-between items-center pb-2 border-b border-gray-700"
+                    >
                       <span className="font-medium text-gray-300">{total.score}</span>
-                      <span className="text-sm text-gray-400">{total.team} vs {total.opponent}</span>
+                      <span className="text-sm text-gray-400">
+                        {total.team} vs {total.opponent}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -629,9 +714,14 @@ const Teams = () => {
               ) : (
                 <div className="space-y-3">
                   {lowestTotals.map((total, index) => (
-                    <div key={index} className="flex justify-between items-center pb-2 border-b border-gray-700">
+                    <div
+                      key={index}
+                      className="flex justify-between items-center pb-2 border-b border-gray-700"
+                    >
                       <span className="font-medium text-gray-300">{total.score}</span>
-                      <span className="text-sm text-gray-400">{total.team} vs {total.opponent}</span>
+                      <span className="text-sm text-gray-400">
+                        {total.team} vs {total.opponent}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -648,7 +738,10 @@ const Teams = () => {
               ) : (
                 <div className="space-y-3">
                   {victories.map((victory, index) => (
-                    <div key={index} className="flex justify-between items-center pb-2 border-b border-gray-700">
+                    <div
+                      key={index}
+                      className="flex justify-between items-center pb-2 border-b border-gray-700"
+                    >
                       <span className="font-medium text-gray-300">{victory.margin}</span>
                       <span className="text-sm text-gray-400">{victory.teams}</span>
                     </div>
@@ -659,19 +752,17 @@ const Teams = () => {
           </div>
 
           <AnimatePresence>
-            {showAddTeamModal && currentUserId && userRole === 'admin' && (
+            {showAddTeamModal && userRole === 'admin' && (
               <AddTeamModal
                 onClose={() => setShowAddTeamModal(false)}
-                onTeamAdded={() => {
-                  setShowAddTeamModal(false);
-                }}
+                onTeamAdded={() => setShowAddTeamModal(false)}
               />
             )}
           </AnimatePresence>
 
           <AnimatePresence>
-            {isAddPlayerModalOpen && currentUserId && userRole === 'admin' && (
-              <AddPlayerModal
+            {isAddPlayerModalOpen && userRole === 'admin' && (
+              <AddClubPlayer
                 onClose={() => setIsAddPlayerModalOpen(false)}
                 team={selectedTeamForPlayer}
               />
@@ -682,6 +773,7 @@ const Teams = () => {
             {showTeamSquadModal && selectedTeam && (
               <TeamSquadModal
                 team={selectedTeam}
+                tournament={selectedTournament}
                 onClose={() => {
                   setShowTeamSquadModal(false);
                   setSelectedTeam(null);
@@ -691,7 +783,7 @@ const Teams = () => {
           </AnimatePresence>
 
           <AnimatePresence>
-            {showDeleteTeamConfirm && teamToDelete && (
+            {showDeleteTeamConfirm && teamToDelete && userRole === 'admin' && (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -710,9 +802,9 @@ const Teams = () => {
                           await deleteDoc(doc(db, 'clubTeams', teamToDelete.id));
                           setShowDeleteTeamConfirm(false);
                           setTeamToDelete(null);
-                        } catch (error) {
-                          console.error('Error deleting team: ', error);
-                          setTeamsError('Failed to delete team: ' + error.message);
+                        } catch (err) {
+                          console.error('Error deleting team: ', err);
+                          setTeamsError('Failed to delete team: ' + err.message);
                         }
                       }}
                       className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"

@@ -3,8 +3,10 @@ import { motion } from 'framer-motion';
 import { db, auth } from '../../../firebase';
 import { collection, addDoc, query, where, onSnapshot } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
+import { useClub } from './ClubContext'; // Import the context hook
 
 const AddTeamModal = ({ onClose, onTeamAdded }) => {
+  const { clubName } = useClub(); // Get clubName from context
   const [teamName, setTeamName] = useState('');
   const [captainName, setCaptainName] = useState('');
   const [matchesPlayed, setMatchesPlayed] = useState(0);
@@ -113,7 +115,9 @@ const AddTeamModal = ({ onClose, onTeamAdded }) => {
         tournamentId: selectedTournamentId,
         tournamentName: selectedTournament.name, // Add tournamentName to the team data
         createdBy: currentUserId,
+        userId: currentUserId,
         createdAt: new Date(),
+        clubName: clubName || '', // Store clubName from context, default to empty string if undefined
       };
 
       await addDoc(collection(db, 'clubTeams'), newTeam);
@@ -186,6 +190,16 @@ const AddTeamModal = ({ onClose, onTeamAdded }) => {
               value={captainName}
               onChange={(e) => setCaptainName(e.target.value)}
               required
+            />
+          </div>
+          <div>
+            <label htmlFor="clubName" className="block text-sm font-medium text-gray-300">Club Name (from context)</label>
+            <input
+              type="text"
+              id="clubName"
+              value={clubName || 'No club selected'}
+              className="mt-1 block w-full px-3 py-2 bg-gray-900 border border-gray-700 rounded-md text-white opacity-50"
+              disabled
             />
           </div>
           <div>

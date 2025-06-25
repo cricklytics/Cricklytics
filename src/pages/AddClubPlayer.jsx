@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { db, auth } from '../firebase';
-import { doc, setDoc, getDocs, collection, query, where, updateDoc, getDoc, arrayUnion } from 'firebase/firestore';
+import { doc, setDoc, getDocs, collection, query, where, updateDoc, arrayUnion } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { onAuthStateChanged } from 'firebase/auth';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useClub } from '../components/yogesh/LandingPage/ClubContext'; // Import the context hook
 
 const storage = getStorage();
 
@@ -28,6 +29,7 @@ const generateUniquePlayerId = async () => {
 };
 
 const AddPlayerModal = ({ onClose }) => {
+  const { clubName } = useClub(); // Get clubName from context
   const [clubPlayerFormData, setClubPlayerFormData] = useState({
     playerId: '',
     name: '',
@@ -229,6 +231,7 @@ const AddPlayerModal = ({ onClose }) => {
         tournamentName: clubPlayerFormData.tournamentName,
         userId: currentUserId,
         user: clubPlayerFormData.user,
+        clubName: clubName || '', // Store clubName from context, default to empty string if undefined
         careerStats: {
           batting: {
             matches: parseInt(clubPlayerFormData.careerStatsBattingMatches) || 0,
@@ -291,7 +294,8 @@ const AddPlayerModal = ({ onClose }) => {
           wins: 0,
           losses: 0,
           points: 0,
-          lastMatch: ''
+          lastMatch: '',
+          clubName: clubName || '' // Store clubName from context
         });
       }
 
@@ -436,6 +440,15 @@ const AddPlayerModal = ({ onClose }) => {
                   onChange={handleClubPlayerChange}
                   className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   required
+                />
+              </div>
+              <div>
+                <label className="block mb-1 text-gray-300">Club Name (from context)</label>
+                <input
+                  type="text"
+                  value={clubName || 'No club selected'}
+                  className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white opacity-50"
+                  disabled
                 />
               </div>
               <div>

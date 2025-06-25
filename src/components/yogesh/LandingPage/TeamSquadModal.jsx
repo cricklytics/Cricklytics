@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db, auth } from '../../../firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
+import { useClub } from './ClubContext';
 
-const TeamSquadModal = ({ team, onClose }) => {
+const TeamSquadModal = ({ team, tournament, onClose }) => {
+  const { clubName } = useClub();
   const [players, setPlayers] = useState([]);
   const [tournamentName, setTournamentName] = useState('');
   const [currentUserId, setCurrentUserId] = useState(null);
@@ -12,7 +14,6 @@ const TeamSquadModal = ({ team, onClose }) => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    // Listen for authentication state changes
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       if (user) {
         setCurrentUserId(user.uid);
@@ -27,67 +28,76 @@ const TeamSquadModal = ({ team, onClose }) => {
   }, []);
 
   useEffect(() => {
-    if (!currentUserId || !team?.tournamentId) {
+    if (!currentUserId || !team?.tournamentId || !clubName) {
       setPlayers([]);
       setTournamentName('');
       setLoading(false);
       return;
     }
 
+    setLoading(true);
+    setError(null);
+
     const fetchTournamentAndPlayers = async () => {
-      setLoading(true);
-      setError(null);
-
       try {
-        // Fetch tournament to get tournamentName
-        const tournamentQuery = query(
-          collection(db, 'tournaments'),
-          where('userId', '==', currentUserId),
-          where('__name__', '==', team.tournamentId)
-        );
-        const tournamentSnapshot = await getDocs(tournamentQuery);
-        let fetchedTournamentName = '';
-
-        if (!tournamentSnapshot.empty) {
-          fetchedTournamentName = tournamentSnapshot.docs[0].data().name;
-          setTournamentName(fetchedTournamentName);
-        } else {
-          setError('Tournament not found.');
-          setPlayers([]);
-          setLoading(false);
-          return;
+        // Use tournament prop if provided, fallback to query
+        let fetchedTournamentName = tournament?.name || '';
+        if (!fetchedTournamentName) {
+          const tournamentQuery = query(
+            collection(db, 'tournaments'),
+            where('__name__', '==', team.tournamentId),
+            where('clubName', '==', clubName)
+          );
+          const tournamentSnapshot = await getDocs(tournamentQuery);
+          if (!tournamentSnapshot.empty) {
+            fetchedTournamentName = tournamentSnapshot.docs[0].data().name;
+          } else {
+            setError('Tournament not found.');
+            setPlayers([]);
+            setLoading(false);
+            return;
+          }
         }
+        setTournamentName(fetchedTournamentName);
 
-        // Fetch players matching teamName, tournamentName, and userId
+        // Fetch players with clubName included
         const playersQuery = query(
           collection(db, 'clubPlayers'),
-          where('userId', '==', currentUserId),
           where('tournamentName', '==', fetchedTournamentName),
-          where('teamName', '==', team.teamName)
+          where('teamName', '==', team.teamName),
+          where('clubName', '==', clubName)
         );
-        const playersSnapshot = await getDocs(playersQuery);
-        const fetchedPlayers = playersSnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
+        const unsubscribe = onSnapshot(playersQuery, (playersSnapshot) => {
+          const fetchedPlayers = playersSnapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }));
+          setPlayers(fetchedPlayers);
+          if (fetchedPlayers.length === 0) {
+            setError('No players found for this team.');
+          } else {
+            setError(null);
+          }
+          setLoading(false);
+        }, (err) => {
+          console.error('Error fetching players:', err);
+          setError('Failed to load squad: ' + err.message);
+          setLoading(false);
+        });
 
-        setPlayers(fetchedPlayers);
-        if (fetchedPlayers.length === 0) {
-          setError('No players found for this team.');
-        }
+        return () => unsubscribe();
       } catch (err) {
         console.error('Error fetching squad data:', err);
         setError('Failed to load squad: ' + err.message);
-      } finally {
         setLoading(false);
       }
     };
 
     fetchTournamentAndPlayers();
-  }, [currentUserId, team]);
+  }, [currentUserId, team, tournament, clubName]);
 
   if (!team) {
-    return null; // Don't render if no team is provided
+    return null;
   }
 
   return (
@@ -141,7 +151,7 @@ const TeamSquadModal = ({ team, onClose }) => {
                   />
                   <div>
                     <h3 className="text-lg font-semibold text-white">{player.name}</h3>
-                    <p className="text-gray-300 text-sm">Role: {player.role|| 'N/A'}</p>
+                    <p className="text-gray-300 text-sm">Role: {player.role || 'N/A'}</p>
                     {player.careerStats?.batting?.runs > 0 && (
                       <p className="text-purple-300 text-xs">
                         Runs: {player.careerStats.batting.runs}

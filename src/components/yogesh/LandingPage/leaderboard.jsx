@@ -2,8 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { db, auth } from '../../../firebase';
 import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
+import { useClub } from './ClubContext';
 
 const LeaderboardContent = () => {
+  const { clubName } = useClub();
+  const [isClubCreator, setIsClubCreator] = useState(false);
+
   const [showMore, setShowMore] = useState(false);
   const [battingStats, setBattingStats] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -19,6 +23,7 @@ const LeaderboardContent = () => {
       } else {
         setCurrentUserId(null);
         setError('Please log in to view the leaderboard.');
+        setIsClubCreator(false);
       }
       setAuthLoading(false);
     });
@@ -26,9 +31,32 @@ const LeaderboardContent = () => {
     return () => unsubscribeAuth();
   }, []);
 
+  // Fetch club ownership to determine if current user is the creator
+  useEffect(() => {
+    if (!currentUserId || !clubName) {
+      setIsClubCreator(false);
+      return;
+    }
+
+    const q = query(
+      collection(db, "clubs"),
+      where("name", "==", clubName),
+      where("userId", "==", currentUserId)
+    );
+
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      setIsClubCreator(!querySnapshot.empty);
+    }, (err) => {
+      console.error("Error checking club ownership:", err);
+      setIsClubCreator(false);
+    });
+
+    return () => unsubscribe();
+  }, [currentUserId, clubName]);
+
   // Effect to fetch players
   useEffect(() => {
-    if (!currentUserId) {
+    if (!clubName) {
       setLoading(false);
       return;
     }
@@ -38,7 +66,7 @@ const LeaderboardContent = () => {
 
     const q = query(
       collection(db, 'clubPlayers'),
-      where('userId', '==', currentUserId),
+      where('clubName', '==', clubName),
       // orderBy('runs', 'desc')
     );
 
@@ -71,7 +99,7 @@ const LeaderboardContent = () => {
     });
 
     return () => unsubscribe();
-  }, [currentUserId]);
+  }, [clubName]);
 
   if (authLoading) {
     return <div className="text-white text-center p-4 bg-gray-900 min-h-screen">Loading authentication...</div>;

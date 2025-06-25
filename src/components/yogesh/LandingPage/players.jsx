@@ -1,12 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { db, auth } from '../../../firebase';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useClub } from './ClubContext';
 import AddPlayerModal from '../../../pages/AddClubPlayer';
 import RoleSelectionModal from '../LandingPage/RoleSelectionModal';
 
 const PlayersList = () => {
+  const { clubName } = useClub();
+
   // Role selection and Auth states
   const [showRoleModal, setShowRoleModal] = useState(() => {
     const storedRole = sessionStorage.getItem('userRole');
@@ -68,7 +71,7 @@ const PlayersList = () => {
 
   // Effect to fetch tournaments from Firestore
   useEffect(() => {
-    if (!currentUserId) {
+    if (!clubName) {
       setLoadingTournaments(false);
       setTournaments([]);
       return;
@@ -79,7 +82,7 @@ const PlayersList = () => {
 
     const q = query(
       collection(db, 'tournaments'),
-      where('userId', '==', currentUserId)
+      where('clubName', '==', clubName)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -88,6 +91,9 @@ const PlayersList = () => {
         name: doc.data().name
       }));
       setTournaments(fetchedTournaments);
+      if (fetchedTournaments.length > 0 && !selectedTournament) {
+        setSelectedTournament(fetchedTournaments[0].name);
+      }
       setLoadingTournaments(false);
     }, (error) => {
       console.error("Error fetching tournaments: ", error);
@@ -96,11 +102,11 @@ const PlayersList = () => {
     });
 
     return () => unsubscribe();
-  }, [currentUserId]);
+  }, [clubName]);
 
   // Effect to fetch teams from Firestore
   useEffect(() => {
-    if (!currentUserId || !selectedTournament) {
+    if (!clubName || !selectedTournament) {
       setLoadingTeams(false);
       setTeams([]);
       setTeamFilter('');
@@ -112,7 +118,7 @@ const PlayersList = () => {
 
     const q = query(
       collection(db, 'clubTeams'),
-      where('createdBy', '==', currentUserId),
+      where('clubName', '==', clubName),
       where('tournamentName', '==', selectedTournament)
     );
 
@@ -122,7 +128,9 @@ const PlayersList = () => {
         teamName: doc.data().teamName
       }));
       setTeams(fetchedTeams);
-      setTeamFilter(''); // Reset team filter when teams change
+      if (fetchedTeams.length > 0 && !teamFilter) {
+        setTeamFilter(fetchedTeams[0].teamName);
+      }
       setLoadingTeams(false);
     }, (error) => {
       console.error("Error fetching teams: ", error);
@@ -131,11 +139,11 @@ const PlayersList = () => {
     });
 
     return () => unsubscribe();
-  }, [currentUserId, selectedTournament]);
+  }, [clubName, selectedTournament]);
 
   // Effect to fetch players from Firestore
   useEffect(() => {
-    if (!currentUserId || !selectedTournament || !teamFilter) {
+    if (!clubName || !selectedTournament || !teamFilter) {
       setLoadingPlayers(false);
       setPlayers([]);
       return;
@@ -146,7 +154,7 @@ const PlayersList = () => {
 
     const q = query(
       collection(db, 'clubPlayers'),
-      where('userId', '==', currentUserId),
+      where('clubName', '==', clubName),
       where('tournamentName', '==', selectedTournament),
       where('teamName', '==', teamFilter)
     );
@@ -167,7 +175,7 @@ const PlayersList = () => {
     });
 
     return () => unsubscribe();
-  }, [currentUserId, selectedTournament, teamFilter]);
+  }, [clubName, selectedTournament, teamFilter]);
 
   // Effect to manage audio playback when playingPlayerId changes
   useEffect(() => {
@@ -299,7 +307,6 @@ const PlayersList = () => {
                 ))}
               </select>
             </div>
-            {/* Uncomment to enable Add Player button */}
             {/* {userRole === 'admin' && currentUserId && (
               <motion.button
                 whileHover={{ scale: 1.05 }}
@@ -368,13 +375,15 @@ const PlayersList = () => {
         </div>
       )}
 
-      {/* Add Player Modal */}
-      {isAddPlayerModalOpen && userRole === 'admin' && currentUserId && (
+      {/* Add Player Modal  */}
+      {/* {isAddPlayerModalOpen && userRole === 'admin' && currentUserId && (
         <AddPlayerModal
           onClose={() => setIsAddPlayerModalOpen(false)}
           onPlayerAdded={handlePlayerAdded}
+          clubName={clubName}
+          tournamentName={selectedTournament}
         />
-      )}
+      )} */}
     </div>
   );
 };
