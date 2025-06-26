@@ -465,7 +465,7 @@ const Teams = () => {
               </select>
               {tournamentsError && <p className="text-red-500 text-sm mt-2">{tournamentsError}</p>}
             </div>
-            {userRole === 'admin' && tournaments.length > 0 && (
+            {userRole === 'admin' && isClubCreator && (
               <div className="flex gap-4">
                 <motion.button
                   whileHover={{ scale: 1.05 }}
@@ -493,7 +493,7 @@ const Teams = () => {
             <div className="text-center text-red-500 text-xl py-8">{teamsError}</div>
           ) : teams.length === 0 ? (
             <div className="text-center text-gray-400 text-xl py-8">
-              No teams found for this trophy. {userRole === 'admin' && 'Add some teams!'}
+              No teams found for this trophy. {userRole === 'admin' && isClubCreator && 'Add some teams!'}
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -504,7 +504,7 @@ const Teams = () => {
                     key={team.id}
                     className="bg-gray-800 rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow border border-gray-700 relative"
                   >
-                    {userRole === 'admin' && (
+                    {userRole === 'admin' && isClubCreator && (
                       <button
                         onClick={() => {
                           setTeamToDelete(team);
@@ -550,7 +550,7 @@ const Teams = () => {
                       <div>
                         <div className="flex justify-between items-center mb-2">
                           <p className="text-sm font-medium text-gray-400">Key Players</p>
-                          {userRole === 'admin' && (
+                          {userRole === 'admin' && isClubCreator && (
                             <button
                               onClick={() => handleOpenAddPlayer(team)}
                               className="text-green-400 hover:text-green-500"
@@ -752,7 +752,7 @@ const Teams = () => {
           </div>
 
           <AnimatePresence>
-            {showAddTeamModal && userRole === 'admin' && tournaments.length > 0 && (
+            {showAddTeamModal && userRole === 'admin' && isClubCreator && (
               <AddTeamModal
                 onClose={() => setShowAddTeamModal(false)}
                 onTeamAdded={() => setShowAddTeamModal(false)}
@@ -761,7 +761,7 @@ const Teams = () => {
           </AnimatePresence>
 
           <AnimatePresence>
-            {isAddPlayerModalOpen && userRole === 'admin' && tournaments.length > 0 && (
+            {isAddPlayerModalOpen && userRole === 'admin' && isClubCreator && (
               <AddClubPlayer
                 onClose={() => setIsAddPlayerModalOpen(false)}
                 team={selectedTeamForPlayer}
@@ -783,7 +783,7 @@ const Teams = () => {
           </AnimatePresence>
 
           <AnimatePresence>
-            {showDeleteTeamConfirm && teamToDelete && userRole === 'admin' && (
+            {showDeleteTeamConfirm && teamToDelete && userRole === 'admin' && isClubCreator && (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
