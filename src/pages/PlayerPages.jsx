@@ -88,52 +88,15 @@ function PlayerPages() {
               highest: player.careerStats?.batting?.highest || 0,
               userId: player.userId,
               playerId: player.playerId?.toString(),
-              audioUrl: '', // Placeholder, to be updated
+              audioUrl: player.audioUrl || '', // Use audioUrl from clubTeams players array
             });
           }
         });
       });
 
-      // Fetch audioUrl from clubPlayers
-      const playerIds = Array.from(playersMap.keys()).filter(id => id);
-      if (playerIds.length === 0) {
-        setPlayers(Array.from(playersMap.values()));
-        console.log("Players Fetched (no playerIds):", Array.from(playersMap.values()));
-        return;
-      }
-
-      // Query clubPlayers for audioUrl
-      const clubPlayersQuery = query(
-        collection(db, 'clubPlayers'),
-        where('userId', '==', auth.currentUser.uid),
-        where('playerId', 'in', playerIds)
-      );
-
-      const unsubscribePlayers = onSnapshot(clubPlayersQuery, (playerSnapshot) => {
-        playerSnapshot.forEach((doc) => {
-          const playerData = doc.data();
-          const playerId = playerData.playerId?.toString();
-          if (playersMap.has(playerId)) {
-            const existingPlayer = playersMap.get(playerId);
-            playersMap.set(playerId, {
-              ...existingPlayer,
-              audioUrl: playerData.audioUrl || '',
-            });
-          }
-        });
-
-        const playersList = Array.from(playersMap.values());
-        setPlayers(playersList);
-        console.log("Players Fetched:", playersList);
-      }, (error) => {
-        console.error("Error fetching clubPlayers data:", error);
-        const playersList = Array.from(playersMap.values());
-        setPlayers(playersList);
-        console.log("Players Fetched (without audio):", playersList);
-      });
-
-      // Cleanup clubPlayers subscription
-      return () => unsubscribePlayers();
+      const playersList = Array.from(playersMap.values());
+      setPlayers(playersList);
+      console.log("Players Fetched:", playersList);
     }, (error) => {
       console.error("Error fetching clubTeams data:", error);
       setPlayers([]);
@@ -223,14 +186,6 @@ function PlayerPages() {
           filteredPlayers.map((player, index) => (
             <div key={player.id || index} className="flex justify-center relative">
               <PlayerCard player={player} onPlay={handlePlayAudio} onDelete={handleDeletePlayer} />
-                {/* <button
-                  onClick={() => handleDeletePlayer(player.id)}
-                  className="absolute top-2 right-2 text-red-500 hover:text-red-700 transition"
-                  aria-label="Delete Player"
-                  title="Delete Player"
-                >
-                  <FaTrashAlt size={20} />
-                </button> */}
             </div>
           ))
         ) : (
