@@ -465,7 +465,7 @@ const Teams = () => {
               </select>
               {tournamentsError && <p className="text-red-500 text-sm mt-2">{tournamentsError}</p>}
             </div>
-            {userRole === 'admin' && (
+            {userRole === 'admin' && tournaments.length > 0 && (
               <div className="flex gap-4">
                 <motion.button
                   whileHover={{ scale: 1.05 }}
@@ -752,7 +752,7 @@ const Teams = () => {
           </div>
 
           <AnimatePresence>
-            {showAddTeamModal && userRole === 'admin' && (
+            {showAddTeamModal && userRole === 'admin' && tournaments.length > 0 && (
               <AddTeamModal
                 onClose={() => setShowAddTeamModal(false)}
                 onTeamAdded={() => setShowAddTeamModal(false)}
@@ -761,7 +761,7 @@ const Teams = () => {
           </AnimatePresence>
 
           <AnimatePresence>
-            {isAddPlayerModalOpen && userRole === 'admin' && (
+            {isAddPlayerModalOpen && userRole === 'admin' && tournaments.length > 0 && (
               <AddClubPlayer
                 onClose={() => setIsAddPlayerModalOpen(false)}
                 team={selectedTeamForPlayer}

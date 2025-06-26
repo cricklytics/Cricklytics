@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import RoleSelectionModal from '../LandingPage/RoleSelectionModal';
 import AddTournamentModal from '../LandingPage/AddTournamentModal';
 import { db, auth } from '../../../firebase';
-import { collection, query, where, onSnapshot, getDocs } from 'firebase/firestore';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { useClub } from './ClubContext';
 
@@ -248,23 +248,29 @@ const Tournament = () => {
     return () => unsubscribeMatches();
   }, [tournamentData]);
 
-  // Fetch top performers and calculate tournament statistics
+  // Fetch top performers and calculate tournament statistics with real-time updates
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchData = () => {
       setLoadingPerformers(true);
       setPerformersError(null);
       setLoadingStats(true);
       setStatsError(null);
 
-      try {
-        // Filter clubPlayers by tournamentName and clubName
-        const playersQuery = query(
-          collection(db, 'clubPlayers'),
-          where('tournamentName', '==', tournamentData.name),
-          where('clubName', '==', clubName)
-        );
+      if (!clubName || !tournamentData?.name) {
+        setLoadingPerformers(false);
+        setLoadingStats(false);
+        setPerformersError("You must be logged in and select a tournament to view performers.");
+        setStatsError("You must be logged in and select a tournament to view statistics.");
+        return () => {}; // Return empty cleanup
+      }
 
-        const querySnapshot = await getDocs(playersQuery);
+      const playersQuery = query(
+        collection(db, 'clubPlayers'),
+        where('tournamentName', '==', tournamentData.name),
+        where('clubName', '==', clubName)
+      );
+
+      const unsubscribePlayers = onSnapshot(playersQuery, (querySnapshot) => {
         const playersData = querySnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
@@ -333,24 +339,17 @@ const Tournament = () => {
         const avgWickets =
           totalPlayersWithWickets > 0 ? (calculatedTotalWickets / totalPlayersWithWickets).toFixed(2) : 0;
         setAverageWicketsPerPlayer(avgWickets);
-      } catch (err) {
+      }, (err) => {
         console.error("Error fetching performers and stats:", err);
         setPerformersError("Failed to load top performers.");
         setStatsError("Failed to load tournament statistics.");
-      } finally {
-        setLoadingPerformers(false);
-        setLoadingStats(false);
-      }
+      });
+
+      return () => unsubscribePlayers();
     };
 
-    if (clubName && tournamentData?.name) {
-      fetchData();
-    } else {
-      setLoadingPerformers(false);
-      setLoadingStats(false);
-      setPerformersError("You must be logged in and select a tournament to view performers.");
-      setStatsError("You must be logged in and select a tournament to view statistics.");
-    }
+    const unsubscribe = fetchData();
+    return unsubscribe;
   }, [tournamentData, clubName]);
 
   if (authLoading) {

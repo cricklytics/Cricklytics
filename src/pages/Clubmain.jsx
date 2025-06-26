@@ -4,12 +4,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import backButton from '../assets/kumar/right-chevron.png';
-import { v4 as uuidv4 } from 'uuid'; // Import uuid for generating tournament ID
-
-// Firebase imports
-import { db, storage, serverTimestamp } from '../firebase';
+import { v4 as uuidv4 } from 'uuid';
+import { db, storage, serverTimestamp, auth } from '../firebase';
 import { collection, addDoc, query, onSnapshot } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { onAuthStateChanged } from 'firebase/auth';
 
 const Clubsmain = () => {
   const navigate = useNavigate();
@@ -37,14 +36,19 @@ const Clubsmain = () => {
     website: '',
     phone: '',
     achievementsText: '',
-    tournamentId: uuidv4() // Initialize with a random UUID
+    tournamentId: uuidv4()
   });
   const [loadingClubs, setLoadingClubs] = useState(true);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [error, setError] = useState(null);
+  const [currentUserId, setCurrentUserId] = useState(null);
 
   useEffect(() => {
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      setCurrentUserId(user?.uid || null);
+    });
     fetchClubs();
+    return () => unsubscribeAuth();
   }, []);
 
   const fetchClubs = () => {
@@ -79,6 +83,11 @@ const Clubsmain = () => {
   const handleAddClub = async (e) => {
     e.preventDefault();
     setError(null);
+
+    if (!currentUserId) {
+      setError("You must be logged in to add a club.");
+      return;
+    }
 
     try {
       setUploadingLogo(true);
@@ -123,7 +132,9 @@ const Clubsmain = () => {
         },
         achievements: parseList(newClub.achievementsText),
         createdAt: serverTimestamp(),
-        tournamentId: newClub.tournamentId // Add tournamentId to club data
+        tournamentId: newClub.tournamentId,
+        createdBy: currentUserId, // Add createdBy field
+        userId: currentUserId 
       };
 
       await addDoc(collection(db, 'clubs'), clubData);
@@ -143,7 +154,7 @@ const Clubsmain = () => {
         website: '',
         phone: '',
         achievementsText: '',
-        tournamentId: uuidv4() // Reset with a new UUID for the next club
+        tournamentId: uuidv4()
       });
     } catch (err) {
       console.error("Error adding club:", err);
@@ -197,7 +208,7 @@ const Clubsmain = () => {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             className="px-3 py-1 md:px-4 md:py-2 bg-green-600 hover:bg-green-700 rounded-md text-white text-sm md:text-base font-medium transition-colors"
-            onClick={() => { /* Implement Join Now logic or navigate to a join page */ }}
+            onClick={() => navigate('/join')} // Placeholder navigation
           >
             Join Now
           </motion.button>
@@ -297,14 +308,16 @@ const Clubsmain = () => {
                 <span className="text-gray-300">Filters</span>
                 {filterOpen ? <FiChevronDown className="transform rotate-180 text-gray-300" /> : <FiChevronDown className="text-gray-300" />}
               </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.03 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => setIsModalOpen(true)}
-                className="flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors text-white text-sm sm:text-base"
-              >
-                <FiPlusCircle /> Add Club
-              </motion.button>
+              {currentUserId && (
+                <motion.button
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setIsModalOpen(true)}
+                  className="flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors text-white text-sm sm:text-base"
+                >
+                  <FiPlusCircle /> Add Club
+                </motion.button>
+              )}
             </div>
 
             {/* Filter Dropdown */}
@@ -330,7 +343,7 @@ const Clubsmain = () => {
                         >
                           <option value="">All Locations</option>
                           {locations.map(location => (
-                            <option key={location} value={location}>{location}</ option>
+                            <option key={location} value={location}>{location}</option>
                           ))}
                         </select>
                       </motion.div>
@@ -497,7 +510,12 @@ const Clubsmain = () => {
               className="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-lg border border-gray-700 overflow-y-auto max-h-[90vh]"
             >
               <h2 className="text-2xl font-bold text-white mb-4">Add New Club</h2>
-              {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
+              {error && (
+                <div className="text-red-500 text-sm mb-4 flex justify-between items-center">
+                  {error}
+                  <button onClick={() => setError(null)} className="ml-2 text-gray-400 hover:text-gray-200">&times;</button>
+                </div>
+              )}
               <form onSubmit={handleAddClub} className="space-y-4">
                 <div>
                   <label htmlFor="tournamentId" className="block text-sm font-medium text-gray-300">Tournament ID</label>
