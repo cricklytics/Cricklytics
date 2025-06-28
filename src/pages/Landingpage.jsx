@@ -498,34 +498,33 @@ useEffect(() => {
           </div>
  
           <div className="mt-1 md:mt-9 flex items-center gap-4 md:gap-8">
-  <div className="z-[2000] mt-9 md:mt-5 h-16 md:h-22 w-fit">
-    <button
-      className="w-8 h-8 md:w-14 md:h-14 rounded-full border-4 border-cyan-500 flex items-center justify-center"
-      onClick={() => navigate("/search-aft")}
-    >
-      <Search className="text-white w-4 h-4 md:w-6 md:h-6" />
-    </button>
-  </div>
-  <div>
-    <button
-      className="text-sm md:text-2xl font-bold cursor-pointer hover:text-[#3edcff]"
-      onClick={() => navigate("/contacts")}
-    >
-      Contacts
-    </button>
-  </div>
-  <FaBell className="cursor-pointer hover:scale-110" size={24} />
+            <div className="z-[2000] mt-9 md:mt-5 h-16 md:h-22 w-fit">
+              <button
+                className="w-8 h-8 md:w-14 md:h-14 rounded-full border-4 border-cyan-500 flex items-center justify-center"
+                onClick={() => navigate("/search-aft")}
+              >
+                <Search className="text-white w-4 h-4 md:w-6 md:h-6" />
+              </button>
+            </div>
+            <div>
+              <button
+                className="text-sm md:text-2xl font-bold cursor-pointer hover:text-[#3edcff]"
+                onClick={() => navigate("/contacts")}
+              >
+                Contacts
+              </button>
+            </div>
+            <FaBell className="cursor-pointer hover:scale-110" size={24} />
 
-  {/* Message Icon */}
-  <div className="relative">
-    <FaComment
-      className="message-icon cursor-pointer text-white transition-transform duration-200 hover:scale-110"
-      size={24}
-      onClick={handleOpenMessagesPage}
-    />
-  </div>
-</div>
-
+            {/* Message Icon */}
+            <div className="relative">
+              <FaComment
+                className="message-icon cursor-pointer text-white transition-transform duration-200 hover:scale-110"
+                size={24}
+                onClick={handleOpenMessagesPage}
+              />
+            </div>
+          </div>
         </nav>
  
         <Sidebar isOpen={menuOpen} closeMenu={() => setMenuOpen(false)} />
@@ -540,26 +539,32 @@ useEffect(() => {
           <div ref={stickyHeaderRef}  className={`sticky w-full md:w-[80%] top-0 z-20 bg-[rgba(2,16,30,0.7)] bg-opacity-40 backdrop-blur-md pb-2 md:pb-4 ${highlightVisible && !showChat ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
             <div className="w-full flex justify-center pt-2 md:pt-4 caret-none">
               <div className="w-full md:w-[50%] flex justify-center gap-2 md:gap-3 md:ml-5 text-white text-sm md:text-xl">
-              {userProfile?.profileImageUrl && (
-                   <div key={userProfile.uid} className="relative profile-image-container" id="user-profile-image-container">
-                     <button
-                       className="w-13 h-13 md:w-20 md:h-20 rounded-full bg-cover bg-center border-2 border-white" // Added border for distinction
-                       style={{ backgroundImage: `url(${userProfile.profileImageUrl})` }}
-                       onClick={(e) => {
-                         e.stopPropagation();
-                         handleProfileClick({ id: 'user', image: userProfile.profileImageUrl, name: userProfile.userName || 'You' });
-                       }}
-                     >
-                     </button>
-                     {/* Optional: Add '+' button for user's own image upload */}
-                      <button
-                         className="absolute -top-1 -right-1 h-5 w-5 rounded-full pb-2 bg-gray-800 flex items-center justify-center text-xl text-white font-bold"
-                         onClick={(e) => handleAddImageClick(e, 'user')} // Use 'user' as ID for user's profile
-                       >
-                         +
-                       </button>
-                   </div>
-                 )}
+              {userProfile && (
+                <div key={userProfile.uid} className="relative profile-image-container" id="user-profile-image-container">
+                  <button
+                    className="w-13 h-13 md:w-20 md:h-20 rounded-full bg-cover bg-center border-2 border-white"
+                    style={{
+                      backgroundImage: userProfile.profileImageUrl
+                        ? `url(${userProfile.profileImageUrl})`
+                        : 'url(path/to/default/image.png)', // Fallback default image
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleProfileClick({ id: 'user', image: userProfile.profileImageUrl || 'path/to/default/image.png', name: userProfile.userName || 'You' });
+                    }}
+                  >
+                  </button>
+                  {/* Conditionally render the '+' button only if profileImageUrl is falsy */}
+                  {!userProfile.profileImageUrl && (
+                    <button
+                      className="absolute -top-1 -right-1 h-5 w-5 rounded-full pb-2 bg-gray-800 flex items-center justify-center text-xl text-white font-bold"
+                      onClick={(e) => handleAddImageClick(e, 'user')}
+                    >
+                      +
+                    </button>
+                  )}
+                </div>
+              )}
                  {/* Other profile images (friends) */}
                   {profileImages.filter(p => p.id !== 'user').map((profile) => ( // Filter out the user's own image from this list
                     <div key={profile.id} className="relative profile-image-container">
@@ -572,12 +577,6 @@ useEffect(() => {
                         handleProfileClick(profile);
                       }}
                       ></button>
-                      <button
-                      className="absolute -top-1 -right-1 h-5 w-5 rounded-full pb-2 bg-gray-800 flex items-center justify-center text-xl text-white font-bold"
-                      onClick={(e) => handleAddImageClick(e, profile.id)}
-                      >
-                      +
-                      </button>
                   </div>
                   ))}
               </div>
