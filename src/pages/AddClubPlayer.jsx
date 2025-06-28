@@ -72,6 +72,7 @@ const AddPlayerModal = ({ onClose }) => {
     careerStatsFieldingStumpings: '',
     careerStatsFieldingRunOuts: '',
     user: 'no',
+    audioUrl: '', // Added audioUrl to form data
   });
   const [clubPlayerImageFile, setClubPlayerImageFile] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -232,6 +233,7 @@ const AddPlayerModal = ({ onClose }) => {
         userId: currentUserId,
         user: clubPlayerFormData.user,
         clubName: clubName || '', // Store clubName from context, default to empty string if undefined
+        audioUrl: clubPlayerFormData.audioUrl || '', // Include audioUrl
         careerStats: {
           batting: {
             matches: parseInt(clubPlayerFormData.careerStatsBattingMatches) || 0,
@@ -283,7 +285,7 @@ const AddPlayerModal = ({ onClose }) => {
         });
       } else {
         // Team doesn't exist, create new team with player
-        await addDoc(collection(db, 'clubTeams'), {
+        await setDoc(doc(collection(db, 'clubTeams')), {
           teamName: clubPlayerFormData.teamName,
           tournamentName: clubPlayerFormData.tournamentName,
           createdBy: currentUserId,
@@ -344,6 +346,7 @@ const AddPlayerModal = ({ onClose }) => {
         careerStatsFieldingStumpings: '',
         careerStatsFieldingRunOuts: '',
         user: 'no',
+        audioUrl: '', // Reset audioUrl
       });
       setClubPlayerImageFile(null);
 
