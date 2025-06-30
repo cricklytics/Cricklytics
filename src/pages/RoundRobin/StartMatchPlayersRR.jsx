@@ -44,6 +44,7 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
   const matchId = location.state?.matchId;
   const phase = location.state?.phase;
   const selectedPlayersFromProps = location.state?.selectedPlayers || { left: [], right: [] };
+  const tournamentName = location.state?.tournamentName;
 
   const [playedOvers, setPlayedOvers] = useState(0);
   const [playedWickets, setPlayedWickets] = useState(0);
@@ -94,6 +95,8 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
   useEffect(() => {
     console.log('Selected Match:', { matchId, phase });
     console.log('Tournament ID:', tournamentId);
+    console.log('Tournament Name:', tournamentName);
+
 
     if (!teamA || !teamB || !selectedPlayersFromProps.left || !selectedPlayersFromProps.right || !tournamentId || !matchId || !phase) {
       console.error("Missing match data in location state. Redirecting.");
@@ -1001,6 +1004,7 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
             winner: winnerTeamName,
             winningDifference: winningDifference,
             tournamentId: tournamentId,
+            tournamentName: tournamentName,
             teamA: {
               name: teamA.name,
               flagUrl: teamA.flagUrl,
