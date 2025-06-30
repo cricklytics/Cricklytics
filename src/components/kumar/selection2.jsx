@@ -6,7 +6,7 @@ import nav from '../../assets/kumar/right-chevron.png';
 
 const Selection2 = () => {
   const { state } = useLocation();
-  const { teams: teamNames } = state || { teams: [] }; // Rename to teamNames for clarity
+  const { teams: teamNames, tournamentName } = state || { teams: [] }; // Rename to teamNames for clarity
   const navigate = useNavigate();
   const [schedule, setSchedule] = useState([]);
   const [semiFinals, setSemiFinals] = useState([]);
@@ -17,6 +17,8 @@ const Selection2 = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const hasStoredSchedule = useRef(false); // Track if schedule has been stored
+
+  console.log(tournamentName);
 
   // Transform teamNames into the desired structure
   const teams = teamNames.map(teamName => ({
@@ -348,7 +350,7 @@ const Selection2 = () => {
             <button
               type="button"
               className="rounded-xl w-32 md:w-44 bg-gradient-to-l from-[#5DE0E6] to-[#004AAD] h-8 md:h-9 text-white cursor-pointer hover:shadow-[0px_0px_13px_0px_#5DE0E6] text-sm md:text-base"
-              onClick={() => navigate('/match-start-rr', { state: { activeTab: 'Start Match', selectedTeams: teams, schedule, semiFinals, finals, tournamentId } })}
+              onClick={() => navigate('/match-start-rr', { state: { activeTab: 'Start Match', selectedTeams: teams, schedule, semiFinals, finals, tournamentId, tournamentName } })}
             >
               Proceed
             </button>

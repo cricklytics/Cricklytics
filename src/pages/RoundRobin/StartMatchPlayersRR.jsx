@@ -1395,8 +1395,11 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
                 {showPastOvers && (
                   <div className="mt-2 md:mt-4 text-white w-full">
                     <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-4 text-center">Overs History</h3>
-                    <div className="bg-[#4C0025] p-3 rounded-lg w-full overflow-auto max-w-full" style={{ minHeight: '100px' }}>
-                      <div className="flex items-center gap-3 min-w-[768px] overflow-x-auto">
+
+                    {/* Outer box: set width to auto and remove restrictive max-width */}
+                    <div className="bg-[#4C0025] p-3 rounded-lg inline-block" style={{ minHeight: '100px' }}>
+                      {/* Inner content grows freely, and flex-wrap ensures wrapping */}
+                      <div className="flex items-center gap-3 flex-wrap">
                         {[...pastOvers, currentOverBalls.length > 0 ? currentOverBalls : null]
                           .filter(Boolean)
                           .map((over, index) => (
@@ -1432,6 +1435,7 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
                     </div>
                   </div>
                 )}
+
               </div>
               <div className="hidden sm:block w-20 text-white text-center">
                 <h3 className="text-lg md:text-xl font-bold">Bowler</h3>

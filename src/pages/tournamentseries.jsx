@@ -6,18 +6,30 @@ import location from '../assets/kumar/loc.png';
 import ball1 from '../assets/kumar/cricket-ball.png';
 import ball2 from '../assets/kumar/ball-others.png';
 import others from '../assets/kumar/icons8-tennis-ball-96.png';
+import { db } from '../firebase'; // Adjust the import path as needed
+import { collection, query, where, getDocs, setDoc, updateDoc, doc } from 'firebase/firestore';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 function Tournamentseries() {
     const navigate = useNavigate();
     const [isRulesVisible, setIsRulesVisible] = useState(false);
     const [showValidationError, setShowValidationError] = useState(false);
+    const [selectedImage, setSelectedImage] = useState(null); // State for the selected image file
     
     const toggleDivVisibility = (e) => {
       e.preventDefault();
       setIsRulesVisible(prevState => !prevState); 
     };
    
-    const handleNavigation = (e) => {
+    const handleImageChange = (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        setSelectedImage(file);
+        setShowValidationError(false);
+      }
+    };
+
+    const handleNavigation = async (e) => {
       e.preventDefault();
       
       const isFormValid = (
@@ -39,7 +51,62 @@ function Tournamentseries() {
         setShowValidationError(true);
         return;
       }
-      navigate('/next', { state: { noOfTeams } });
+
+      let imageUrl = '';
+      if (selectedImage) {
+        try {
+          const storage = getStorage();
+          const storageRef = ref(storage, `tournament_images/${Date.now()}_${selectedImage.name}`);
+          await uploadBytes(storageRef, selectedImage);
+          imageUrl = await getDownloadURL(storageRef);
+        } catch (error) {
+          console.error('Error uploading image:', error);
+          setShowValidationError(true); // Show error if image upload fails
+          return;
+        }
+      }
+
+      // Prepare the tournament data
+      const tournamentData = {
+        name: tournamentName,
+        location: selectedLocation,
+        noOfTeams: noOfTeams,
+        startDate: startDate,
+        endDate: endDate,
+        physicalLocation: physicalLocation,
+        schedule: selectedSchedule,
+        timing: selectedTiming,
+        pitch: selectedPitch,
+        category: selectedcategory,
+        matchType: selectedmatchtype,
+        ball: selectedBall,
+        winningPrize: selectedwp,
+        homeAwayFormat: homeAwayFormat,
+        lastBatterRule: lastBatterRule,
+        createdAt: new Date().toISOString(),
+        imageUrl: imageUrl // Add image URL to the data
+      };
+
+      try {
+        // Query the tournament collection to find a document with matching name
+        const q = query(collection(db, 'tournaments'), where('name', '==', tournamentName));
+        const querySnapshot = await getDocs(q);
+
+        if (!querySnapshot.empty) {
+          // Update the first matching document
+          const docRef = doc(db, 'tournaments', querySnapshot.docs[0].id);
+          await updateDoc(docRef, tournamentData);
+        } else {
+          // Create a new document with auto-generated ID
+          await setDoc(doc(collection(db, 'tournaments')), tournamentData);
+        }
+
+        // Navigate to the next page with the number of teams
+        navigate('/next', { state: { noOfTeams , tournamentName } });
+      } catch (error) {
+        console.error('Error saving tournament data:', error);
+        setShowValidationError(true); // Optionally show an error to the user
+      }
     };
 
     const handleCancel = (e) => {
@@ -58,7 +125,8 @@ function Tournamentseries() {
         selectedmatchtype !== null || 
         selectedwp !== null ||
         homeAwayFormat ||
-        lastBatterRule
+        lastBatterRule ||
+        selectedImage
       );
 
       if (hasData) {
@@ -204,7 +272,7 @@ function Tournamentseries() {
                                         <img className="w-[2rem] h-[2rem]" src={upload} alt="upload" />
                                         <p className="mb-2 text-[10px] text-gray-500"><span className="font-semibold">Click to upload</span> or drag & drop</p>
                                     </div>
-                                    <input id="image-upload" type="file" className="hidden" />
+                                    <input id="image-upload" type="file" className="hidden" onChange={handleImageChange} />
                                 </label>
                             </div>
                         </div>
@@ -304,7 +372,7 @@ function Tournamentseries() {
                     </div>
 
                     <div className="w-full md:w-[80%] lg:w-[50%] relative flex flex-col md:flex-row items-start md:items-center justify-between gap-2 md:gap-5">
-                        <label className="text-xl text-white md:mt-6">Schedule</label>
+                        <label className="text-xl text-white">Schedule</label>
                         <div>
                             <input 
                               className="accent-cyan-500 w-[1rem] h-[1rem]" 
@@ -381,9 +449,7 @@ function Tournamentseries() {
                           <img src={others} alt="" className='w-20 h-20' />
                         </a>
                         <a
-                          className={`animate-rotate flex items-center justify-center
-
- w-25 h-25 rounded-full ${selectedBall === 'ball2' ? 'bg-blue-100' : 'bg-transparent'}  hover:text-white mt-4 cursor-pointer`}
+                          className={`animate-rotate flex items-center justify-center w-25 h-25 rounded-full ${selectedBall === 'ball2' ? 'bg-blue-100' : 'bg-transparent'}  hover:text-white mt-4 cursor-pointer`}
                           onClick={() => handleBallClick('ball2')}
                         >
                           <img src={ball2} alt="" className='w-18 h-18' />

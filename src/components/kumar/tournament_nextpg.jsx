@@ -7,11 +7,13 @@ import { useState } from 'react';
 function Tournament_nextpg() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { noOfTeams } = location.state || {};
+  const { noOfTeams, tournamentName } = location.state || {};
   const [isRulesVisible, setIsRulesVisible] = useState(false);
   const [ispriceVisible, setIspriceVisible] = useState(false);
   const [showValidationError, setShowValidationError] = useState(false);
   
+console.log(tournamentName);
+
   const toggleDivVisibility = (e) => {
     e.preventDefault();
     setIsRulesVisible(prevState => !prevState); 
@@ -40,7 +42,7 @@ function Tournament_nextpg() {
       setShowValidationError(true);
       return;
     }
-    navigate('/TournamentPage', { state: { noOfTeams, selectedBall } });
+    navigate('/TournamentPage', { state: { noOfTeams, tournamentName } });
   };
 
   const handleCancel = (e) => {
@@ -312,6 +314,11 @@ function Tournament_nextpg() {
           {noOfTeams && (
             <div className="w-1/3 text-white p-2 rounded-lg mb-4 text-sm md:text-base">
               Number of Teams: {noOfTeams}
+            </div>
+          )}
+          {tournamentName && (
+            <div className="w-1/3 text-white p-2 rounded-lg mb-4 text-sm md:text-base">
+              Tournament Name: {tournamentName}
             </div>
           )}
 

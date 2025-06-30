@@ -271,6 +271,7 @@ const Startmatch = ({
   origin,
   onTeamsSelectedForLiveScore,
   setActiveTab,
+  tournamentName, // Add this line
 }) => {
   console.group('Startmatch Props');
   console.log('Initial Team A:', initialTeamA);
@@ -283,6 +284,7 @@ const Startmatch = ({
   console.log('Origin:', origin);
   console.log('onTeamsSelectedForLiveScore:', typeof onTeamsSelectedForLiveScore);
   console.log('setActiveTab:', typeof setActiveTab);
+  console.log('TournamentName:', tournamentName);
   console.groupEnd();
 
   const [allTeams, setAllTeams] = useState([]);
@@ -337,6 +339,40 @@ const Startmatch = ({
     };
     fetchAllTeams();
   }, []);
+useEffect(() => {
+  const fetchTournamentDetails = async () => {
+    if (!tournamentName) {
+      setTournamentError('No tournament name provided.');
+      setTournamentImageUrl(''); // Clear image if no name
+      return;
+    }
+
+    try {
+      const tournamentsCollectionRef = collection(db, 'tournaments');
+      const querySnapshot = await getDocs(tournamentsCollectionRef);
+      const matchingTournament = querySnapshot.docs.find(doc => 
+        doc.data().name.toLowerCase() === tournamentName.toLowerCase()
+      );
+
+      if (matchingTournament) {
+        const tournamentData = matchingTournament.data();
+        setTournamentImageUrl(tournamentData.imageUrl || ''); // Set image URL from matched document
+      } else {
+        setTournamentError('No matching tournament found.');
+        setTournamentImageUrl(''); // Clear image if no match
+      }
+    } catch (err) {
+      console.error('Error fetching tournament details:', err);
+      setTournamentError('Failed to load tournament details.');
+      setTournamentImageUrl(''); // Clear image on error
+    }
+  };
+
+  fetchTournamentDetails();
+}, [tournamentName]);
+
+// Add state for imageUrl
+const [tournamentImageUrl, setTournamentImageUrl] = useState('');
 
   // Fetch tournament data to get matches, determine phase, and update semi-finals/finals
   useEffect(() => {
@@ -753,6 +789,17 @@ const Startmatch = ({
                 className="min-h-[300px] bg-gradient-to-br from-blue-50 to-indigo-50 bg-opacity-90 rounded-xl shadow-xl p-6 w-full border border-blue-100 flex flex-col"
                 whileHover={{ scale: 1.01 }}
               >
+                {tournamentName && tournamentImageUrl && (
+                  <div className="flex items-center mb-4">
+                    <img
+                      src={tournamentImageUrl}
+                      alt={`${tournamentName} Image`}
+                      className="w-16 h-16 object-cover rounded-full mr-2"
+                      onError={(e) => (e.target.style.display = 'none')} // Hide if image fails to load
+                    />
+                    <span className="text-xl font-medium text-blue-800">{tournamentName}</span>
+                  </div>
+                )}
                 <h2 className="text-xl font-semibold mb-4 text-blue-800">Select Match</h2>
                 <div className="mb-4">
                   <span className="inline-block bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-semibold">

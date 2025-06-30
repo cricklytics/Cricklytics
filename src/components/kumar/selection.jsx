@@ -50,75 +50,75 @@ const Selection = () => {
       handleFormatSelection('knockout');
     }
   }, [teams, format]);
-
-  useEffect(() => {
-    console.log('useEffect: location.state', location.state);
-    if (location.state) {
-      if (location.state.teams) {
-        const initialTeams = Array.isArray(location.state.teams)
-          ? location.state.teams.map(team => typeof team === 'string' ? { name: team } : team)
-          : [];
-        console.log('Initial teams:', initialTeams);
-        setTeams(initialTeams);
-        const initialResults = {};
-        const initialStats = {};
-        initialTeams.forEach(team => {
-          initialResults[team.name] = 0;
-          initialStats[team.name] = { wins: 0, losses: 0, points: 0 };
-        });
-        setGroupStageResults(initialResults);
-        setTeamStats(initialStats);
-      }
-      if (location.state.matches) {
-        setMatches(location.state.matches);
-        const newGroupStageResults = { ...groupStageResults };
-        const newRoundWinners = {};
-        const newTeamStats = { ...teamStats };
-        rounds.forEach(round => {
-          if (round.stage === 'League Stage') {
-            newRoundWinners[round.name] = [];
-          }
-        });
-        location.state.matches.forEach(match => {
-          if (match.stage === 'League Stage' && match.winner && !match.team1?.isBye && !match.team2?.isBye) {
-            newGroupStageResults[match.winner] = (newGroupStageResults[match.winner] || 0) + 1;
-            newTeamStats[match.winner] = {
-              ...newTeamStats[match.winner],
-              wins: (newTeamStats[match.winner]?.wins || 0) + 1,
-              points: (newTeamStats[match.winner]?.points || 0) + 2
-            };
-            const loser = match.team1.name === match.winner ? match.team2.name : match.team1.name;
-            newTeamStats[loser] = {
-              ...newTeamStats[loser],
-              losses: (newTeamStats[loser]?.losses || 0) + 1,
-              points: newTeamStats[loser]?.points || 0
-            };
-            const round = rounds.find(r => r.matches.includes(match.id));
-            if (round && round.stage === 'League Stage') {
-              newRoundWinners[round.name] = newRoundWinners[round.name] || [];
-              if (!newRoundWinners[round.name].includes(match.winner)) {
-                newRoundWinners[round.name].push(match.winner);
-              }
+useEffect(() => {
+  console.log('useEffect: location.state', location.state);
+  if (location.state) {
+    if (location.state.teams) {
+      const initialTeams = Array.isArray(location.state.teams)
+        ? location.state.teams.map(team => typeof team === 'string' ? { name: team } : team)
+        : [];
+      console.log('Initial teams:', initialTeams);
+      setTeams(initialTeams);
+      const initialResults = {};
+      const initialStats = {};
+      initialTeams.forEach(team => {
+        initialResults[team.name] = 0;
+        initialStats[team.name] = { wins: 0, losses: 0, points: 0 };
+      });
+      setGroupStageResults(initialResults);
+      setTeamStats(initialStats);
+    }
+    if (location.state.matches) {
+      setMatches(location.state.matches);
+      const newGroupStageResults = { ...groupStageResults };
+      const newRoundWinners = {};
+      const newTeamStats = { ...teamStats };
+      rounds.forEach(round => {
+        if (round.stage === 'League Stage') {
+          newRoundWinners[round.name] = [];
+        }
+      });
+      location.state.matches.forEach(match => {
+        if (match.stage === 'League Stage' && match.winner && !match.team1?.isBye && !match.team2?.isBye) {
+          newGroupStageResults[match.winner] = (newGroupStageResults[match.winner] || 0) + 1;
+          newTeamStats[match.winner] = {
+            ...newTeamStats[match.winner],
+            wins: (newTeamStats[match.winner]?.wins || 0) + 1,
+            points: (newTeamStats[match.winner]?.points || 0) + 2
+          };
+          const loser = match.team1.name === match.winner ? match.team2.name : match.team1.name;
+          newTeamStats[loser] = {
+            ...newTeamStats[loser],
+            losses: (newTeamStats[loser]?.losses || 0) + 1,
+            points: newTeamStats[loser]?.points || 0
+          };
+          const round = rounds.find(r => r.matches.includes(match.id));
+          if (round && round.stage === 'League Stage') {
+            newRoundWinners[round.name] = newRoundWinners[round.name] || [];
+            if (!newRoundWinners[round.name].includes(match.winner)) {
+              newRoundWinners[round.name].push(match.winner);
             }
           }
-        });
-        setGroupStageResults(newGroupStageResults);
-        setRoundWinners(newRoundWinners);
-        setTeamStats(newTeamStats);
-      }
-      if (location.state.rounds) setRounds(location.state.rounds);
-      if (location.state.currentStage) setCurrentStage(location.state.currentStage);
-      if (location.state.currentGroupRound) setCurrentGroupRound(location.state.currentGroupRound);
-      if (location.state.tournamentWinner) setTournamentWinner(location.state.tournamentWinner);
-      if (location.state.format) setFormat(location.state.format);
-      if (location.state.groupStageResults) setGroupStageResults(location.state.groupStageResults);
-      if (location.state.groups) setGroups(location.state.groups);
-      if (location.state.teamStats) setTeamStats(location.state.teamStats);
-      if (location.state.roundWinners) setRoundWinners(location.state.roundWinners);
-    } else {
-      console.warn('No location.state provided');
+        }
+      });
+      setGroupStageResults(newGroupStageResults);
+      setRoundWinners(newRoundWinners);
+      setTeamStats(newTeamStats);
     }
-  }, [location.state]);
+    if (location.state.rounds) setRounds(location.state.rounds);
+    if (location.state.currentStage) setCurrentStage(location.state.currentStage);
+    if (location.state.currentGroupRound) setCurrentGroupRound(location.state.currentGroupRound);
+    if (location.state.tournamentWinner) setTournamentWinner(location.state.tournamentWinner);
+    if (location.state.format) setFormat(location.state.format);
+    if (location.state.groupStageResults) setGroupStageResults(location.state.groupStageResults);
+    if (location.state.groups) setGroups(location.state.groups);
+    if (location.state.teamStats) setTeamStats(location.state.teamStats);
+    if (location.state.roundWinners) setRoundWinners(location.state.roundWinners);
+    if (location.state.tournamentName) setTournamentName(location.state.tournamentName); // Add this line
+  } else {
+    console.warn('No location.state provided');
+  }
+}, [location.state]);
 
   const initializeBracket = (teams, selectedFormat) => {
     console.log('initializeBracket: teams', teams, 'format', selectedFormat);
@@ -328,7 +328,8 @@ const Selection = () => {
         groupStageResults,
         groups,
         teamStats,
-        roundWinners
+        roundWinners,
+        tournamentName // Add this line
       }
     });
   };

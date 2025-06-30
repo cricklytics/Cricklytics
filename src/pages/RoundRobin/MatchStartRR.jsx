@@ -455,6 +455,8 @@ const FixtureGenerator = () => {
   const [matchDateTime, setMatchDateTime] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
+  const {tournamentName } = location.state || {};
+  console.log(tournamentName);
 
   useEffect(() => {
     const q = query(collection(db, 'scoringpage'), orderBy('createdAt', 'desc'));
@@ -558,6 +560,11 @@ const FixtureGenerator = () => {
           flag: location.state.teamB.flagUrl || placeholderFlag,
         }));
       }
+      // Add tournamentName handling
+    if (location.state.tournamentName) {
+      // No state update needed as it's passed directly to Startmatch
+      console.log(tournamentName);
+    }
     }
   }, [location.state]);
 
@@ -693,6 +700,7 @@ const FixtureGenerator = () => {
           origin="/match-start-rr"
           onTeamsSelectedForLiveScore={handleTeamsSelected}
           setActiveTab={setActiveTab}
+          tournamentName={tournamentName}
         />
       ) : (
         <main className="w-full max-w-7xl px-4 sm:px-8 py-8 mx-auto">

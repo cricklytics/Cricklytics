@@ -318,6 +318,7 @@ const TournamentBracket = () => {
   const [currentGroupIndex, setCurrentGroupIndex] = useState(0);
   const [historicalGroupResults, setHistoricalGroupResults] = useState({});
   const [selectedStandingsPhase, setSelectedStandingsPhase] = useState('league');
+  const [tournamentName, setTournamentName] = useState(null); // Add this at the top with other useState declarations
 
   useEffect(() => {
     if (location.state?.teams) {
@@ -334,6 +335,9 @@ const TournamentBracket = () => {
     }
     if (location.state?.winner) {
       handleMatchResultFromStartMatch(location.state.winner);
+    }
+    if (location.state?.tournamentName) {
+      setTournamentName(location.state.tournamentName); // Add this line
     }
   }, [location.state]);
 
@@ -428,7 +432,8 @@ const TournamentBracket = () => {
           ...location.state,
           format: 'knockout',
           origin: 'flowchart',
-          activeTab: 'Knockout Brackets'
+          activeTab: 'Knockout Brackets',
+          tournamentName // Add this line
         }
       });
     } else if (formatType === 'test') {

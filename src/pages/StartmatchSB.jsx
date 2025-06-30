@@ -307,12 +307,12 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '', origin }) => {
     const fetchAllTeams = async () => {
       try {
         setLoadingTeams(true);
-        const teamsCollectionRef = collection(db, 'clubTeams');
-        const q = query(teamsCollectionRef, where('createdBy', '==', currentUserId));
-        const teamSnapshot = await getDocs(q);
+        const teamsCollectionRef = collection(db, 'teams');
+        // const q = query(teamsCollectionRef, where('createdBy', '==', currentUserId));
+        const teamSnapshot = await getDocs(teamsCollectionRef);
         const fetchedTeams = teamSnapshot.docs.map(doc => ({
           id: doc.id,
-          teamName: doc.data().teamName,
+          teamName: doc.data().name,
           flagUrl: doc.data().flagUrl || '',
           players: doc.data().players || [],
           ...doc.data()
