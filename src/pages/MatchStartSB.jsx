@@ -395,7 +395,7 @@ const FixtureGenerator = () => {
   const [selectedTeamB, setSelectedTeamB] = useState('');
   const [liveTeamA, setLiveTeamA] = useState({ name: 'Team A', flag: null, score: '0/0', overs: '(0.0)' });
   const [liveTeamB, setLiveTeamB] = useState({ name: 'Team B', flag: null, score: '0/0', overs: '(0.0)' });
-  const [winningCaption, setWinningCaption] = useState('');
+  const [winningCaption, setWinningCaption] = useState('Live');
   const [activeTab, setActiveTab] = useState('Start Match');
   const [activeAnalyticsTab, setActiveAnalyticsTab] = useState('scorecard');
   const [generatedFixtures, setGeneratedFixtures] = useState([]);
@@ -406,44 +406,56 @@ const FixtureGenerator = () => {
   const location = useLocation();
 
   useEffect(() => {
-    // Fetch latest match data from Firestore
+    // Reset states on component unmount to ensure default values on tab reopen
+    return () => {
+      setMatchData(null);
+      setLiveTeamA({ name: 'Team A', flag: null, score: '0/0', overs: '(0.0)' });
+      setLiveTeamB({ name: 'Team B', flag: null, score: '0/0', overs: '(0.0)' });
+      setWinningCaption('Live');
+      setMatchDateTime('');
+    };
+  }, []);
+
+  useEffect(() => {
+    // Fetch latest match data from Firestore only if match has a result
     const q = query(collection(db, 'scoringpage'), orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       if (!snapshot.empty) {
         const latestMatch = snapshot.docs[0].data();
-        setMatchData(latestMatch);
-
-        // Update liveTeamA and liveTeamB
-        setLiveTeamA({
-          name: latestMatch.teamA.name,
-          flag: latestMatch.teamA.flagUrl || null,
-          score: `${latestMatch.teamA.totalScore}/${latestMatch.teamA.wickets}`,
-          overs: `(${latestMatch.teamA.overs} overs)`,
-        });
-        setLiveTeamB({
-          name: latestMatch.teamB.name,
-          flag: latestMatch.teamB.flagUrl || null,
-          score: `${latestMatch.teamB.totalScore}/${latestMatch.teamB.wickets}`,
-          overs: `(${latestMatch.teamB.overs} overs)`,
-        });
-
-        // Format match date and time
-        if (latestMatch.createdAt) {
-          const date = latestMatch.createdAt.toDate();
-          setMatchDateTime(
-            date.toLocaleString('en-US', {
-              weekday: 'short',
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit',
-            })
-          );
-        }
-
-        // Compute winning caption
+        // Only update if match has a result
         if (latestMatch.matchResult) {
+          setMatchData(latestMatch);
+
+          // Update liveTeamA and liveTeamB
+          setLiveTeamA({
+            name: latestMatch.teamA.name,
+            flag: latestMatch.teamA.flagUrl || null,
+            score: `${latestMatch.teamA.totalScore}/${latestMatch.teamA.wickets}`,
+            overs: `(${latestMatch.teamA.overs} overs)`,
+          });
+          setLiveTeamB({
+            name: latestMatch.teamB.name,
+            flag: latestMatch.teamB.flagUrl || null,
+            score: `${latestMatch.teamB.totalScore}/${latestMatch.teamB.wickets}`,
+            overs: `(${latestMatch.teamB.overs} overs)`,
+          });
+
+          // Format match date and time
+          if (latestMatch.createdAt) {
+            const date = latestMatch.createdAt.toDate();
+            setMatchDateTime(
+              date.toLocaleString('en-US', {
+                weekday: 'short',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+              })
+            );
+          }
+
+          // Compute winning caption
           if (latestMatch.matchResult === 'Tie') {
             setWinningCaption('Match Tied');
           } else if (latestMatch.teamA.result === 'Win') {
@@ -457,8 +469,6 @@ const FixtureGenerator = () => {
               setWinningCaption(`${latestMatch.teamB.name} won by ${wicketsRemaining} wickets`);
             }
           }
-        } else {
-          setWinningCaption('Live');
         }
       }
     }, (error) => {
@@ -717,7 +727,7 @@ const FixtureGenerator = () => {
                         animate={{ scale: [1, 1.1, 1] }}
                         transition={{ repeat: Infinity, duration: 1.5 }}
                       >
-                        {winningCaption || 'Live'}
+                        {winningCaption}
                       </motion.span>
                     </div>
                   </motion.div>

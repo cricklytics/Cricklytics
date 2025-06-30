@@ -307,12 +307,12 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '', origin }) => {
     const fetchAllTeams = async () => {
       try {
         setLoadingTeams(true);
-        const teamsCollectionRef = collection(db, 'teams');
-        // const q = query(teamsCollectionRef, where('createdBy', '==', currentUserId));
-        const teamSnapshot = await getDocs(teamsCollectionRef);
+        const teamsCollectionRef = collection(db, 'clubTeams');
+        const q = query(teamsCollectionRef, where('createdBy', '==', currentUserId));
+        const teamSnapshot = await getDocs(q);
         const fetchedTeams = teamSnapshot.docs.map(doc => ({
           id: doc.id,
-          teamName: doc.data().name,
+          teamName: doc.data().teamName,
           flagUrl: doc.data().flagUrl || '',
           players: doc.data().players || [],
           ...doc.data()
@@ -341,7 +341,7 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '', origin }) => {
   }, [initialTeamB, allTeams]);
 
   useEffect(() => {
-    if (selectedTeamA && selectedTeamB === selectedTeamA) {
+    if (selectedTeamA && selectedTeamB.toLowerCase() === selectedTeamA.toLowerCase()) {
       setSelectedTeamB('');
     }
   }, [selectedTeamA, selectedTeamB]);
@@ -351,13 +351,13 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '', origin }) => {
       alert('Please select both teams, enter overs, and assign the scorer.');
       return;
     }
-    if (selectedTeamA === selectedTeamB) {
+    if (selectedTeamA.toLowerCase() === selectedTeamB.toLowerCase()) {
       alert('Teams A and B cannot be the same. Please select different teams.');
       return;
     }
 
-    const teamAData = allTeams.find(team => team.teamName === selectedTeamA);
-    const teamBData = allTeams.find(team => team.teamName === selectedTeamB);
+    const teamAData = allTeams.find(team => team.teamName.toLowerCase() === selectedTeamA.toLowerCase());
+    const teamBData = allTeams.find(team => team.teamName.toLowerCase() === selectedTeamB.toLowerCase());
 
     if (!teamAData) {
       alert(`Team "${selectedTeamA}" not found in database.`);
@@ -380,8 +380,8 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '', origin }) => {
   };
 
   if (showPlayerSelector) {
-    const teamAObject = allTeams.find(team => team.teamName === selectedTeamA);
-    const teamBObject = allTeams.find(team => team.teamName === selectedTeamB);
+    const teamAObject = allTeams.find(team => team.teamName.toLowerCase() === selectedTeamA.toLowerCase());
+    const teamBObject = allTeams.find(team => team.teamName.toLowerCase() === selectedTeamB.toLowerCase());
 
     return (
       <PlayerSelector
@@ -468,34 +468,24 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '', origin }) => {
                   {/* Team A */}
                   <div className="w-full">
                     <label className="block text-gray-700 mb-2 font-medium">Team A</label>
-                    <select
+                    <input
+                      type="text"
+                      placeholder="Enter Team A name"
                       className={`w-full p-3 border-2 border-blue-200 rounded-lg text-gray-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 ${hasValue(selectedTeamA) ? 'bg-gray-200 text-gray-700' : 'bg-white'}`}
                       value={selectedTeamA}
                       onChange={(e) => setSelectedTeamA(e.target.value)}
-                    >
-                      <option value="">Select Team</option>
-                      {allTeams.map(team => (
-                        <option key={`teamA-${team.id}`} value={team.teamName}>
-                          {team.teamName}
-                        </option>
-                      ))}
-                    </select>
+                    />
                   </div>
                   {/* Team B */}
                   <div className="w-full">
                     <label className="block text-gray-700 mb-2 font-medium">Team B</label>
-                    <select
+                    <input
+                      type="text"
+                      placeholder="Enter Team B name"
                       className={`w-full p-3 border-2 border-blue-200 rounded-lg text-gray-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 ${hasValue(selectedTeamB) ? 'bg-gray-200 text-gray-700' : 'bg-white'}`}
                       value={selectedTeamB}
                       onChange={(e) => setSelectedTeamB(e.target.value)}
-                    >
-                      <option value="">Select Team</option>
-                      {allTeams.filter(t => t.teamName !== selectedTeamA).map(team => (
-                        <option key={`teamB-${team.id}`} value={team.teamName}>
-                          {team.teamName}
-                        </option>
-                      ))}
-                    </select>
+                    />
                   </div>
                 </div>
               </motion.div>
