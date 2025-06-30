@@ -18,6 +18,7 @@ const PlayerSelector = ({
   selectedTeams,
   groupPhase,
   matchId,
+  tournamentName,
 }) => {
   const [leftSearch, setLeftSearch] = useState('');
   const [rightSearch, setRightSearch] = useState('');
@@ -83,6 +84,7 @@ const PlayerSelector = ({
         selectedTeams,
         phase: groupPhase,
         matchId,
+        tournamentName,
       },
     });
   };
@@ -719,6 +721,7 @@ const [tournamentImageUrl, setTournamentImageUrl] = useState('');
         selectedTeams={selectedTeams}
         groupPhase={groupPhase}
         matchId={selectedMatchId}
+        tournamentName={tournamentName}
       />
     );
   }

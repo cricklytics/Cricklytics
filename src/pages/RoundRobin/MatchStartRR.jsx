@@ -457,70 +457,73 @@ const FixtureGenerator = () => {
   const location = useLocation();
   const {tournamentName } = location.state || {};
   console.log(tournamentName);
-
+// Only fetch Firestore data if coming from a specific navigation with match data
   useEffect(() => {
-    const q = query(collection(db, 'scoringpage'), orderBy('createdAt', 'desc'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      if (!snapshot.empty) {
-        const latestMatch = snapshot.docs[0].data();
-        setMatchData(latestMatch);
+    if (location.state && (location.state.teamA || location.state.teamB || location.state.winner)) {
+      const q = query(collection(db, 'scoringpage'), orderBy('createdAt', 'desc'));
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        if (!snapshot.empty) {
+          const latestMatch = snapshot.docs[0].data();
+          setMatchData(latestMatch);
 
-        setLiveTeamA({
-          name: latestMatch.teamA.name,
-          flag: latestMatch.teamA.flagUrl || placeholderFlag,
-          score: `${latestMatch.teamA.totalScore}/${latestMatch.teamA.wickets}`,
-          overs: `(${latestMatch.teamA.overs} overs)`,
-        });
-        setLiveTeamB({
-          name: latestMatch.teamB.name,
-          flag: latestMatch.teamB.flagUrl || placeholderFlag,
-          score: `${latestMatch.teamB.totalScore}/${latestMatch.teamB.wickets}`,
-          overs: `(${latestMatch.teamB.overs} overs)`,
-        });
+          setLiveTeamA({
+            name: latestMatch.teamA.name,
+            flag: latestMatch.teamA.flagUrl || placeholderFlag,
+            score: `${latestMatch.teamA.totalScore}/${latestMatch.teamA.wickets}`,
+            overs: `(${latestMatch.teamA.overs} overs)`,
+          });
+          setLiveTeamB({
+            name: latestMatch.teamB.name,
+            flag: latestMatch.teamB.flagUrl || placeholderFlag,
+            score: `${latestMatch.teamB.totalScore}/${latestMatch.teamB.wickets}`,
+            overs: `(${latestMatch.teamB.overs} overs)`,
+          });
 
-        if (latestMatch.createdAt) {
-          const date = latestMatch.createdAt.toDate();
-          setMatchDateTime(
-            date.toLocaleString('en-US', {
-              weekday: 'short',
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit',
-            })
-          );
-        }
-
-        if (latestMatch.matchResult) {
-          if (latestMatch.matchResult === 'Tie') {
-            setWinningCaption('Match Tied');
-            setMatchResultWinner('Tie');
-          } else if (latestMatch.teamA.result === 'Win') {
-            const runDiff = latestMatch.teamA.totalScore - latestMatch.teamB.totalScore;
-            if (runDiff > 0) {
-              setWinningCaption(`${latestMatch.teamA.name} won by ${runDiff} runs`);
-              setMatchResultWinner(latestMatch.teamA.name);
-            }
-          } else if (latestMatch.teamB.result === 'Win') {
-            const wicketsRemaining = 10 - latestMatch.teamB.wickets;
-            if (latestMatch.teamB.totalScore >= latestMatch.teamA.totalScore) {
-              setWinningCaption(`${latestMatch.teamB.name} won by ${wicketsRemaining} wickets`);
-              setMatchResultWinner(latestMatch.teamB.name);
-            }
+          if (latestMatch.createdAt) {
+            const date = latestMatch.createdAt.toDate();
+            setMatchDateTime(
+              date.toLocaleString('en-US', {
+                weekday: 'short',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+              })
+            );
           }
-        } else {
-          setWinningCaption('Live');
-          setMatchResultWinner(null);
+
+          if (latestMatch.matchResult) {
+            if (latestMatch.matchResult === 'Tie') {
+              setWinningCaption('Match Tied');
+              setMatchResultWinner('Tie');
+            } else if (latestMatch.teamA.result === 'Win') {
+              const runDiff = latestMatch.teamA.totalScore - latestMatch.teamB.totalScore;
+              if (runDiff > 0) {
+                setWinningCaption(`${latestMatch.teamA.name} won by ${runDiff} runs`);
+                setMatchResultWinner(latestMatch.teamA.name);
+              }
+            } else if (latestMatch.teamB.result === 'Win') {
+              const wicketsRemaining = 10 - latestMatch.teamB.wickets;
+              if (latestMatch.teamB.totalScore >= latestMatch.teamA.totalScore) {
+                setWinningCaption(`${latestMatch.teamB.name} won by ${wicketsRemaining} wickets`);
+                setMatchResultWinner(latestMatch.teamB.name);
+              }
+            }
+          } else {
+            setWinningCaption('Live');
+            setMatchResultWinner(null);
+          }
         }
-      }
-    }, (error) => {
-      console.error('Error fetching match data:', error);
-    });
+      }, (error) => {
+        console.error('Error fetching match data:', error);
+      });
 
-    return () => unsubscribe();
-  }, []);
+      return () => unsubscribe();
+    }
+  }, [location.state]);
 
+  // Handle navigation state for team selection and other data
   useEffect(() => {
     if (location.state) {
       if (location.state.activeTab) {
@@ -560,11 +563,6 @@ const FixtureGenerator = () => {
           flag: location.state.teamB.flagUrl || placeholderFlag,
         }));
       }
-      // Add tournamentName handling
-    if (location.state.tournamentName) {
-      // No state update needed as it's passed directly to Startmatch
-      console.log(tournamentName);
-    }
     }
   }, [location.state]);
 
@@ -706,89 +704,96 @@ const FixtureGenerator = () => {
         <main className="w-full max-w-7xl px-4 sm:px-8 py-8 mx-auto">
           {activeTab === 'Live Score' && (
             <div className="w-full">
-              <motion.div
-                className="bg-white rounded-2xl shadow-2xl overflow-hidden max-w-3xl mx-auto mt-10"
-                initial={{ opacity: 0, y: 50 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, ease: "easeOut" }}
-              >
-                <div className="bg-gradient-to-r from-blue-900 to-blue-700 text-white p-6">
-                  <h3 className="text-2xl font-bold">{liveTeamA.name} vs {liveTeamB.name}</h3>
-                  <p className="text-sm opacity-90 mt-1">{matchDateTime || 'No date available'}</p>
-                </div>
-                <div className="p-6 bg-gray-50">
-                  <div className="flex justify-around items-center mb-6">
+              {(liveTeamA.name !== 'Team A' || liveTeamB.name !== 'Team B') ? (
+                <motion.div
+                  className="bg-white rounded-2xl shadow-2xl overflow-hidden max-w-3xl mx-auto mt-10"
+                  initial={{ opacity: 0, y: 50 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, ease: "easeOut" }}
+                >
+                  <div className="bg-gradient-to-r from-blue-900 to-blue-700 text-white p-6">
+                    <h3 className="text-2xl font-bold">{liveTeamA.name} vs {liveTeamB.name}</h3>
+                    <p className="text-sm opacity-90 mt-1">{matchDateTime || 'No date available'}</p>
+                  </div>
+                  <div className="p-6 bg-gray-50">
+                    <div className="flex justify-around items-center mb-6">
+                      <motion.div
+                        className="text-center"
+                        whileHover={{ scale: 1.05 }}
+                        transition={{ type: "spring", stiffness: 300 }}
+                      >
+                        <div className="w-20 h-20 mx-auto mb-2 rounded-full flex items-center justify-center shadow-md overflow-hidden">
+                          {liveTeamA.flag ? (
+                            <img
+                              src={liveTeamA.flag}
+                              alt={`${liveTeamA.name} Flag`}
+                              className="w-full h-full object-cover"
+                              onError={(e) => (e.target.src = placeholderFlag)}
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                              <span className="text-gray-600">No Flag</span>
+                            </div>
+                          )}
+                        </div>
+                        <h4 className="font-bold text-xl text-gray-800">{liveTeamA.name}</h4>
+                        <p className="text-3xl font-extrabold text-blue-700 mt-1">{liveTeamA.score}</p>
+                        <p className="text-sm text-gray-600">{liveTeamA.overs}</p>
+                      assiste
+                      </motion.div>
+                      <div className="text-3xl font-bold text-gray-600 px-6">vs</div>
+                      <motion.div
+                        className="text-center"
+                        whileHover={{ scale: 1.05 }}
+                        transition={{ type: "spring", stiffness: 300 }}
+                      >
+                        <div className="w-20 h-20 mx-auto mb-2 rounded-full flex items-center justify-center shadow-md overflow-hidden">
+                          {liveTeamB.flag ? (
+                            <img
+                              src={liveTeamB.flag}
+                              alt={`${liveTeamB.name} Flag`}
+                              className="w-full h-full object-cover"
+                              onError={(e) => (e.target.src = placeholderFlag)}
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                              <span className="text-gray-600">No Flag</span>
+                            </div>
+                          )}
+                        </div>
+                        <h4 className="font-bold text-xl text-gray-800">{liveTeamB.name}</h4>
+                        <p className="text-3xl font-extrabold text-green-700 mt-1">{liveTeamB.score}</p>
+                        <p className="text-sm text-gray-600">{liveTeamB.overs}</p>
+                      </motion.div>
+                    </div>
                     <motion.div
-                      className="text-center"
-                      whileHover={{ scale: 1.05 }}
-                      transition={{ type: "spring", stiffness: 300 }}
+                      className="bg-white p-5 rounded-xl shadow-inner"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.5 }}
                     >
-                      <div className="w-20 h-20 mx-auto mb-2 rounded-full flex items-center justify-center shadow-md overflow-hidden">
-                        {liveTeamA.flag ? (
-                          <img
-                            src={liveTeamA.flag}
-                            alt={`${liveTeamA.name} Flag`}
-                            className="w-full h-full object-cover"
-                            onError={(e) => (e.target.src = placeholderFlag)}
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                            <span className="text-gray-600">No Flag</span>
-                          </div>
-                        )}
+                      <div className="flex justify-between items-center mb-3">
+                        <span className="text-gray-700 font-medium">Match Status:</span>
+                        <motion.span
+                          className={`px-4 py-1 rounded-full text-sm font-semibold ${
+                            winningCaption === 'Live'
+                              ? 'bg-green-600 text-white'
+                              : 'bg-yellow-400 text-black'
+                          }`}
+                          animate={{ scale: [1, 1.1, 1] }}
+                          transition={{ repeat: Infinity, duration: 1.5 }}
+                        >
+                          {winningCaption || 'Live'}
+                        </motion.span>
                       </div>
-                      <h4 className="font-bold text-xl text-gray-800">{liveTeamA.name}</h4>
-                      <p className="text-3xl font-extrabold text-blue-700 mt-1">{liveTeamA.score}</p>
-                      <p className="text-sm text-gray-600">{liveTeamA.overs}</p>
-                    </motion.div>
-                    <div className="text-3xl font-bold text-gray-600 px-6">vs</div>
-                    <motion.div
-                      className="text-center"
-                      whileHover={{ scale: 1.05 }}
-                      transition={{ type: "spring", stiffness: 300 }}
-                    >
-                      <div className="w-20 h-20 mx-auto mb-2 rounded-full flex items-center justify-center shadow-md overflow-hidden">
-                        {liveTeamB.flag ? (
-                          <img
-                            src={liveTeamB.flag}
-                            alt={`${liveTeamB.name} Flag`}
-                            className="w-full h-full object-cover"
-                            onError={(e) => (e.target.src = placeholderFlag)}
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                            <span className="text-gray-600">No Flag</span>
-                          </div>
-                        )}
-                      </div>
-                      <h4 className="font-bold text-xl text-gray-800">{liveTeamB.name}</h4>
-                      <p className="text-3xl font-extrabold text-green-700 mt-1">{liveTeamB.score}</p>
-                      <p className="text-sm text-gray-600">{liveTeamB.overs}</p>
                     </motion.div>
                   </div>
-                  <motion.div
-                    className="bg-white p-5 rounded-xl shadow-inner"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.5 }}
-                  >
-                    <div className="flex justify-between items-center mb-3">
-                      <span className="text-gray-700 font-medium">Match Status:</span>
-                      <motion.span
-                        className={`px-4 py-1 rounded-full text-sm font-semibold ${
-                          winningCaption === 'Live'
-                            ? 'bg-green-600 text-white'
-                            : 'bg-yellow-400 text-black'
-                        }`}
-                        animate={{ scale: [1, 1.1, 1] }}
-                        transition={{ repeat: Infinity, duration: 1.5 }}
-                      >
-                        {winningCaption || 'Live'}
-                      </motion.span>
-                    </div>
-                  </motion.div>
+                </motion.div>
+              ) : (
+                <div className="text-center text-white text-lg">
+                  No live match data available. Please start a match to view live scores.
                 </div>
-              </motion.div>
+              )}
             </div>
           )}
 
