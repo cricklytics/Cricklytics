@@ -1,35 +1,53 @@
-import trophy from '../assets/sophita/HomePage/trophy.png';
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import FireworksCanvas from '../components/sophita/HomePage/FireworksCanvas';
 import { FaChevronDown, FaChevronUp, FaTrophy, FaHeart, FaCommentDots, FaShareAlt } from 'react-icons/fa';
 import { ResponsiveContainer, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Line, Scatter } from 'recharts';
 import logo from '../assets/sophita/HomePage/Picture3_2.png';
+import trophy from '../assets/sophita/HomePage/trophy.png';
+import advertisement1 from '../assets/sophita/HomePage/Advertisement1.webp';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Startmatch from './StartmatchSB';
 import nav from '../assets/kumar/right-chevron.png';
-import { db, auth } from '../firebase';
-import { collection, addDoc, onSnapshot, query, orderBy } from 'firebase/firestore';
+import placeholderFlag from '../assets/sophita/HomePage/Netherland.jpeg';
+import { db, storage, auth } from '../firebase';
+import { collection, addDoc, getDocs, query, where, serverTimestamp, onSnapshot, orderBy } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 const IPLCards = ({ setActiveTab }) => {
   const [highlights, setHighlights] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const photoInputRef = useRef(null);
   const videoInputRef = useRef(null);
 
+  // Fetch highlights from Firestore for the current user
   useEffect(() => {
-    if (!auth.currentUser) return;
-
-    const unsubscribe = onSnapshot(collection(db, 'match_highlights'), (snapshot) => {
-      const highlightsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setHighlights(highlightsData);
-    }, (error) => {
-      console.error("Error fetching highlights:", error);
-    });
-
-    return () => unsubscribe();
+    (async () => {
+      try {
+        setLoading(true);
+        const user = auth.currentUser;
+        if (!user) {
+          setError('Please log in to view highlights.');
+          setLoading(false);
+          return;
+        }
+        const userId = user.uid;
+        const highlightsRef = query(collection(db, 'match_highlights'), where('userId', '==', userId));
+        const snapshot = await getDocs(highlightsRef);
+        const fetchedHighlights = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        fetchedHighlights.sort((a, b) => b.uploadedAt?.seconds - a.uploadedAt?.seconds);
+        setHighlights(fetchedHighlights);
+      } catch (err) {
+        console.error('Error fetching highlights:', err);
+        setError('Failed to load highlights.');
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, []);
 
   const handlePhotoUploadClick = () => {
@@ -42,24 +60,57 @@ const IPLCards = ({ setActiveTab }) => {
 
   const handleFileChange = async (event) => {
     const files = event.target.files;
-    if (files.length > 0) {
-      const file = files[0];
-      const type = file.type.startsWith('image/') ? 'image' : 'video';
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        try {
-          await addDoc(collection(db, 'match_highlights'), {
-            url: reader.result,
-            type,
-            userId: auth.currentUser.uid,
-            createdAt: new Date(),
-          });
-        } catch (error) {
-          console.error("Error uploading file:", error);
-        }
-      };
-      reader.readAsDataURL(file);
+    if (files.length === 0) {
+      alert('No file selected.');
+      return;
     }
+
+    const file = files[0];
+    const fileType = file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : null;
+    if (!fileType) {
+      alert('Unsupported file type. Please upload an image or video.');
+      return;
+    }
+
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        alert('Please log in to upload highlights.');
+        return;
+      }
+      const userId = user.uid;
+
+      const storagePath = `match_highlights/${userId}/${Date.now()}_${file.name}`;
+      const storageRef = ref(storage, storagePath);
+      await uploadBytes(storageRef, file);
+      const downloadURL = await getDownloadURL(storageRef);
+
+      const highlightsRef = collection(db, 'match_highlights');
+      await addDoc(highlightsRef, {
+        url: downloadURL,
+        type: fileType,
+        title: file.name,
+        uploadedAt: serverTimestamp(),
+        userId: userId,
+      });
+
+      setHighlights(prev => [
+        {
+          url: downloadURL,
+          type: fileType,
+          title: file.name,
+          uploadedAt: { seconds: Math.floor(Date.now() / 1000) },
+          userId: userId,
+        },
+        ...prev,
+      ]);
+
+      alert(`${fileType.charAt(0).toUpperCase() + fileType.slice(1)} uploaded successfully!`);
+    } catch (err) {
+      console.error('Error uploading file:', err);
+      alert('Failed to upload file.');
+    }
+
     event.target.value = null;
   };
 
@@ -67,8 +118,16 @@ const IPLCards = ({ setActiveTab }) => {
     setActiveTab('Match Analytics');
   };
 
+  if (loading) {
+    return <div className="text-center text-white">Loading highlights...</div>;
+  }
+
+  if (error) {
+    return <div className="text-center text-red-500">{error}</div>;
+  }
+
   return (
-    <div className="min-h-screen flex flex-col justify-top items-center p-6 py-0">
+    <div className="min-h-screen flex flex-col justify-center items-center p-6 py-0">
       <div className="flex justify-center gap-6 mb-6 w-full max-w-md">
         <button
           className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-lg text-lg"
@@ -107,9 +166,9 @@ const IPLCards = ({ setActiveTab }) => {
       </div>
       <div className="flex flex-wrap justify-center gap-6 mb-12">
         {highlights.length === 0 ? (
-          <p className="text-gray-600 text-lg">No highlights uploaded yet.</p>
+          <p className="text-white text-lg">No highlights available for this tournament.</p>
         ) : (
-          highlights.map((highlight) => (
+          highlights.map((highlight, index) => (
             <motion.div
               key={highlight.id}
               className="bg-white rounded-2xl overflow-hidden shadow-md flex flex-col items-center"
@@ -118,7 +177,7 @@ const IPLCards = ({ setActiveTab }) => {
               {highlight.type === 'image' ? (
                 <img
                   src={highlight.url}
-                  alt="Uploaded Highlight"
+                  alt={highlight.title}
                   className="w-[300px] h-[220px] object-cover"
                 />
               ) : (
@@ -148,14 +207,12 @@ const WormGraph = ({ matchData }) => {
 
   const { firstInnings, secondInnings } = matchData;
 
-  // Parse overs to numbers
   const parseOvers = (overs) => {
     if (!overs) return 0;
     const [whole, decimal] = overs.split('.');
     return parseFloat(`${whole}.${decimal || 0}`);
   };
 
-  // Generate over-by-over data starting from 0.1
   const teamAData = [];
   const teamBData = [];
   const teamAWickets = [];
@@ -164,11 +221,9 @@ const WormGraph = ({ matchData }) => {
   const teamAOvers = parseOvers(firstInnings.overs);
   const teamBOvers = parseOvers(secondInnings.overs);
 
-  // Approximate runs per over
   const runsPerOverA = firstInnings.totalScore / (teamAOvers || 1);
   const runsPerOverB = secondInnings.totalScore / (teamBOvers || 1);
 
-  // Team A (first innings)
   for (let over = 0.1; over <= teamAOvers; over += 0.1) {
     const runs = Math.round(runsPerOverA * over);
     teamAData.push({
@@ -177,7 +232,6 @@ const WormGraph = ({ matchData }) => {
     });
   }
 
-  // Team B (second innings)
   for (let over = 0.1; over <= teamBOvers; over += 0.1) {
     const runs = Math.round(runsPerOverB * over);
     teamBData.push({
@@ -186,7 +240,6 @@ const WormGraph = ({ matchData }) => {
     });
   }
 
-  // Wicket points for Team A
   firstInnings.playerStats.forEach(player => {
     if (player.wicketOver) {
       const over = parseOvers(player.wicketOver);
@@ -199,7 +252,6 @@ const WormGraph = ({ matchData }) => {
     }
   });
 
-  // Wicket points for Team B
   secondInnings.playerStats.forEach(player => {
     if (player.wicketOver) {
       const over = parseOvers(player.wicketOver);
@@ -214,7 +266,7 @@ const WormGraph = ({ matchData }) => {
 
   return (
     <ResponsiveContainer width="100%" height={300}>
-      <LineChart margin={{ top: 20, right: 20, bottom: 10, left: 20 }}>
+      <LineChart margin={{ top: 20, right: 20, bottom: 40, left: 20 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#4a5568" />
         <XAxis
           dataKey="over"
@@ -238,7 +290,9 @@ const WormGraph = ({ matchData }) => {
             return [value, name];
           }}
         />
-        <Legend wrapperStyle={{ color: '#fff' }} />
+        <Legend
+          wrapperStyle={{ color: '#fff', marginBottom: '20px' }}
+        />
         <Line
           type="monotone"
           dataKey="runs"
@@ -285,21 +339,17 @@ const Scorecard = ({ matchData }) => {
   const [activeTeam, setActiveTeam] = useState('teamA');
 
   const getTeamScorecard = (team, innings, opponentInnings) => {
-    // Played players: those with runs, balls, or a wicket
     const playedPlayers = innings.playerStats.filter(
       player => player.runs > 0 || player.balls > 0 || player.wicketOver
     );
 
-    // Unplayed players: those with no runs, no balls, and no wicket
     const unplayedPlayers = innings.playerStats
       .filter(player => player.runs === 0 && player.balls === 0 && !player.wicketOver)
       .map(player => player.name)
       .join(', ');
 
-    // Opponent bowlers (from the opposing team's bowlerStats)
     const bowlers = opponentInnings.bowlerStats.filter(bowler => bowler.oversBowled !== '0.0');
 
-    // Calculate 50s and 100s for each player
     const getFifties = (runs) => (runs >= 50 && runs < 100 ? 1 : 0);
     const getHundreds = (runs) => (runs >= 100 ? 1 : 0);
 
@@ -378,7 +428,7 @@ const Scorecard = ({ matchData }) => {
           {teamA.name}
         </button>
         <button
-          className={`flex-1 py-2 text-white font-semibold ${activeTeam === 'teamB' ? 'bg-gray-800' : 'bg-gray-600'}`}
+          className={`flex-1 py-2 text-white font-semibold ${activeTeam === 'teamB' ? 'bg-gray-600' : 'bg-gray-800'}`}
           onClick={() => setActiveTeam('teamB')}
         >
           {teamB.name}
@@ -393,54 +443,63 @@ const Scorecard = ({ matchData }) => {
 const FixtureGenerator = () => {
   const [selectedTeamA, setSelectedTeamA] = useState('');
   const [selectedTeamB, setSelectedTeamB] = useState('');
-  const [liveTeamA, setLiveTeamA] = useState({ name: 'Team A', flag: null, score: '0/0', overs: '(0.0)' });
-  const [liveTeamB, setLiveTeamB] = useState({ name: 'Team B', flag: null, score: '0/0', overs: '(0.0)' });
-  const [winningCaption, setWinningCaption] = useState('Live');
+  const [liveTeamA, setLiveTeamA] = useState({ name: 'Team A', flag: placeholderFlag, score: '0/0', overs: '(0.0)' });
+  const [liveTeamB, setLiveTeamB] = useState({ name: 'Team B', flag: placeholderFlag, score: '0/0', overs: '(0.0)' });
+  const [winningCaption, setWinningCaption] = useState('');
   const [activeTab, setActiveTab] = useState('Start Match');
   const [activeAnalyticsTab, setActiveAnalyticsTab] = useState('scorecard');
   const [generatedFixtures, setGeneratedFixtures] = useState([]);
   const [showFixtures, setShowFixtures] = useState(false);
+  const [matchResultWinner, setMatchResultWinner] = useState(null);
   const [matchData, setMatchData] = useState(null);
   const [matchDateTime, setMatchDateTime] = useState('');
+  const [hasViewedResults, setHasViewedResults] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const { tournamentName } = location.state || {};
 
+  // Reset states for new sessions
   useEffect(() => {
-    // Reset states on component unmount to ensure default values on tab reopen
+    // Clear states on component unmount or new session
     return () => {
       setMatchData(null);
-      setLiveTeamA({ name: 'Team A', flag: null, score: '0/0', overs: '(0.0)' });
-      setLiveTeamB({ name: 'Team B', flag: null, score: '0/0', overs: '(0.0)' });
-      setWinningCaption('Live');
+      setLiveTeamA({ name: 'Team A', flag: placeholderFlag, score: '0/0', overs: '(0.0)' });
+      setLiveTeamB({ name: 'Team B', flag: placeholderFlag, score: '0/0', overs: '(0.0)' });
+      setWinningCaption('');
       setMatchDateTime('');
+      setMatchResultWinner(null);
+      setHasViewedResults(false);
     };
   }, []);
 
+  // Fetch Firestore data only after viewing Match Results tab
   useEffect(() => {
-    // Fetch latest match data from Firestore only if match has a result
+    if (activeTab === 'Match Results') {
+      setHasViewedResults(true);
+    }
+
+    if (!hasViewedResults) return;
+
     const q = query(collection(db, 'scoringpage'), orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       if (!snapshot.empty) {
         const latestMatch = snapshot.docs[0].data();
-        // Only update if match has a result
         if (latestMatch.matchResult) {
           setMatchData(latestMatch);
 
-          // Update liveTeamA and liveTeamB
           setLiveTeamA({
             name: latestMatch.teamA.name,
-            flag: latestMatch.teamA.flagUrl || null,
+            flag: latestMatch.teamA.flagUrl || placeholderFlag,
             score: `${latestMatch.teamA.totalScore}/${latestMatch.teamA.wickets}`,
             overs: `(${latestMatch.teamA.overs} overs)`,
           });
           setLiveTeamB({
             name: latestMatch.teamB.name,
-            flag: latestMatch.teamB.flagUrl || null,
+            flag: latestMatch.teamB.flagUrl || placeholderFlag,
             score: `${latestMatch.teamB.totalScore}/${latestMatch.teamB.wickets}`,
             overs: `(${latestMatch.teamB.overs} overs)`,
           });
 
-          // Format match date and time
           if (latestMatch.createdAt) {
             const date = latestMatch.createdAt.toDate();
             setMatchDateTime(
@@ -455,19 +514,26 @@ const FixtureGenerator = () => {
             );
           }
 
-          // Compute winning caption
-          if (latestMatch.matchResult === 'Tie') {
-            setWinningCaption('Match Tied');
-          } else if (latestMatch.teamA.result === 'Win') {
-            const runDiff = latestMatch.teamA.totalScore - latestMatch.teamB.totalScore;
-            if (runDiff > 0) {
-              setWinningCaption(`${latestMatch.teamA.name} won by ${runDiff} runs`);
+          if (latestMatch.matchResult) {
+            if (latestMatch.matchResult === 'Tie') {
+              setWinningCaption('Match Tied');
+              setMatchResultWinner('Tie');
+            } else if (latestMatch.teamA.result === 'Win') {
+              const runDiff = latestMatch.teamA.totalScore - latestMatch.teamB.totalScore;
+              if (runDiff > 0) {
+                setWinningCaption(`${latestMatch.teamA.name} won by ${runDiff} runs`);
+                setMatchResultWinner(latestMatch.teamA.name);
+              }
+            } else if (latestMatch.teamB.result === 'Win') {
+              const wicketsRemaining = 10 - latestMatch.teamB.wickets;
+              if (latestMatch.teamB.totalScore >= latestMatch.teamA.totalScore) {
+                setWinningCaption(`${latestMatch.teamB.name} won by ${wicketsRemaining} wickets`);
+                setMatchResultWinner(latestMatch.teamB.name);
+              }
             }
-          } else if (latestMatch.teamB.result === 'Win') {
-            const wicketsRemaining = 10 - latestMatch.teamB.wickets;
-            if (latestMatch.teamB.totalScore >= latestMatch.teamA.totalScore) {
-              setWinningCaption(`${latestMatch.teamB.name} won by ${wicketsRemaining} wickets`);
-            }
+          } else {
+            setWinningCaption('Live');
+            setMatchResultWinner(null);
           }
         }
       }
@@ -476,61 +542,67 @@ const FixtureGenerator = () => {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [hasViewedResults, activeTab]);
 
+  // Handle navigation state for team selection and other data
   useEffect(() => {
     if (location.state) {
       if (location.state.activeTab) {
         setActiveTab(location.state.activeTab);
       }
-      if (location.state.winner) {
-        setWinningCaption(location.state.winningDifference || winningCaption);
+      if (location.state.winner && hasViewedResults) {
+        setMatchResultWinner(location.state.winner);
+        setWinningCaption(location.state.winningDifference || '');
       }
       if (location.state.teamA && location.state.teamB) {
         setLiveTeamA({
           name: location.state.teamA.name,
-          flag: location.state.teamA.flagUrl || null,
-          score: `${location.state.teamA.score || 0}/${location.state.teamA.wickets || 0}`,
-          overs: location.state.teamA.balls
-            ? `(${Math.floor(location.state.teamA.balls / 6)}.${location.state.teamA.balls % 6} overs)`
-            : `(${location.state.teamA.overs || '0.0'} overs)`,
+          flag: location.state.teamA.flagUrl || placeholderFlag,
+          score: hasViewedResults ? `${location.state.teamA.score || 0}/${location.state.teamA.wickets || 0}` : '0/0',
+          overs: hasViewedResults
+            ? location.state.teamA.balls
+              ? `(${Math.floor(location.state.teamA.balls / 6)}.${location.state.teamA.balls % 6} overs)`
+              : `(${location.state.teamA.overs || '0.0'} overs)`
+            : '(0.0)',
         });
         setLiveTeamB({
           name: location.state.teamB.name,
-          flag: location.state.teamB.flagUrl || null,
-          score: `${location.state.teamB.score || 0}/${location.state.teamB.wickets || 0}`,
-          overs: location.state.teamB.balls
-            ? `(${Math.floor(location.state.teamB.balls / 6)}.${location.state.teamB.balls % 6} overs)`
-            : `(${location.state.teamB.overs || '0.0'} overs)`,
+          flag: location.state.teamB.flagUrl || placeholderFlag,
+          score: hasViewedResults ? `${location.state.teamB.score || 0}/${location.state.teamB.wickets || 0}` : '0/0',
+          overs: hasViewedResults
+            ? location.state.teamB.balls
+              ? `(${Math.floor(location.state.teamB.balls / 6)}.${location.state.teamB.balls % 6} overs)`
+              : `(${location.state.teamB.overs || '0.0'} overs)`
+            : '(0.0)',
         });
       } else if (location.state.teamA) {
         setLiveTeamA(prevState => ({
           ...prevState,
           name: location.state.teamA.name,
-          flag: location.state.teamA.flagUrl || null,
+          flag: location.state.teamA.flagUrl || placeholderFlag,
         }));
       } else if (location.state.teamB) {
         setLiveTeamB(prevState => ({
           ...prevState,
           name: location.state.teamB.name,
-          flag: location.state.teamB.flagUrl || null,
+          flag: location.state.teamB.flagUrl || placeholderFlag,
         }));
       }
     }
-  }, [location.state]);
+  }, [location.state, hasViewedResults]);
 
   const handleTeamsSelected = (teamAData, teamBData) => {
     setLiveTeamA({
       name: teamAData.name,
-      flag: teamAData.flagUrl || null,
+      flag: teamAData.flagUrl || placeholderFlag,
       score: teamAData.score || '0/0',
-      overs: teamAData.overs || '(0.0)',
+      overs: teamAData.overs || '(0.0)'
     });
     setLiveTeamB({
       name: teamBData.name,
-      flag: teamBData.flagUrl || null,
+      flag: teamBData.flagUrl || placeholderFlag,
       score: teamBData.score || '0/0',
-      overs: teamAData.overs || '(0.0)',
+      overs: teamBData.overs || '(0.0)'
     });
   };
 
@@ -551,7 +623,7 @@ const FixtureGenerator = () => {
       id: Date.now(),
       teamA: selectedTeamA,
       teamB: selectedTeamB,
-      date: new Date().toISOString(),
+      date: new Date().toISOString()
     };
 
     setGeneratedFixtures([...generatedFixtures, newFixture]);
@@ -638,6 +710,7 @@ const FixtureGenerator = () => {
           </div>
         </div>
       </header>
+
       {activeTab === 'Start Match' ? (
         <Startmatch
           initialTeamA={selectedTeamA}
@@ -645,96 +718,104 @@ const FixtureGenerator = () => {
           origin="/match-start-sb"
           onTeamsSelectedForLiveScore={handleTeamsSelected}
           setActiveTab={setActiveTab}
+          tournamentName={tournamentName}
         />
       ) : (
         <main className="w-full max-w-7xl px-4 sm:px-8 py-8 mx-auto">
           {activeTab === 'Live Score' && (
             <div className="w-full">
-              <motion.div
-                className="bg-white rounded-2xl shadow-2xl overflow-hidden max-w-3xl mx-auto mt-10"
-                initial={{ opacity: 0, y: 50 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, ease: "easeOut" }}
-              >
-                <div className="bg-gradient-to-r from-blue-900 to-blue-700 text-white p-6">
-                  <h3 className="text-2xl font-bold">{liveTeamA.name} vs {liveTeamB.name}</h3>
-                  <p className="text-sm opacity-90 mt-1">{matchDateTime || 'No date available'}</p>
-                </div>
-                <div className="p-6 bg-gray-50">
-                  <div className="flex justify-around items-center mb-6">
+              {(liveTeamA.name !== 'Team A' || liveTeamB.name !== 'Team B') ? (
+                <motion.div
+                  className="bg-white rounded-2xl shadow-2xl overflow-hidden max-w-3xl mx-auto mt-10"
+                  initial={{ opacity: 0, y: 50 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, ease: "easeOut" }}
+                >
+                  <div className="bg-gradient-to-r from-blue-900 to-blue-700 text-white p-6">
+                    <h3 className="text-2xl font-bold">{liveTeamA.name} vs {liveTeamB.name}</h3>
+                    <p className="text-sm opacity-90 mt-1">{matchDateTime || 'No date available'}</p>
+                  </div>
+                  <div className="p-6 bg-gray-50">
+                    <div className="flex justify-around items-center mb-6">
+                      <motion.div
+                        className="text-center"
+                        whileHover={{ scale: 1.05 }}
+                        transition={{ type: "spring", stiffness: 300 }}
+                      >
+                        <div className="w-20 h-20 mx-auto mb-2 rounded-full flex items-center justify-center shadow-md overflow-hidden">
+                          {liveTeamA.flag ? (
+                            <img
+                              src={liveTeamA.flag}
+                              alt={`${liveTeamA.name} Flag`}
+                              className="w-full h-full object-cover"
+                              onError={(e) => (e.target.src = placeholderFlag)}
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                              <span className="text-gray-600">No Flag</span>
+                            </div>
+                          )}
+                        </div>
+                        <h4 className="font-bold text-xl text-gray-800">{liveTeamA.name}</h4>
+                        <p className="text-3xl font-extrabold text-blue-700 mt-1">{liveTeamA.score}</p>
+                        <p className="text-sm text-gray-600">{liveTeamA.overs}</p>
+                      </motion.div>
+                      <div className="text-3xl font-bold text-gray-600 px-6">vs</div>
+                      <motion.div
+                        className="text-center"
+                        whileHover={{ scale: 1.05 }}
+                        transition={{ type: "spring", stiffness: 300 }}
+                      >
+                        <div className="w-20 h-20 mx-auto mb-2 rounded-full flex items-center justify-center shadow-md overflow-hidden">
+                          {liveTeamB.flag ? (
+                            <img
+                              src={liveTeamB.flag}
+                              alt={`${liveTeamB.name} Flag`}
+                              className="w-full h-full object-cover"
+                              onError={(e) => (e.target.src = placeholderFlag)}
+                            />
+                          ) : (
+                            <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                              <span className="text-gray-600">No Flag</span>
+                            </div>
+                          )}
+                        </div>
+                        <h4 className="font-bold text-xl text-gray-800">{liveTeamB.name}</h4>
+                        <p className="text-3xl font-extrabold text-green-700 mt-1">{liveTeamB.score}</p>
+                        <p className="text-sm text-gray-600">{liveTeamB.overs}</p>
+                      </motion.div>
+                    </div>
                     <motion.div
-                      className="text-center"
-                      whileHover={{ scale: 1.05 }}
-                      transition={{ type: "spring", stiffness: 300 }}
+                      className="bg-white p-5 rounded-xl shadow-inner"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.5 }}
                     >
-                      <div className="w-20 h-20 mx-auto mb-2 rounded-full flex items-center justify-center shadow-md overflow-hidden">
-                        {liveTeamA.flag ? (
-                          <img
-                            src={liveTeamA.flag}
-                            alt={`${liveTeamA.name} Flag`}
-                            className="w-full h-full object-cover"
-                            onError={(e) => (e.target.src = '')}
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                            <span className="text-gray-600">No Flag</span>
-                          </div>
-                        )}
+                      <div className="flex justify-between items-center mb-3">
+                        <span className="text-gray-700 font-medium">Match Status:</span>
+                        <motion.span
+                          className={`px-4 py-1 rounded-full text-sm font-semibold ${
+                            winningCaption === 'Live'
+                              ? 'bg-green-600 text-white'
+                              : 'bg-yellow-400 text-black'
+                          }`}
+                          animate={{ scale: [1, 1.1, 1] }}
+                          transition={{ repeat: Infinity, duration: 1.5 }}
+                        >
+                          {winningCaption || 'Live'}
+                        </motion.span>
                       </div>
-                      <h4 className="font-bold text-xl text-gray-800">{liveTeamA.name}</h4>
-                      <p className="text-3xl font-extrabold text-blue-700 mt-1">{liveTeamA.score}</p>
-                      <p className="text-sm text-gray-600">{liveTeamA.overs}</p>
-                    </motion.div>
-                    <div className="text-3xl font-bold text-gray-600 px-6">vs</div>
-                    <motion.div
-                      className="text-center"
-                      whileHover={{ scale: 1.05 }}
-                      transition={{ type: "spring", stiffness: 300 }}
-                    >
-                      <div className="w-20 h-20 mx-auto mb-2 rounded-full flex items-center justify-center shadow-md overflow-hidden">
-                        {liveTeamB.flag ? (
-                          <img
-                            src={liveTeamB.flag}
-                            alt={`${liveTeamB.name} Flag`}
-                            className="w-full h-full object-cover"
-                            onError={(e) => (e.target.src = '')}
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                            <span className="text-gray-600">No Flag</span>
-                          </div>
-                        )}
-                      </div>
-                      <h4 className="font-bold text-xl text-gray-800">{liveTeamB.name}</h4>
-                      <p className="text-3xl font-extrabold text-green-700 mt-1">{liveTeamB.score}</p>
-                      <p className="text-sm text-gray-600">{liveTeamB.overs}</p>
                     </motion.div>
                   </div>
-                  <motion.div
-                    className="bg-white p-5 rounded-xl shadow-inner"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.5 }}
-                  >
-                    <div className="flex justify-between items-center mb-3">
-                      <span className="text-gray-700 font-medium">Match Status:</span>
-                      <motion.span
-                        className={`px-4 py-1 rounded-full text-sm font-semibold ${
-                          winningCaption === 'Live'
-                            ? 'bg-green-600 text-white'
-                            : 'bg-yellow-400 text-black'
-                        }`}
-                        animate={{ scale: [1, 1.1, 1] }}
-                        transition={{ repeat: Infinity, duration: 1.5 }}
-                      >
-                        {winningCaption}
-                      </motion.span>
-                    </div>
-                  </motion.div>
+                </motion.div>
+              ) : (
+                <div className="text-center text-white text-lg">
+                  No live match data available. Please start a match to view live scores.
                 </div>
-              </motion.div>
+              )}
             </div>
           )}
+
           {activeTab === 'Match Results' && (
             <motion.div
               initial={{ opacity: 0 }}
@@ -756,7 +837,7 @@ const FixtureGenerator = () => {
                             src={liveTeamA.flag}
                             alt={`${liveTeamA.name} Flag`}
                             className="w-full h-full object-cover"
-                            onError={(e) => (e.target.src = '')}
+                            onError={(e) => (e.target.src = placeholderFlag)}
                           />
                         </div>
                       ) : liveTeamB.name === matchData.matchResult ? (
@@ -765,7 +846,7 @@ const FixtureGenerator = () => {
                             src={liveTeamB.flag}
                             alt={`${liveTeamB.name} Flag`}
                             className="w-full h-full object-cover"
-                            onError={(e) => (e.target.src = '')}
+                            onError={(e) => (e.target.src = placeholderFlag)}
                           />
                         </div>
                       ) : null}
@@ -803,6 +884,7 @@ const FixtureGenerator = () => {
               </div>
             </motion.div>
           )}
+
           {activeTab === 'Highlights' && (
             <motion.div
               initial={{ opacity: 0 }}
@@ -812,6 +894,7 @@ const FixtureGenerator = () => {
               <IPLCards setActiveTab={setActiveTab} />
             </motion.div>
           )}
+
           {activeTab === 'Match Analytics' && (
             <div className="rounded-lg p-6 text-white">
               <div className="flex border-b border-gray-700 mb-6">
