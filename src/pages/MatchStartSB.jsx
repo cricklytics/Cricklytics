@@ -21,7 +21,6 @@ const IPLCards = ({ setActiveTab }) => {
   const photoInputRef = useRef(null);
   const videoInputRef = useRef(null);
 
-  // Fetch highlights from Firestore for the current user
   useEffect(() => {
     (async () => {
       try {
@@ -428,7 +427,7 @@ const Scorecard = ({ matchData }) => {
           {teamA.name}
         </button>
         <button
-          className={`flex-1 py-2 text-white font-semibold ${activeTeam === 'teamB' ? 'bg-gray-600' : 'bg-gray-800'}`}
+          className={`flex-1 py-2 text-white font-semibold ${activeTeam === 'teamB' ? 'bg-gray-800' : 'bg-gray-600'}`}
           onClick={() => setActiveTeam('teamB')}
         >
           {teamB.name}
@@ -457,10 +456,19 @@ const FixtureGenerator = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { tournamentName } = location.state || {};
+  console.log(tournamentName);
 
-  // Reset states for new sessions
+  // Reset states for new sessions on mount
   useEffect(() => {
-    // Clear states on component unmount or new session
+    setMatchData(null);
+    setLiveTeamA({ name: 'Team A', flag: placeholderFlag, score: '0/0', overs: '(0.0)' });
+    setLiveTeamB({ name: 'Team B', flag: placeholderFlag, score: '0/0', overs: '(0.0)' });
+    setWinningCaption('');
+    setMatchDateTime('');
+    setMatchResultWinner(null);
+    setHasViewedResults(false);
+
+    // Clean up on unmount
     return () => {
       setMatchData(null);
       setLiveTeamA({ name: 'Team A', flag: placeholderFlag, score: '0/0', overs: '(0.0)' });
@@ -472,13 +480,15 @@ const FixtureGenerator = () => {
     };
   }, []);
 
-  // Fetch Firestore data only after viewing Match Results tab
+  // Fetch Firestore data only after viewing Match Results tab and with relevant location.state
   useEffect(() => {
     if (activeTab === 'Match Results') {
       setHasViewedResults(true);
     }
 
-    if (!hasViewedResults) return;
+    if (!hasViewedResults || !location.state || (!location.state.teamA && !location.state.teamB && !location.state.winner)) {
+      return;
+    }
 
     const q = query(collection(db, 'scoringpage'), orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -542,7 +552,7 @@ const FixtureGenerator = () => {
     });
 
     return () => unsubscribe();
-  }, [hasViewedResults, activeTab]);
+  }, [hasViewedResults, activeTab, location.state]);
 
   // Handle navigation state for team selection and other data
   useEffect(() => {
