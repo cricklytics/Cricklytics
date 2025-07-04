@@ -869,7 +869,15 @@ const FixtureGenerator = () => {
                   />
                   {matchData && matchData.matchResult && matchData.matchResult !== 'Tie' && (
                     <h1 className="text-4xl text-green-400 font-bold drop-shadow-[0_0_10px_#22c55e]">
-                      {matchData.matchResult} won the match!
+                      <span className="inline-flex items-center">
+                        <img
+                          src={liveTeamA.name === matchData.matchResult ? liveTeamA.flag : liveTeamB.flag}
+                          alt={`${matchData.matchResult} Flag`}
+                          className="w-6 h-6 mr-2 object-cover"
+                          onError={(e) => (e.target.src = placeholderFlag)}
+                        />
+                        {matchData.matchResult} won the match!
+                      </span>
                     </h1>
                   )}
                   {matchData && matchData.matchResult === 'Tie' && (
