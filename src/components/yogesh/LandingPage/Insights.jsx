@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import logo from '../../../assets/pawan/PlayerProfile/picture-312.png';
 import backButton from '../../../assets/kumar/right-chevron.png';
 import { db, auth } from "../../../firebase";
-import { collection, query, where, onSnapshot } from "firebase/firestore";
+import { collection, query, where, onSnapshot, doc, onSnapshot as docSnapshot } from "firebase/firestore";
 
 const Insights = () => {
   const navigate = useNavigate();
@@ -11,6 +11,7 @@ const Insights = () => {
   const [activeSubOption, setActiveSubOption] = useState("runs");
   const [insightsData, setInsightsData] = useState({});
   const [prevStats, setPrevStats] = useState(null);
+  const [userProfile, setUserProfile] = useState(null);
 
   const tabs = [
     { id: "batting", label: "Batting" },
@@ -63,6 +64,23 @@ const Insights = () => {
     ],
     overall: [],
   };
+
+  // Fetch user profile from Firestore
+  useEffect(() => {
+    if (!auth.currentUser) return;
+
+    const unsubscribe = docSnapshot(doc(db, 'users', auth.currentUser.uid), (doc) => {
+      if (doc.exists()) {
+        setUserProfile({ uid: auth.currentUser.uid, ...doc.data() });
+      } else {
+        setUserProfile(null);
+      }
+    }, (error) => {
+      console.error("Error fetching user profile:", error);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   // Fetch player data from clubTeams collection
   useEffect(() => {
@@ -369,8 +387,24 @@ const Insights = () => {
         />
       </div>
 
-      {/* Horizontal Navigation Bar */}
-      <div className="max-w-5xl mx-auto">
+      {/* User Profile */}
+      <div className="max-w-5xl mx-auto mt-6">
+        <div className="flex items-center gap-3 mb-6">
+          <img
+            src={userProfile?.profileImageUrl || "/images/user-placeholder.png"}
+            alt="User Pic"
+            className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-full object-cover aspect-square"
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.src = "/images/user-placeholder.png";
+            }}
+          />
+          <div className="text-2xl sm:text-3xl md:text-4xl font-['Alegreya'] text-gray-300">
+            {userProfile?.firstName || "User"}
+          </div>
+        </div>
+
+        {/* Horizontal Navigation Bar */}
         <div className="flex overflow-x-auto justify-center whitespace-nowrap gap-4 border-b border-white/20 mb-10 px-4">
           {tabs.map((tab) => (
             <button

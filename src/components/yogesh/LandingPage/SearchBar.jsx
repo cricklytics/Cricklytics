@@ -35,7 +35,7 @@ const SearchBar = () => {
                       key={tag}
                       className="bg-gray-200 text-black font-semibold px-4 py-1 rounded-full hover:bg-gray-300"
                       onClick={() => {
-                        if (tag === 'Stats') navigate('/stats');
+                        if (tag === 'Stats') navigate('/insights');
                         else if (tag === 'Match') navigate('/match');
                         else if (tag === 'Tournament') navigate('/tournament');
                         else if (tag === 'Team') navigate('/team')

@@ -5,6 +5,7 @@ import ClubMain from './pages/Clubmain'
 // import ClubDetail from './components/yogesh/ClubDetail'
 import Tab from "./components/yogesh/LandingPage/tab"
 
+import AddPlayer from './pages/Addplayer';
 
 import Login from './components/yogesh/LoginPage/login';
 import Signup from './components/yogesh/LoginPage/signup';
@@ -263,7 +264,7 @@ function App() {
 
 
 
-
+          <Route path='/addplayer' element={<AddPlayer/>} />
 
           <Route path="/admin" element={<AdminPanel />} />
         </Routes>

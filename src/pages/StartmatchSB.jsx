@@ -21,8 +21,15 @@ const uploadFile = async (file, filePath) => {
 
 const generateUniquePlayerId = async () => {
   const playersCollectionRef = collection(db, 'clubPlayers');
-  const snapshot = await getDocs(playersCollectionRef);
-  const existingIds = snapshot.docs.map(doc => doc.data().playerId).filter(id => id);
+  const playerDetailsCollectionRef = collection(db, 'PlayerDetails');
+  const [clubPlayersSnapshot, playerDetailsSnapshot] = await Promise.all([
+    getDocs(playersCollectionRef),
+    getDocs(playerDetailsCollectionRef),
+  ]);
+  const existingIds = [
+    ...clubPlayersSnapshot.docs.map(doc => doc.data().playerId).filter(id => id),
+    ...playerDetailsSnapshot.docs.map(doc => doc.data().playerId).filter(id => id),
+  ];
 
   let newId;
   do {
@@ -32,8 +39,28 @@ const generateUniquePlayerId = async () => {
   return newId;
 };
 
+// Helper function to check if team name exists (case-insensitive)
+const checkTeamNameUnique = async (teamName, excludeTeamId = null) => {
+  try {
+    const teamsCollectionRef = collection(db, 'clubTeams');
+    const teamSnapshot = await getDocs(teamsCollectionRef);
+    let existingTeam = null;
+
+    teamSnapshot.forEach(doc => {
+      if (doc.data().teamName.toLowerCase() === teamName.toLowerCase() && doc.id !== excludeTeamId) {
+        existingTeam = { id: doc.id, ...doc.data() };
+      }
+    });
+
+    return existingTeam;
+  } catch (err) {
+    console.error("Error checking team name:", err);
+    throw new Error("Failed to check team name existence.");
+  }
+};
+
 // AddClubPlayerModal2 Component
-const AddClubPlayerModal2 = ({ onClose, team }) => {
+const AddClubPlayerModal2 = ({ onClose, team, onPlayerAdded }) => {
   const [formData, setFormData] = useState({
     playerId: '',
     name: '',
@@ -83,6 +110,10 @@ const AddClubPlayerModal2 = ({ onClose, team }) => {
   const [success, setSuccess] = useState(false);
   const [currentUserId, setCurrentUserId] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [playerIds, setPlayerIds] = useState([]);
+  const [filteredPlayerIds, setFilteredPlayerIds] = useState([]);
+  const [playerIdSearch, setPlayerIdSearch] = useState('');
+  const [isNewPlayer, setIsNewPlayer] = useState(false);
 
   // Handle authentication state
   useEffect(() => {
@@ -99,18 +130,86 @@ const AddClubPlayerModal2 = ({ onClose, team }) => {
     return () => unsubscribeAuth();
   }, []);
 
-  // Generate playerId when the modal mounts
+  // Fetch player IDs from clubPlayers and PlayerDetails
+  const fetchPlayerIds = async () => {
+    try {
+      const clubPlayersRef = collection(db, 'clubPlayers');
+      const playerDetailsRef = collection(db, 'PlayerDetails');
+      const [clubPlayersSnapshot, playerDetailsSnapshot] = await Promise.all([
+        getDocs(clubPlayersRef),
+        getDocs(playerDetailsRef),
+      ]);
+
+      const clubPlayerIds = clubPlayersSnapshot.docs.map(doc => ({
+        playerId: doc.data().playerId,
+        source: 'clubPlayers',
+        ...doc.data(),
+      }));
+      const playerDetailsIds = playerDetailsSnapshot.docs.map(doc => ({
+        playerId: doc.data().playerId,
+        source: 'PlayerDetails',
+        ...doc.data(),
+      }));
+
+      const allPlayerIds = [...clubPlayerIds, ...playerDetailsIds]
+        .filter((player, index, self) => 
+          index === self.findIndex(p => p.playerId === player.playerId)
+        )
+        .sort(() => Math.random() - 0.5)
+        .slice(0, 5);
+
+      setPlayerIds(allPlayerIds);
+      setFilteredPlayerIds(allPlayerIds);
+    } catch (err) {
+      console.error("Error fetching player IDs:", err);
+      setError("Failed to load player IDs.");
+    }
+  };
+
   useEffect(() => {
-    const setPlayerId = async () => {
-      const newId = await generateUniquePlayerId();
-      setFormData(prev => ({ ...prev, playerId: newId.toString() }));
-    };
-    setPlayerId();
+    fetchPlayerIds();
   }, []);
+
+  // Filter player IDs based on search
+  useEffect(() => {
+    if (playerIdSearch.trim() === '') {
+      setFilteredPlayerIds(playerIds);
+    } else {
+      const fetchFilteredPlayerIds = async () => {
+        try {
+          const clubPlayersRef = collection(db, 'clubPlayers');
+          const playerDetailsRef = collection(db, 'PlayerDetails');
+          const [clubPlayersSnapshot, playerDetailsSnapshot] = await Promise.all([
+            getDocs(clubPlayersRef),
+            getDocs(playerDetailsRef),
+          ]);
+
+          const clubPlayerIds = clubPlayersSnapshot.docs
+            .map(doc => ({ playerId: doc.data().playerId, source: 'clubPlayers', ...doc.data() }))
+            .filter(player => player.playerId.toString().includes(playerIdSearch));
+          const playerDetailsIds = playerDetailsSnapshot.docs
+            .map(doc => ({ playerId: doc.data().playerId, source: 'PlayerDetails', ...doc.data() }))
+            .filter(player => player.playerId.toString().includes(playerIdSearch));
+
+          const allFilteredPlayerIds = [...clubPlayerIds, ...playerDetailsIds]
+            .filter((player, index, self) => 
+              index === self.findIndex(p => p.playerId === player.playerId)
+            );
+
+          setFilteredPlayerIds(allFilteredPlayerIds);
+        } catch (err) {
+          console.error("Error filtering player IDs:", err);
+          setError("Failed to filter player IDs.");
+        }
+      };
+
+      fetchFilteredPlayerIds();
+    }
+  }, [playerIdSearch, playerIds]);
 
   // Set teamName from team prop
   useEffect(() => {
-    if (team?.teamName) {
+    if (team?.teamName && !formData.playerId) {
       setFormData(prev => ({ ...prev, teamName: team.teamName }));
     }
   }, [team]);
@@ -126,6 +225,147 @@ const AddClubPlayerModal2 = ({ onClose, team }) => {
     } else {
       setImageFile(null);
     }
+  };
+
+  const handlePlayerIdChange = async (e) => {
+    const selectedPlayerId = e.target.value;
+    setFormData(prev => ({ ...prev, playerId: selectedPlayerId }));
+    setIsNewPlayer(false);
+
+    if (selectedPlayerId) {
+      try {
+        let playerData = null;
+        const clubPlayerQuery = query(
+          collection(db, 'clubPlayers'),
+          where('playerId', '==', parseInt(selectedPlayerId))
+        );
+        const clubPlayerSnapshot = await getDocs(clubPlayerQuery);
+        if (!clubPlayerSnapshot.empty) {
+          playerData = clubPlayerSnapshot.docs[0].data();
+        } else {
+          const playerDetailsQuery = query(
+            collection(db, 'PlayerDetails'),
+            where('playerId', '==', parseInt(selectedPlayerId))
+          );
+          const playerDetailsSnapshot = await getDocs(playerDetailsQuery);
+          if (!playerDetailsSnapshot.empty) {
+            playerData = playerDetailsSnapshot.docs[0].data();
+          }
+        }
+
+        if (playerData) {
+          setFormData({
+            ...formData,
+            playerId: playerData.playerId.toString(),
+            name: playerData.name || '',
+            image: playerData.image || '',
+            teamName: team?.teamName || playerData.teamName || '',
+            role: playerData.role || 'player',
+            age: playerData.age?.toString() || '',
+            battingStyle: playerData.battingStyle || '',
+            bowlingStyle: playerData.bowlingStyle || '',
+            matches: playerData.matches?.toString() || '',
+            runs: playerData.runs?.toString() || '',
+            highestScore: playerData.highestScore?.toString() || '',
+            average: playerData.average?.toString() || '',
+            strikeRate: playerData.strikeRate?.toString() || '',
+            centuries: playerData.centuries?.toString() || '',
+            fifties: playerData.fifties?.toString() || '',
+            wickets: playerData.wickets?.toString() || '',
+            bestBowling: playerData.bestBowling || '',
+            bio: playerData.bio || '',
+            recentMatches: Array.isArray(playerData.recentMatches)
+              ? playerData.recentMatches.map(match => `${match.opponent}, ${match.runs}, ${match.wickets}, ${match.result}`).join('\n')
+              : '',
+            user: playerData.user || 'no',
+            audioUrl: playerData.audioUrl || '',
+            careerStatsBattingMatches: playerData.careerStats?.batting?.matches?.toString() || '',
+            careerStatsBattingInnings: playerData.careerStats?.batting?.innings?.toString() || '',
+            careerStatsBattingNotOuts: playerData.careerStats?.batting?.notOuts?.toString() || '',
+            careerStatsBattingRuns: playerData.careerStats?.batting?.runs?.toString() || '',
+            careerStatsBattingHighest: playerData.careerStats?.batting?.highest?.toString() || '',
+            careerStatsBattingAverage: playerData.careerStats?.batting?.average?.toString() || '',
+            careerStatsBattingStrikeRate: playerData.careerStats?.batting?.strikeRate?.toString() || '',
+            careerStatsBattingCenturies: playerData.careerStats?.batting?.centuries?.toString() || '',
+            careerStatsBattingFifties: playerData.careerStats?.batting?.fifties?.toString() || '',
+            careerStatsBattingFours: playerData.careerStats?.batting?.fours?.toString() || '',
+            careerStatsBattingSixes: playerData.careerStats?.batting?.sixes?.toString() || '',
+            careerStatsBowlingInnings: playerData.careerStats?.bowling?.innings?.toString() || '',
+            careerStatsBowlingWickets: playerData.careerStats?.bowling?.wickets?.toString() || '',
+            careerStatsBowlingBest: playerData.careerStats?.bowling?.best || '',
+            careerStatsBowlingAverage: playerData.careerStats?.bowling?.average?.toString() || '',
+            careerStatsBowlingEconomy: playerData.careerStats?.bowling?.economy?.toString() || '',
+            careerStatsBowlingStrikeRate: playerData.careerStats?.bowling?.strikeRate?.toString() || '',
+            careerStatsFieldingCatches: playerData.careerStats?.fielding?.catches?.toString() || '',
+            careerStatsFieldingStumpings: playerData.careerStats?.fielding?.stumpings?.toString() || '',
+            careerStatsFieldingRunOuts: playerData.careerStats?.fielding?.runOuts?.toString() || '',
+          });
+        } else {
+          setError("Player data not found.");
+        }
+      } catch (err) {
+        console.error("Error fetching player data:", err);
+        setError("Failed to fetch player data.");
+      }
+    } else {
+      setFormData(prev => ({ ...prev, teamName: team?.teamName || '' }));
+    }
+  };
+
+  const handleNewPlayerId = async () => {
+    const newId = await generateUniquePlayerId();
+    const newPlayer = {
+      playerId: newId,
+      source: 'new',
+      name: 'New Player',
+    };
+    setFormData({
+      playerId: newId.toString(),
+      name: '',
+      image: '',
+      teamName: team?.teamName || '',
+      role: 'player',
+      age: '',
+      battingStyle: '',
+      bowlingStyle: '',
+      matches: '0',
+      runs: '0',
+      highestScore: '0',
+      average: '0',
+      strikeRate: '0',
+      centuries: '0',
+      fifties: '0',
+      wickets: '0',
+      bestBowling: '',
+      bio: '',
+      recentMatches: '',
+      user: 'no',
+      audioUrl: '',
+      careerStatsBattingMatches: '0',
+      careerStatsBattingInnings: '0',
+      careerStatsBattingNotOuts: '0',
+      careerStatsBattingRuns: '0',
+      careerStatsBattingHighest: '0',
+      careerStatsBattingAverage: '0',
+      careerStatsBattingStrikeRate: '0',
+      careerStatsBattingCenturies: '0',
+      careerStatsBattingFifties: '0',
+      careerStatsBattingFours: '0',
+      careerStatsBattingSixes: '0',
+      careerStatsBowlingInnings: '0',
+      careerStatsBowlingWickets: '0',
+      careerStatsBowlingBest: '',
+      careerStatsBowlingAverage: '0',
+      careerStatsBowlingEconomy: '0',
+      careerStatsBowlingStrikeRate: '0',
+      careerStatsFieldingCatches: '0',
+      careerStatsFieldingStumpings: '0',
+      careerStatsFieldingRunOuts: '0',
+    });
+    setImageFile(null);
+    setIsNewPlayer(true);
+    setPlayerIds(prev => [newPlayer, ...prev]);
+    setFilteredPlayerIds(prev => [newPlayer, ...prev]);
   };
 
   const handleSubmit = async (e) => {
@@ -235,25 +475,20 @@ const AddClubPlayerModal2 = ({ onClose, team }) => {
       };
 
       const playerId = formData.playerId;
-      // Save player to clubPlayers collection
       await setDoc(doc(db, "clubPlayers", playerId), playerData);
 
-      // Add player to clubTeams collection
       const teamQuery = query(
         collection(db, 'clubTeams'),
-        where('teamName', '==', formData.teamName),
-        where('createdBy', '==', currentUserId)
+        where('teamName', '==', formData.teamName)
       );
       const teamSnapshot = await getDocs(teamQuery);
 
       if (!teamSnapshot.empty) {
-        // Team exists, append player to players array
         const teamDoc = teamSnapshot.docs[0];
         await updateDoc(doc(db, 'clubTeams', teamDoc.id), {
           players: arrayUnion(playerData)
         });
       } else {
-        // Team doesn't exist, create new team with player
         await setDoc(doc(collection(db, 'clubTeams')), {
           teamName: formData.teamName,
           createdBy: currentUserId,
@@ -271,6 +506,11 @@ const AddClubPlayerModal2 = ({ onClose, team }) => {
       setSuccess(true);
 
       const newId = await generateUniquePlayerId();
+      const newPlayer = {
+        playerId: newId,
+        source: 'new',
+        name: 'New Player',
+      };
       setFormData({
         playerId: newId.toString(),
         name: '',
@@ -280,41 +520,47 @@ const AddClubPlayerModal2 = ({ onClose, team }) => {
         age: '',
         battingStyle: '',
         bowlingStyle: '',
-        matches: '',
-        runs: '',
-        highestScore: '',
-        average: '',
-        strikeRate: '',
-        centuries: '',
-        fifties: '',
-        wickets: '',
+        matches: '0',
+        runs: '0',
+        highestScore: '0',
+        average: '0',
+        strikeRate: '0',
+        centuries: '0',
+        fifties: '0',
+        wickets: '0',
         bestBowling: '',
         bio: '',
         recentMatches: '',
         user: 'no',
         audioUrl: '',
-        careerStatsBattingMatches: '',
-        careerStatsBattingInnings: '',
-        careerStatsBattingNotOuts: '',
-        careerStatsBattingRuns: '',
-        careerStatsBattingHighest: '',
-        careerStatsBattingAverage: '',
-        careerStatsBattingStrikeRate: '',
-        careerStatsBattingCenturies: '',
-        careerStatsBattingFifties: '',
-        careerStatsBattingFours: '',
-        careerStatsBattingSixes: '',
-        careerStatsBowlingInnings: '',
-        careerStatsBowlingWickets: '',
+        careerStatsBattingMatches: '0',
+        careerStatsBattingInnings: '0',
+        careerStatsBattingNotOuts: '0',
+        careerStatsBattingRuns: '0',
+        careerStatsBattingHighest: '0',
+        careerStatsBattingAverage: '0',
+        careerStatsBattingStrikeRate: '0',
+        careerStatsBattingCenturies: '0',
+        careerStatsBattingFifties: '0',
+        careerStatsBattingFours: '0',
+        careerStatsBattingSixes: '0',
+        careerStatsBowlingInnings: '0',
+        careerStatsBowlingWickets: '0',
         careerStatsBowlingBest: '',
-        careerStatsBowlingAverage: '',
-        careerStatsBowlingEconomy: '',
-        careerStatsBowlingStrikeRate: '',
-        careerStatsFieldingCatches: '',
-        careerStatsFieldingStumpings: '',
-        careerStatsFieldingRunOuts: '',
+        careerStatsBowlingAverage: '0',
+        careerStatsBowlingEconomy: '0',
+        careerStatsBowlingStrikeRate: '0',
+        careerStatsFieldingCatches: '0',
+        careerStatsFieldingStumpings: '0',
+        careerStatsFieldingRunOuts: '0',
       });
       setImageFile(null);
+      setIsNewPlayer(true);
+      setPlayerIds(prev => [newPlayer, ...prev]);
+      setFilteredPlayerIds(prev => [newPlayer, ...prev]);
+      if (onPlayerAdded) {
+        onPlayerAdded();
+      }
 
       setTimeout(() => onClose(), 1500);
     } catch (err) {
@@ -363,12 +609,36 @@ const AddClubPlayerModal2 = ({ onClose, team }) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block mb-1 text-gray-300">Player ID</label>
+                <div className="flex items-center gap-2">
+                  <select
+                    name="playerId"
+                    value={formData.playerId}
+                    onChange={handlePlayerIdChange}
+                    className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">Select Player ID</option>
+                    {filteredPlayerIds.map(player => (
+                      <option key={`${player.playerId}-${player.source}`} value={player.playerId}>
+                        {player.playerId} ({player.source})
+                      </option>
+                    ))}
+                  </select>
+                  <motion.button
+                    type="button"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={handleNewPlayerId}
+                    className="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                  >
+                    New
+                  </motion.button>
+                </div>
                 <input
                   type="text"
-                  name="playerId"
-                  value={formData.playerId}
-                  readOnly
-                  className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 opacity-75"
+                  placeholder="Search Player ID..."
+                  value={playerIdSearch}
+                  onChange={(e) => setPlayerIdSearch(e.target.value)}
+                  className="w-full p-2 mt-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
                 <div className="mt-2 flex items-center gap-4">
                   <label className="text-gray-300">User</label>
@@ -1036,6 +1306,7 @@ const PlayerSelector = ({ teamA, teamB, overs, origin, scorer, onPlayerAdded }) 
             <AddClubPlayerModal2
               onClose={handleCloseAddPlayer}
               team={selectedTeamForPlayer}
+              onPlayerAdded={onPlayerAdded}
             />
           )}
         </AnimatePresence>
@@ -1059,6 +1330,10 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '', origin }) => {
   const [scorer, setScorer] = useState('');
   const [showPlayerSelector, setShowPlayerSelector] = useState(false);
   const [currentUserId, setCurrentUserId] = useState(null);
+  const [teamAError, setTeamAError] = useState(null);
+  const [teamBError, setTeamBError] = useState(null);
+  const [teamAId, setTeamAId] = useState(null);
+  const [teamBId, setTeamBId] = useState(null);
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
@@ -1073,15 +1348,10 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '', origin }) => {
   }, []);
 
   const fetchAllTeams = async () => {
-    if (!currentUserId) {
-      setLoadingTeams(false);
-      return;
-    }
     try {
       setLoadingTeams(true);
       const teamsCollectionRef = collection(db, 'clubTeams');
-      const q = query(teamsCollectionRef, where('createdBy', '==', currentUserId));
-      const teamSnapshot = await getDocs(q);
+      const teamSnapshot = await getDocs(teamsCollectionRef);
       const fetchedTeams = teamSnapshot.docs.map(doc => ({
         id: doc.id,
         teamName: doc.data().teamName,
@@ -1117,6 +1387,9 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '', origin }) => {
   useEffect(() => {
     if (selectedTeamA && selectedTeamB.toLowerCase() === selectedTeamA.toLowerCase()) {
       setSelectedTeamB('');
+      setTeamBError('Teams A and B cannot be the same. Please select a different team.');
+    } else {
+      setTeamBError(null);
     }
   }, [selectedTeamA, selectedTeamB]);
 
@@ -1130,46 +1403,80 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '', origin }) => {
       return;
     }
 
-    const teamsCollectionRef = collection(db, 'clubTeams');
+    try {
+      // Check for Team A
+      let teamAName = selectedTeamA.trim();
+      let teamADocId = null;
+      const existingTeamA = await checkTeamNameUnique(teamAName);
+      if (existingTeamA) {
+        teamADocId = existingTeamA.id;
+      } else {
+        const confirmMessage = `No team named "${teamAName}" exists. Would you like to create a new team? Click "OK" to create a new team, or "Cancel" to enter a different team name.`;
+        if (window.confirm(confirmMessage)) {
+          const newTeamDoc = await addDoc(collection(db, 'clubTeams'), {
+            teamName: teamAName,
+            createdBy: currentUserId,
+            createdAt: new Date(),
+            players: [],
+            captain: '',
+            matches: 0,
+            wins: 0,
+            losses: 0,
+            points: 0,
+            lastMatch: ''
+          });
+          teamADocId = newTeamDoc.id;
+        } else {
+          setTeamAError("Please enter a different team name.");
+          setSelectedTeamA('');
+          return;
+        }
+      }
+      setSelectedTeamA(teamAName);
+      setTeamAId(teamADocId);
 
-    const teamAQuery = query(
-      teamsCollectionRef,
-      where('teamName', '==', selectedTeamA),
-      where('createdBy', '==', currentUserId)
-    );
-    const teamASnapshot = await getDocs(teamAQuery);
-    if (teamASnapshot.empty) {
-      await addDoc(teamsCollectionRef, {
-        teamName: selectedTeamA,
-        createdBy: currentUserId,
-        createdAt: new Date(),
-        players: []
-      });
+      // Check for Team B
+      let teamBName = selectedTeamB.trim();
+      let teamBDocId = null;
+      const existingTeamB = await checkTeamNameUnique(teamBName);
+      if (existingTeamB) {
+        teamBDocId = existingTeamB.id;
+      } else {
+        const confirmMessage = `No team named "${teamBName}" exists. Would you like to create a new team? Click "OK" to create a new team, or "Cancel" to enter a different team name.`;
+        if (window.confirm(confirmMessage)) {
+          const newTeamDoc = await addDoc(collection(db, 'clubTeams'), {
+            teamName: teamBName,
+            createdBy: currentUserId,
+            createdAt: new Date(),
+            players: [],
+            captain: '',
+            matches: 0,
+            wins: 0,
+            losses: 0,
+            points: 0,
+            lastMatch: ''
+          });
+          teamBDocId = newTeamDoc.id;
+        } else {
+          setTeamBError("Please enter a different team name.");
+          setSelectedTeamB('');
+          return;
+        }
+      }
+      setSelectedTeamB(teamBName);
+      setTeamBId(teamBDocId);
+
+      await fetchAllTeams();
+      setShowPlayerSelector(true);
+    } catch (err) {
+      console.error("Error in handleNext:", err);
+      alert("An error occurred while processing teams. Please try again.");
     }
-
-    const teamBQuery = query(
-      teamsCollectionRef,
-      where('teamName', '==', selectedTeamB),
-      where('createdBy', '==', currentUserId)
-    );
-    const teamBSnapshot = await getDocs(teamBQuery);
-    if (teamBSnapshot.empty) {
-      await addDoc(teamsCollectionRef, {
-        teamName: selectedTeamB,
-        createdBy: currentUserId,
-        createdAt: new Date(),
-        players: []
-      });
-    }
-
-    await fetchAllTeams();
-
-    setShowPlayerSelector(true);
   };
 
   if (showPlayerSelector) {
-    const teamAObject = allTeams.find(team => team.teamName.toLowerCase() === selectedTeamA.toLowerCase());
-    const teamBObject = allTeams.find(team => team.teamName.toLowerCase() === selectedTeamB.toLowerCase());
+    const teamAObject = allTeams.find(team => team.id === teamAId) || { teamName: selectedTeamA, players: [] };
+    const teamBObject = allTeams.find(team => team.id === teamBId) || { teamName: selectedTeamB, players: [] };
 
     return (
       <PlayerSelector
@@ -1197,16 +1504,6 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '', origin }) => {
     return (
       <div className="min-h-screen bg-gray-900 text-red-500 flex items-center justify-center">
         <p className="text-xl">Error: {teamFetchError}</p>
-      </div>
-    );
-  }
-
-  if (allTeams.length < 2) {
-    return (
-      <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
-        <p className="text-xl text-center">
-          Not enough teams registered. Please add at least two teams via the Admin Panel.
-        </p>
       </div>
     );
   }
@@ -1259,8 +1556,12 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '', origin }) => {
                       placeholder="Enter Team A name"
                       className={`w-full p-3 border-2 border-blue-200 rounded-lg text-gray-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 ${hasValue(selectedTeamA) ? 'bg-gray-200 text-gray-700' : 'bg-white'}`}
                       value={selectedTeamA}
-                      onChange={(e) => setSelectedTeamA(e.target.value)}
+                      onChange={(e) => {
+                        setSelectedTeamA(e.target.value);
+                        setTeamAError(null);
+                      }}
                     />
+                    {teamAError && <p className="text-red-500 text-sm mt-1">{teamAError}</p>}
                   </div>
                   <div className="w-full">
                     <label className="block text-gray-700 mb-2 font-medium">Team B</label>
@@ -1269,8 +1570,12 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '', origin }) => {
                       placeholder="Enter Team B name"
                       className={`w-full p-3 border-2 border-blue-200 rounded-lg text-gray-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 ${hasValue(selectedTeamB) ? 'bg-gray-200 text-gray-700' : 'bg-white'}`}
                       value={selectedTeamB}
-                      onChange={(e) => setSelectedTeamB(e.target.value)}
+                      onChange={(e) => {
+                        setSelectedTeamB(e.target.value);
+                        setTeamBError(null);
+                      }}
                     />
+                    {teamBError && <p className="text-red-500 text-sm mt-1">{teamBError}</p>}
                   </div>
                 </div>
               </motion.div>
@@ -1309,7 +1614,7 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '', origin }) => {
                   <div className="w-full">
                     <label className="block text-gray-700 mb-2 font-medium">Record Toss & Decision</label>
                     <select
-                      className={`w-full p-3 border-2 border-blue-200 rounded-lg text-gray-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 mb-4 ${hasValue(tossWinner) ? 'bg-gray-200 text-gray-700' : 'bg-white'}`}
+                      className={`w-full p-3 border-2 border-blue-200 rounded-lg text-gray-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 ${hasValue(tossWinner) ? 'bg-gray-200 text-gray-700' : 'bg-white'}`}
                       value={tossWinner}
                       onChange={(e) => setTossWinner(e.target.value)}
                     >
@@ -1373,10 +1678,10 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '', origin }) => {
             transition={{ duration: 0.5, delay: 0.4 }}
           >
             <motion.button
-              className="px-10 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl shadow-lg hover:shadow-xl text-xl transition-all duration-300"
-              onClick={handleNext}
-              whileHover={{ scale: 1.03, boxShadow: "0 10px 25px -5px rgba(59, 130, 246, 0.4)" }}
+              className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all duration-300 w-full max-w-md"
+              whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
+              onClick={handleNext}
             >
               Next
             </motion.button>
