@@ -69,98 +69,108 @@ const Match = () => {
   // Format match data based on active sub-option
   const getMatchData = (match, subOption) => {
     const {
-      teamA,
-      teamB,
+      teamA = { name: "N/A", totalScore: 0, wickets: 0, overs: 0, result: null },
+      teamB = { name: "N/A", totalScore: 0, wickets: 0, overs: 0, result: null },
       createdAt,
       matchResult,
-      firstInnings,
-      secondInnings,
-      Format,
-      venue,
-      umpire,
+      firstInnings = { playerStats: [], bowlerStats: [] },
+      secondInnings = { playerStats: [], bowlerStats: [] },
+      Format = "N/A",
+      venue = "Not Available",
+      umpire = "Not Available",
       matchId,
     } = match;
 
     switch (subOption) {
       case "info":
         return {
-          matchId,
+          matchId: matchId || "N/A",
           teams: `${teamA.name} vs ${teamB.name}`,
           date: createdAt ? createdAt.toDate().toISOString().split('T')[0] : "Unknown Date",
           status: matchResult ? "Past" : "Live",
-          score: `${teamA.totalScore}/${teamA.wickets} (${teamA.overs}) vs ${teamB.totalScore}/${teamB.wickets} (${teamB.overs})`,
-          venue: venue || "Unknown Venue",
-          Format: Format || "T20",
-          umpire: umpire || "Unknown Umpires",
+          score: `${teamA.totalScore || 0}/${teamA.wickets || 0} (${teamA.overs || 0}) vs ${teamB.totalScore || 0}/${teamB.wickets || 0} (${teamB.overs || 0})`,
+          venue,
+          Format,
+          umpire,
         };
       case "summary":
-        let summary = "";
+        let summary = "Match in progress";
         if (matchResult === "Tie") {
           summary = "Match Tied";
         } else if (teamA.result === "Win") {
-          const runDiff = teamA.totalScore - teamB.totalScore;
+          const runDiff = (teamA.totalScore || 0) - (teamB.totalScore || 0);
           if (runDiff > 0) {
             summary = `${teamA.name} beat ${teamB.name} by ${runDiff} runs`;
           }
         } else if (teamB.result === "Win") {
-          const wicketsRemaining = 10 - teamB.wickets;
-          if (teamB.totalScore >= teamA.totalScore) {
+          const wicketsRemaining = 10 - (teamB.wickets || 0);
+          if ((teamB.totalScore || 0) >= (teamA.totalScore || 0)) {
             summary = `${teamB.name} beat ${teamA.name} by ${wicketsRemaining} wickets`;
           }
-        } else {
-          summary = "Match in progress";
         }
         return {
-          matchId,
+          matchId: matchId || "N/A",
           score: summary,
         };
       case "scorecard":
         const battingDetails = [
           `${teamA.name}:`,
-          ...firstInnings.playerStats
-            .filter(p => p.runs > 0 || p.balls > 0)
-            .map(p => `${p.name}: ${p.runs} runs (${p.balls} balls)`),
+          ...(firstInnings && firstInnings.playerStats?.length > 0
+            ? firstInnings.playerStats
+                .filter(p => (p.runs || 0) > 0 || (p.balls || 0) > 0)
+                .map(p => `${p.name || "Unknown"}: ${p.runs || 0} runs (${p.balls || 0} balls)`)
+            : ["No batting data available"]),
           `\n${teamB.name}:`,
-          ...secondInnings.playerStats
-            .filter(p => p.runs > 0 || p.balls > 0)
-            .map(p => `${p.name}: ${p.runs} runs (${p.balls} balls)`),
+          ...(secondInnings && secondInnings.playerStats?.length > 0
+            ? secondInnings.playerStats
+                .filter(p => (p.runs || 0) > 0 || (p.balls || 0) > 0)
+                .map(p => `${p.name || "Unknown"}: ${p.runs || 0} runs (${p.balls || 0} balls)`)
+            : ["No batting data available"]),
         ].join('\n');
         const bowlingDetails = [
           `${teamB.name} Bowling:`,
-          ...secondInnings.bowlerStats
-            .filter(b => b.oversBowled !== "0.0")
-            .map(b => `${b.name}: ${b.wickets}/${b.runsConceded} (${b.oversBowled} overs)`),
+          ...(secondInnings && secondInnings.bowlerStats?.length > 0
+            ? secondInnings.bowlerStats
+                .filter(b => b.oversBowled && b.oversBowled !== "0.0")
+                .map(b => `${b.name || "Unknown"}: ${b.wickets || 0}/${b.runsConceded || 0} (${b.oversBowled || "0.0"} overs)`)
+            : ["No bowling data available"]),
           `\n${teamA.name} Bowling:`,
-          ...firstInnings.bowlerStats
-            .filter(b => b.oversBowled !== "0.0")
-            .map(b => `${b.name}: ${b.wickets}/${b.runsConceded} (${b.oversBowled} overs)`),
+          ...(firstInnings && firstInnings.bowlerStats?.length > 0
+            ? firstInnings.bowlerStats
+                .filter(b => b.oversBowled && b.oversBowled !== "0.0")
+                .map(b => `${b.name || "Unknown"}: ${b.wickets || 0}/${b.runsConceded || 0} (${b.oversBowled || "0.0"} overs)`)
+            : ["No bowling data available"]),
         ].join('\n');
         return {
-          matchId,
+          matchId: matchId || "N/A",
           batting: battingDetails,
           bowling: bowlingDetails,
         };
       case "squad":
-        const squadIndia = firstInnings.playerStats.map(p => p.name).join(', ');
-        const squadAustralia = secondInnings.playerStats.map(p => p.name).join(', ');
+        const squadIndia = firstInnings && firstInnings.playerStats?.length > 0
+          ? firstInnings.playerStats.map(p => p.name || "Unknown").join(', ')
+          : "No squad data available";
+        const squadAustralia = secondInnings && secondInnings.playerStats?.length > 0
+          ? secondInnings.playerStats.map(p => p.name || "Unknown").join(', ')
+          : "No squad data available";
         return {
-          matchId,
+          matchId: matchId || "N/A",
           squadIndia,
           squadAustralia,
         };
       case "analysis":
-        const analysis = `Match between ${teamA.name} and ${teamB.name} was played on ${createdAt ? createdAt.toDate().toLocaleDateString() : 'Unknown Date'}. ${teamA.name} scored ${teamA.totalScore}/${teamA.wickets} in ${teamA.overs} overs, while ${teamB.name} scored ${teamB.totalScore}/${teamB.wickets} in ${teamB.overs} overs.`;
+        const analysis = `Match between ${teamA.name} and ${teamB.name} was played on ${createdAt ? createdAt.toDate().toLocaleDateString() : 'Unknown Date'}. ${teamA.name} scored ${teamA.totalScore || 0}/${teamA.wickets || 0} in ${teamA.overs || 0} overs, while ${teamB.name} scored ${teamB.totalScore || 0}/${teamB.wickets || 0} in ${teamB.overs || 0} overs.`;
         return {
-          matchId,
+          matchId: matchId || "N/A",
           analysis,
         };
       case "mvp":
         return {
-          matchId,
-          mvp: "Not specified", // MVP not stored in scoringpage, placeholder
+          matchId: matchId || "N/A",
+          mvp: "Not specified",
         };
       default:
-        return { matchId };
+        return { matchId: matchId || "N/A" };
     }
   };
 

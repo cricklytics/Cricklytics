@@ -1678,39 +1678,44 @@ const Sidebar = ({ isOpen, closeMenu, userProfile }) => {
           </button>
 
           {/* Profile Section */}
-          <div className="text-center py-4 px-4 mt-6 text-black">
-            <div className="relative w-16 h-16 md:w-20 md:h-20 mx-auto mb-4">
-              {userProfile?.profileImageUrl ? (
-                <img
-                  src={userProfile.profileImageUrl}
-                  alt="Profile"
-                  className="w-full h-full rounded-full object-cover border-2 border-black"
-                />
-              ) : (
-                <div className="w-full h-full rounded-full bg-black text-white flex items-center justify-center text-2xl font-bold border-2 border-[#5DE0E6]">
-                  {userProfile?.userName ? userProfile.userName.charAt(0).toUpperCase() : 'U'}
-                </div>
-              )}
+         <div className="text-center py-4 px-4 mt-6 text-black">
+  <div className="relative w-16 h-16 md:w-20 md:h-20 mx-auto mb-4">
+    {userProfile?.profileImageUrl ? (
+      <img
+        src={userProfile.profileImageUrl}
+        alt="Profile"
+        className="w-full h-full rounded-full object-cover border-2 border-black"
+      />
+    ) : (
+      <div className="w-full h-full rounded-full bg-black text-white flex items-center justify-center text-2xl font-bold border-2 border-[#5DE0E6]">
+        {userProfile?.userName ? userProfile.userName.charAt(0).toUpperCase() : 'U'}
+      </div>
+    )}
 
-              <label className="absolute bottom-0 right-0 bg-white p-1 rounded-full cursor-pointer shadow-md">
-                <FaPlus className="text-black text-xs" />
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="hidden"
-                />
-              </label>
-            </div>
+    <label className="absolute bottom-0 right-0 bg-white p-1 rounded-full cursor-pointer shadow-md">
+      <FaPlus className="text-black text-xs" />
+      <input
+        type="file"
+        accept="image/*"
+        onChange={handleImageUpload}
+        className="hidden"
+      />
+    </label>
+  </div>
 
-            <div className="flex items-center justify-center gap-2">
-              <h6 className="text-base md:text-lg font-bold">
-                {userProfile?.userName || "User"}
-              </h6>
-            </div>
-            <p className="text-xs md:text-sm opacity-80 mt-1">{userProfile?.email || "No email"}</p>
-            <p className="text-xs md:text-sm opacity-80">{userProfile?.whatsapp || "No phone"}</p>
-          </div>
+  <div className="flex items-center justify-center gap-2">
+    <h6 className="text-base md:text-lg font-bold">
+      {userProfile?.userName || "User"}
+    </h6>
+  </div>
+  <p className="text-xs md:text-sm opacity-80 mt-1">{userProfile?.email || "No email"}</p>
+  <p className="text-xs md:text-sm opacity-80">{userProfile?.whatsapp || "No phone"}</p>
+
+  {/* Plus icon added below WhatsApp */}
+  <div className="flex justify-center mt-2" onClick={()=>navigate('/addplayer')}>
+    <FaPlus className="text-black text-sm cursor-pointer" />
+  </div>
+</div>
 
           {/* Menu Items */}
           <ul className="list-none p-0 mt-4 text-black">

@@ -455,9 +455,9 @@ const FixtureGenerator = () => {
   const [matchDateTime, setMatchDateTime] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
-  const {tournamentName } = location.state || {};
-  console.log(tournamentName);
-// Only fetch Firestore data if coming from a specific navigation with match data
+  const { tournamentName } = location.state || {};
+
+  // Fetch match data from Firestore
   useEffect(() => {
     if (location.state && (location.state.teamA || location.state.teamB || location.state.winner)) {
       const q = query(collection(db, 'scoringpage'), orderBy('createdAt', 'desc'));
@@ -739,7 +739,6 @@ const FixtureGenerator = () => {
                         <h4 className="font-bold text-xl text-gray-800">{liveTeamA.name}</h4>
                         <p className="text-3xl font-extrabold text-blue-700 mt-1">{liveTeamA.score}</p>
                         <p className="text-sm text-gray-600">{liveTeamA.overs}</p>
-                      assiste
                       </motion.div>
                       <div className="text-3xl font-bold text-gray-600 px-6">vs</div>
                       <motion.div
@@ -810,38 +809,28 @@ const FixtureGenerator = () => {
               <FireworksCanvas />
               <div className="relative z-20 text-center p-8 flex flex-col items-center justify-between h-full w-full">
                 <div>
-                  {matchData && matchData.matchResult && matchData.matchResult !== 'Tie' && (
-                    <div className="mb-4">
-                      {liveTeamA.name === matchData.matchResult ? (
-                        <div className="w-24 h-24 mx-auto flex items-center justify-center rounded-full shadow-lg overflow-hidden">
-                          <img
-                            src={liveTeamA.flag}
-                            alt={`${liveTeamA.name} Flag`}
-                            className="w-full h-full object-cover"
-                            onError={(e) => (e.target.src = placeholderFlag)}
-                          />
-                        </div>
-                      ) : liveTeamB.name === matchData.matchResult ? (
-                        <div className="w-24 h-24 mx-auto flex items-center justify-center rounded-full shadow-lg overflow-hidden">
-                          <img
-                            src={liveTeamB.flag}
-                            alt={`${liveTeamB.name} Flag`}
-                            className="w-full h-full object-cover"
-                            onError={(e) => (e.target.src = placeholderFlag)}
-                          />
-                        </div>
-                      ) : null}
-                    </div>
-                  )}
+                  <img
+                    src={location.state?.tournamentImageUrl || tournamentName}
+                    alt="Tournament Logo"
+                    className="w-[150px] h-auto mb-4 drop-shadow-lg mx-auto"
+                  />
                   <img
                     src={trophy}
                     alt="Trophy"
-                    className="w-[300px] h-auto mb-8 drop-shadow-lg mx-auto"
+                    className="w-[300px] h-auto mb-4 drop-shadow-lg mx-auto"
                   />
                   {matchData && matchData.matchResult && matchData.matchResult !== 'Tie' && (
-                    <h1 className="text-4xl text-green-400 font-bold drop-shadow-[0_0_10px_#22c55e]">
-                      {matchData.matchResult} won the match!
-                    </h1>
+                    <div className="flex items-center justify-center mb-4">
+                      <img
+                        src={liveTeamA.name === matchData.matchResult ? liveTeamA.flag : liveTeamB.flag}
+                        alt={`${matchData.matchResult} Flag`}
+                        className="w-12 h-12 mr-2 rounded-full object-cover"
+                        onError={(e) => (e.target.src = placeholderFlag)}
+                      />
+                      <h1 className="text-4xl text-green-400 font-bold drop-shadow-[0_0_10px_#22c55e]">
+                        {matchData.matchResult} won the match!
+                      </h1>
+                    </div>
                   )}
                   {matchData && matchData.matchResult === 'Tie' && (
                     <h1 className="text-xl text-green-400 font-bold drop-shadow-[0_0_10px_#22c55e]">

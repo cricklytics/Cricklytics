@@ -19,6 +19,7 @@ const PlayerSelector = ({
   groupPhase,
   matchId,
   tournamentName,
+  tournamentImageUrl, // Add this prop
 }) => {
   const [leftSearch, setLeftSearch] = useState('');
   const [rightSearch, setRightSearch] = useState('');
@@ -68,6 +69,7 @@ const PlayerSelector = ({
     console.log('Selected Teams:', selectedTeams);
     console.log('Group Phase:', groupPhase);
     console.log('Match ID:', matchId);
+    console.log('Tournament Image URL:', tournamentImageUrl);
     console.groupEnd();
 
     navigate('/StartMatchPlayersRR', {
@@ -85,6 +87,7 @@ const PlayerSelector = ({
         phase: groupPhase,
         matchId,
         tournamentName,
+        tournamentImageUrl, // Pass tournamentImageUrl
       },
     });
   };
@@ -273,7 +276,7 @@ const Startmatch = ({
   origin,
   onTeamsSelectedForLiveScore,
   setActiveTab,
-  tournamentName, // Add this line
+  tournamentName,
 }) => {
   console.group('Startmatch Props');
   console.log('Initial Team A:', initialTeamA);
@@ -311,6 +314,7 @@ const Startmatch = ({
   const [flowchartData, setFlowchartData] = useState([]);
   const [flowchartLoading, setFlowchartLoading] = useState(false);
   const [flowchartError, setFlowchartError] = useState(null);
+  const [tournamentImageUrl, setTournamentImageUrl] = useState('');
 
   const scorers = ['John Doe', 'Jane Smith', 'Mike Johnson'];
   const navigate = useNavigate();
@@ -341,42 +345,41 @@ const Startmatch = ({
     };
     fetchAllTeams();
   }, []);
-useEffect(() => {
-  const fetchTournamentDetails = async () => {
-    if (!tournamentName) {
-      setTournamentError('No tournament name provided.');
-      setTournamentImageUrl(''); // Clear image if no name
-      return;
-    }
 
-    try {
-      const tournamentsCollectionRef = collection(db, 'tournaments');
-      const querySnapshot = await getDocs(tournamentsCollectionRef);
-      const matchingTournament = querySnapshot.docs.find(doc => 
-        doc.data().name.toLowerCase() === tournamentName.toLowerCase()
-      );
-
-      if (matchingTournament) {
-        const tournamentData = matchingTournament.data();
-        setTournamentImageUrl(tournamentData.imageUrl || ''); // Set image URL from matched document
-      } else {
-        setTournamentError('No matching tournament found.');
-        setTournamentImageUrl(''); // Clear image if no match
+  // Fetch tournament image
+  useEffect(() => {
+    const fetchTournamentDetails = async () => {
+      if (!tournamentName) {
+        setTournamentError('No tournament name provided.');
+        setTournamentImageUrl('');
+        return;
       }
-    } catch (err) {
-      console.error('Error fetching tournament details:', err);
-      setTournamentError('Failed to load tournament details.');
-      setTournamentImageUrl(''); // Clear image on error
-    }
-  };
 
-  fetchTournamentDetails();
-}, [tournamentName]);
+      try {
+        const tournamentsCollectionRef = collection(db, 'tournaments');
+        const querySnapshot = await getDocs(tournamentsCollectionRef);
+        const matchingTournament = querySnapshot.docs.find(doc => 
+          doc.data().name.toLowerCase() === tournamentName.toLowerCase()
+        );
 
-// Add state for imageUrl
-const [tournamentImageUrl, setTournamentImageUrl] = useState('');
+        if (matchingTournament) {
+          const tournamentData = matchingTournament.data();
+          setTournamentImageUrl(tournamentData.imageUrl || '');
+        } else {
+          setTournamentError('No matching tournament found.');
+          setTournamentImageUrl('');
+        }
+      } catch (err) {
+        console.error('Error fetching tournament details:', err);
+        setTournamentError('Failed to load tournament details.');
+        setTournamentImageUrl('');
+      }
+    };
 
-  // Fetch tournament data to get matches, determine phase, and update semi-finals/finals
+    fetchTournamentDetails();
+  }, [tournamentName]);
+
+  // Fetch tournament data
   useEffect(() => {
     const fetchTournamentData = async () => {
       if (!tournamentId) {
@@ -401,7 +404,6 @@ const [tournamentImageUrl, setTournamentImageUrl] = useState('');
         setTournamentDocId(tournamentDoc.id);
         const tournamentData = tournamentDoc.data();
 
-        // Extract matches from roundRobin, semiFinals, and finals
         const roundRobinMatches = Object.keys(tournamentData.roundRobin || {}).flatMap(groupKey => {
           const groupNumber = groupKey.split('_').pop();
           return (tournamentData.roundRobin[groupKey] || []).map(match => ({
@@ -418,12 +420,10 @@ const [tournamentImageUrl, setTournamentImageUrl] = useState('');
           phase: 'Final',
         }));
 
-        // Determine completion status of each phase
         const groupStageComplete = roundRobinMatches.length > 0 && roundRobinMatches.every(match => match.winner !== null);
         const semiFinalsComplete = semiFinalMatches.length > 0 && semiFinalMatches.every(match => match.winner !== null);
         const finalsComplete = finalMatches.length > 0 && finalMatches.every(match => match.winner !== null);
 
-        // Update semi-finals if Group Stage is complete and semi-finals are not yet set
         if (groupStageComplete && semiFinalMatches.every(match => match.team1 === 'TBD')) {
           const teams = tournamentData.teams || [];
           const sortedTeams = teams
@@ -445,7 +445,6 @@ const [tournamentImageUrl, setTournamentImageUrl] = useState('');
           }
         }
 
-        // Update finals if Semi-Finals are complete and finals are not yet set
         if (groupStageComplete && semiFinalsComplete && finalMatches.every(match => match.team1 === 'TBD')) {
           const semiFinalWinners = semiFinalMatches
             .map(match => match.winner)
@@ -464,7 +463,6 @@ const [tournamentImageUrl, setTournamentImageUrl] = useState('');
           }
         }
 
-        // Determine the tournament winner if Finals are complete
         if (groupStageComplete && semiFinalsComplete && finalsComplete) {
           const finalWinner = finalMatches[0]?.winner;
           if (finalWinner) {
@@ -475,29 +473,27 @@ const [tournamentImageUrl, setTournamentImageUrl] = useState('');
           }
         }
 
-        // Determine which matches to display based on phase completion
         let matchesToDisplay = [];
         let phase = 'Group Stage';
 
         if (!groupStageComplete) {
-          matchesToDisplay = roundRobinMatches; // Include all group stage matches
+          matchesToDisplay = roundRobinMatches;
           phase = 'Group Stage';
         } else if (groupStageComplete && !semiFinalsComplete) {
-          matchesToDisplay = semiFinalMatches; // Include all semi-final matches
+          matchesToDisplay = semiFinalMatches;
           phase = 'Semi-Finals';
         } else if (groupStageComplete && semiFinalsComplete && !finalsComplete) {
-          matchesToDisplay = finalMatches; // Include all final matches
+          matchesToDisplay = finalMatches;
           phase = 'Finals';
         } else if (groupStageComplete && semiFinalsComplete && finalsComplete) {
-          matchesToDisplay = finalMatches; // Include final matches for display
+          matchesToDisplay = finalMatches;
           phase = 'Finals (Complete)';
         }
 
-        // Sort matches: played (winner !== null) first, unplayed (winner === null) second
         matchesToDisplay = matchesToDisplay.sort((a, b) => {
-          if (a.winner !== null && b.winner === null) return -1; // Played matches first
-          if (a.winner === null && b.winner !== null) return 1; // Unplayed matches after
-          return 0; // Maintain original order within groups
+          if (a.winner !== null && b.winner === null) return -1;
+          if (a.winner === null && b.winner !== null) return 1;
+          return 0;
         });
 
         setAllMatches(matchesToDisplay);
@@ -528,7 +524,6 @@ const [tournamentImageUrl, setTournamentImageUrl] = useState('');
     }
   }, [tournamentId]);
 
-  // Handle match selection
   useEffect(() => {
     if (selectedMatchId) {
       const match = allMatches.find(m => m.id === selectedMatchId);
@@ -547,14 +542,12 @@ const [tournamentImageUrl, setTournamentImageUrl] = useState('');
     }
   }, [selectedMatchId, allMatches]);
 
-  // Prevent same team selection
   useEffect(() => {
     if (selectedTeamA && selectedTeamB === selectedTeamA) {
       setSelectedTeamB('');
     }
   }, [selectedTeamA, selectedTeamB]);
 
-  // Fetch data for the flowchart modal
   const fetchFlowchartData = async () => {
     if (!tournamentId) {
       setFlowchartError('No tournament ID provided.');
@@ -631,7 +624,6 @@ const [tournamentImageUrl, setTournamentImageUrl] = useState('');
     }
   };
 
-  // Open flowchart modal and fetch data
   const handleOpenFlowchartModal = () => {
     setShowFlowchartModal(true);
     fetchFlowchartData();
@@ -722,6 +714,7 @@ const [tournamentImageUrl, setTournamentImageUrl] = useState('');
         groupPhase={groupPhase}
         matchId={selectedMatchId}
         tournamentName={tournamentName}
+        tournamentImageUrl={tournamentImageUrl} // Pass tournamentImageUrl
       />
     );
   }
@@ -798,7 +791,7 @@ const [tournamentImageUrl, setTournamentImageUrl] = useState('');
                       src={tournamentImageUrl}
                       alt={`${tournamentName} Image`}
                       className="w-16 h-16 object-cover rounded-full mr-2"
-                      onError={(e) => (e.target.style.display = 'none')} // Hide if image fails to load
+                      onError={(e) => (e.target.style.display = 'none')}
                     />
                     <span className="text-xl font-medium text-blue-800">{tournamentName}</span>
                   </div>
@@ -1037,8 +1030,8 @@ const [tournamentImageUrl, setTournamentImageUrl] = useState('');
 
       <style jsx>{`
         .played-match {
-          color: #9ca3af; /* Gray color for played matches */
-          background-color: #f3f4f6; /* Light gray background */
+          color: #9ca3af;
+          background-color: #f3f4f6;
         }
       `}</style>
     </div>
