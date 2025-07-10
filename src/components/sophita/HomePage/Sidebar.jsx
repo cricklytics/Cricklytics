@@ -14,6 +14,7 @@ import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { signOut, reauthenticateWithCredential, EmailAuthProvider, updatePassword } from "firebase/auth";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { FaPlus } from "react-icons/fa";
+import { collection, query, where, getDocs } from "firebase/firestore";
 
 const hexToRgb = (hex) => {
   hex = hex.replace('#', '');
@@ -1572,6 +1573,38 @@ const Sidebar = ({ isOpen, closeMenu, userProfile }) => {
     "#5DE0E6", "#FF6B6B", "#48BB78", "#F6AD55", 
     "#667EEA", "#9F7AEA", "#ED64A6", "#38B2AC"
   ];
+  const [hasPlayerId, setHasPlayerId] = useState(false);
+  const [playerId, setPlayerId] = useState('');
+
+  useEffect(() => {
+  const checkPlayerDetails = async () => {
+    if (userProfile?.uid) {
+      try {
+        const q = query(collection(db, 'PlayerDetails'), where('userId', '==', userProfile.uid));
+        const querySnapshot = await getDocs(q);
+        
+        if (!querySnapshot.empty) {
+          querySnapshot.forEach((doc) => {
+            if (doc.data().playerId) {
+              setHasPlayerId(true);
+              setPlayerId(doc.data().playerId);
+              return;
+            }
+          });
+        } else {
+          setHasPlayerId(false);
+          setPlayerId('');
+        }
+      } catch (err) {
+        console.error("Error checking player details:", err);
+        setHasPlayerId(false);
+        setPlayerId('');
+      }
+    }
+  };
+
+  checkPlayerDetails();
+}, [userProfile]);
 
   useEffect(() => {
     const checkMobileView = () => setIsMobileView(window.innerWidth < MD_BREAKPOINT);
@@ -1711,10 +1744,14 @@ const Sidebar = ({ isOpen, closeMenu, userProfile }) => {
   <p className="text-xs md:text-sm opacity-80 mt-1">{userProfile?.email || "No email"}</p>
   <p className="text-xs md:text-sm opacity-80">{userProfile?.whatsapp || "No phone"}</p>
 
-  {/* Plus icon added below WhatsApp */}
-  <div className="flex justify-center mt-2" onClick={()=>navigate('/addplayer')}>
-    <FaPlus className="text-black text-sm cursor-pointer" />
-  </div>
+  {/* Show player ID if exists, otherwise show plus icon */}
+  {hasPlayerId ? (
+    <p className="text-xs md:text-sm opacity-80 mt-1">Player ID: {playerId}</p>
+  ) : (
+    <div className="flex justify-center mt-2" onClick={() => navigate('/addplayer')}>
+      <FaPlus className="text-black text-sm cursor-pointer" />
+    </div>
+  )}
 </div>
 
           {/* Menu Items */}

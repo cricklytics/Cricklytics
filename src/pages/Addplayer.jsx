@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { db, auth } from '../firebase';
 import { doc, setDoc, getDocs, collection, query, where, updateDoc, arrayUnion } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -50,6 +50,9 @@ class ErrorBoundary extends React.Component {
 
 const AddPlayer = ({ onClose }) => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const userProfile = location.state?.userProfile || null;
+  
   const [playerFormData, setPlayerFormData] = useState({
     playerId: '',
     name: '',
@@ -93,6 +96,7 @@ const AddPlayer = ({ onClose }) => {
     user: 'yes',
     audioUrl: '',
   });
+
   const [playerImageFile, setPlayerImageFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -118,11 +122,17 @@ const AddPlayer = ({ onClose }) => {
   // Generate playerId when the modal mounts
   useEffect(() => {
     const setPlayerId = async () => {
-      const newId = await generateUniquePlayerId();
-      setPlayerFormData(prev => ({ ...prev, playerId: newId.toString() }));
+      // If user already has a player ID, use that
+      if (userProfile?.playerId) {
+        setPlayerFormData(prev => ({ ...prev, playerId: userProfile.playerId }));
+      } else {
+        // Otherwise generate a new one
+        const newId = await generateUniquePlayerId();
+        setPlayerFormData(prev => ({ ...prev, playerId: newId.toString() }));
+      }
     };
     setPlayerId();
-  }, []);
+  }, [userProfile]);
 
   const handlePlayerChange = (e) => {
     const { name, value } = e.target;
@@ -244,6 +254,7 @@ const AddPlayer = ({ onClose }) => {
       };
 
       const playerId = playerFormData.playerId;
+      
       // Save player to PlayerDetails collection
       await setDoc(doc(db, "PlayerDetails", playerId), playerData);
 
@@ -274,6 +285,13 @@ const AddPlayer = ({ onClose }) => {
           losses: 0,
           points: 0,
           lastMatch: '',
+        });
+      }
+
+      // If user didn't have a player ID, update their profile
+      if (!userProfile?.playerId) {
+        await updateDoc(doc(db, "users", currentUserId), {
+          playerId: playerFormData.playerId
         });
       }
 
@@ -332,7 +350,7 @@ const AddPlayer = ({ onClose }) => {
         } else {
           console.warn('onClose is not a function, skipping modal close');
         }
-        navigate(-1); // Navigate back to the previous route
+        navigate(-1);
       }, 1500);
     } catch (err) {
       console.error("Error adding player:", err);
@@ -349,7 +367,7 @@ const AddPlayer = ({ onClose }) => {
     } else {
       console.warn('onClose is not a function, skipping modal close');
     }
-    navigate(-1); // Navigate back to the previous route
+    navigate(-1);
   };
 
   if (authLoading) {
