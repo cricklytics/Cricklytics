@@ -114,7 +114,7 @@ useEffect(() => {
     if (location.state.groups) setGroups(location.state.groups);
     if (location.state.teamStats) setTeamStats(location.state.teamStats);
     if (location.state.roundWinners) setRoundWinners(location.state.roundWinners);
-    if (location.state.tournamentName) setTournamentName(location.state.tournamentName); // Add this line
+    // if (location.state.tournamentName) setTournamentName(location.state.tournamentName); // Add this line
   } else {
     console.warn('No location.state provided');
   }
@@ -329,7 +329,7 @@ useEffect(() => {
         groups,
         teamStats,
         roundWinners,
-        tournamentName // Add this line
+        // tournamentName // Add this line
       }
     });
   };
