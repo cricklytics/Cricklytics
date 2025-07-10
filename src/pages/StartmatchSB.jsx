@@ -354,7 +354,7 @@ const AddClubPlayerModal2 = ({ onClose, team, onPlayerAdded }) => {
       careerStatsBattingSixes: '0',
       careerStatsBowlingInnings: '0',
       careerStatsBowlingWickets: '0',
-      careerStatsBowlingBest: '',
+      careerStatsBowlingBest: '0',
       careerStatsBowlingAverage: '0',
       careerStatsBowlingEconomy: '0',
       careerStatsBowlingStrikeRate: '0',
@@ -438,7 +438,7 @@ const AddClubPlayerModal2 = ({ onClose, team, onPlayerAdded }) => {
         centuries: parseInt(formData.centuries) || 0,
         fifties: parseInt(formData.fifties) || 0,
         wickets: parseInt(formData.wickets) || 0,
-        bestBowling: formData.bestBowling || '',
+        bestBowling: formData.bestBowling || '0',
         bio: formData.bio || '',
         recentMatches: recentMatchesParsed,
         userId: currentUserId,
@@ -461,7 +461,7 @@ const AddClubPlayerModal2 = ({ onClose, team, onPlayerAdded }) => {
           bowling: {
             innings: parseInt(formData.careerStatsBowlingInnings) || 0,
             wickets: parseInt(formData.careerStatsBowlingWickets) || 0,
-            best: formData.careerStatsBowlingBest || '',
+            best: formData.careerStatsBowlingBest || '0',
             average: parseFloat(formData.careerStatsBowlingAverage) || 0,
             economy: parseFloat(formData.careerStatsBowlingEconomy) || 0,
             strikeRate: parseFloat(formData.careerStatsBowlingStrikeRate) || 0,
@@ -528,7 +528,7 @@ const AddClubPlayerModal2 = ({ onClose, team, onPlayerAdded }) => {
         centuries: '0',
         fifties: '0',
         wickets: '0',
-        bestBowling: '',
+        bestBowling: '0',
         bio: '',
         recentMatches: '',
         user: 'no',
@@ -546,7 +546,7 @@ const AddClubPlayerModal2 = ({ onClose, team, onPlayerAdded }) => {
         careerStatsBattingSixes: '0',
         careerStatsBowlingInnings: '0',
         careerStatsBowlingWickets: '0',
-        careerStatsBowlingBest: '',
+        careerStatsBowlingBest: '0',
         careerStatsBowlingAverage: '0',
         careerStatsBowlingEconomy: '0',
         careerStatsBowlingStrikeRate: '0',
@@ -788,6 +788,7 @@ const AddClubPlayerModal2 = ({ onClose, team, onPlayerAdded }) => {
                   name="careerStatsBattingMatches"
                   value={formData.careerStatsBattingMatches}
                   onChange={handleChange}
+                  disabled
                   className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -798,6 +799,7 @@ const AddClubPlayerModal2 = ({ onClose, team, onPlayerAdded }) => {
                   name="careerStatsBattingInnings"
                   value={formData.careerStatsBattingInnings}
                   onChange={handleChange}
+                  disabled
                   className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -808,6 +810,7 @@ const AddClubPlayerModal2 = ({ onClose, team, onPlayerAdded }) => {
                   name="careerStatsBattingNotOuts"
                   value={formData.careerStatsBattingNotOuts}
                   onChange={handleChange}
+                  disabled
                   className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -818,6 +821,7 @@ const AddClubPlayerModal2 = ({ onClose, team, onPlayerAdded }) => {
                   name="careerStatsBattingRuns"
                   value={formData.careerStatsBattingRuns}
                   onChange={handleChange}
+                  disabled
                   className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -828,6 +832,7 @@ const AddClubPlayerModal2 = ({ onClose, team, onPlayerAdded }) => {
                   name="careerStatsBattingHighest"
                   value={formData.careerStatsBattingHighest}
                   onChange={handleChange}
+                  disabled
                   className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -839,6 +844,7 @@ const AddClubPlayerModal2 = ({ onClose, team, onPlayerAdded }) => {
                   name="careerStatsBattingAverage"
                   value={formData.careerStatsBattingAverage}
                   onChange={handleChange}
+                  disabled
                   className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -850,6 +856,7 @@ const AddClubPlayerModal2 = ({ onClose, team, onPlayerAdded }) => {
                   name="careerStatsBattingStrikeRate"
                   value={formData.careerStatsBattingStrikeRate}
                   onChange={handleChange}
+                  disabled
                   className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -860,6 +867,7 @@ const AddClubPlayerModal2 = ({ onClose, team, onPlayerAdded }) => {
                   name="careerStatsBattingCenturies"
                   value={formData.careerStatsBattingCenturies}
                   onChange={handleChange}
+                  disabled
                   className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -870,6 +878,7 @@ const AddClubPlayerModal2 = ({ onClose, team, onPlayerAdded }) => {
                   name="careerStatsBattingFifties"
                   value={formData.careerStatsBattingFifties}
                   onChange={handleChange}
+                  disabled
                   className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -880,6 +889,7 @@ const AddClubPlayerModal2 = ({ onClose, team, onPlayerAdded }) => {
                   name="careerStatsBattingFours"
                   value={formData.careerStatsBattingFours}
                   onChange={handleChange}
+                  disabled
                   className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -890,6 +900,7 @@ const AddClubPlayerModal2 = ({ onClose, team, onPlayerAdded }) => {
                   name="careerStatsBattingSixes"
                   value={formData.careerStatsBattingSixes}
                   onChange={handleChange}
+                  disabled
                   className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -904,6 +915,7 @@ const AddClubPlayerModal2 = ({ onClose, team, onPlayerAdded }) => {
                   name="careerStatsBowlingInnings"
                   value={formData.careerStatsBowlingInnings}
                   onChange={handleChange}
+                  disabled
                   className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -914,6 +926,7 @@ const AddClubPlayerModal2 = ({ onClose, team, onPlayerAdded }) => {
                   name="careerStatsBowlingWickets"
                   value={formData.careerStatsBowlingWickets}
                   onChange={handleChange}
+                  disabled
                   className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -924,6 +937,7 @@ const AddClubPlayerModal2 = ({ onClose, team, onPlayerAdded }) => {
                   name="careerStatsBowlingBest"
                   value={formData.careerStatsBowlingBest}
                   onChange={handleChange}
+                  disabled
                   className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -935,6 +949,7 @@ const AddClubPlayerModal2 = ({ onClose, team, onPlayerAdded }) => {
                   name="careerStatsBowlingAverage"
                   value={formData.careerStatsBowlingAverage}
                   onChange={handleChange}
+                  disabled
                   className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -946,6 +961,7 @@ const AddClubPlayerModal2 = ({ onClose, team, onPlayerAdded }) => {
                   name="careerStatsBowlingEconomy"
                   value={formData.careerStatsBowlingEconomy}
                   onChange={handleChange}
+                  disabled
                   className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -957,6 +973,7 @@ const AddClubPlayerModal2 = ({ onClose, team, onPlayerAdded }) => {
                   name="careerStatsBowlingStrikeRate"
                   value={formData.careerStatsBowlingStrikeRate}
                   onChange={handleChange}
+                  disabled
                   className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -971,6 +988,7 @@ const AddClubPlayerModal2 = ({ onClose, team, onPlayerAdded }) => {
                   name="careerStatsFieldingCatches"
                   value={formData.careerStatsFieldingCatches}
                   onChange={handleChange}
+                  disabled
                   className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -981,6 +999,7 @@ const AddClubPlayerModal2 = ({ onClose, team, onPlayerAdded }) => {
                   name="careerStatsFieldingStumpings"
                   value={formData.careerStatsFieldingStumpings}
                   onChange={handleChange}
+                  disabled
                   className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -991,6 +1010,7 @@ const AddClubPlayerModal2 = ({ onClose, team, onPlayerAdded }) => {
                   name="careerStatsFieldingRunOuts"
                   value={formData.careerStatsFieldingRunOuts}
                   onChange={handleChange}
+                  disabled
                   className="w-full p-2 rounded bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
