@@ -1748,8 +1748,9 @@ const Sidebar = ({ isOpen, closeMenu, userProfile }) => {
   {hasPlayerId ? (
     <p className="text-xs md:text-sm opacity-80 mt-1">Player ID: {playerId}</p>
   ) : (
-    <div className="flex justify-center mt-2" onClick={() => navigate('/addplayer')}>
-      <FaPlus className="text-black text-sm cursor-pointer" />
+    <div className="flex items-center justify-center gap-1 mt-1">
+    <span className="text-xs md:text-sm opacity-80"  onClick={() => navigate('/addplayer')}>About</span>
+      <FaPencilAlt className="text-black text-sm cursor-pointer"  onClick={() => navigate('/addplayer')}/>
     </div>
   )}
 </div>

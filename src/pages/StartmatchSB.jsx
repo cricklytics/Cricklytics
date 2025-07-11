@@ -114,6 +114,7 @@ const AddClubPlayerModal2 = ({ onClose, team, onPlayerAdded }) => {
   const [filteredPlayerIds, setFilteredPlayerIds] = useState([]);
   const [playerIdSearch, setPlayerIdSearch] = useState('');
   const [isNewPlayer, setIsNewPlayer] = useState(false);
+  const [originalUserId, setOriginalUserId] = useState(null); // New state to store original userId
 
   // Handle authentication state
   useEffect(() => {
@@ -235,6 +236,8 @@ const AddClubPlayerModal2 = ({ onClose, team, onPlayerAdded }) => {
     if (selectedPlayerId) {
       try {
         let playerData = null;
+        let originalUserId = null; // Variable to store the original userId
+        
         const clubPlayerQuery = query(
           collection(db, 'clubPlayers'),
           where('playerId', '==', parseInt(selectedPlayerId))
@@ -242,6 +245,7 @@ const AddClubPlayerModal2 = ({ onClose, team, onPlayerAdded }) => {
         const clubPlayerSnapshot = await getDocs(clubPlayerQuery);
         if (!clubPlayerSnapshot.empty) {
           playerData = clubPlayerSnapshot.docs[0].data();
+          originalUserId = playerData.userId; // Store the original userId
         } else {
           const playerDetailsQuery = query(
             collection(db, 'PlayerDetails'),
@@ -250,10 +254,12 @@ const AddClubPlayerModal2 = ({ onClose, team, onPlayerAdded }) => {
           const playerDetailsSnapshot = await getDocs(playerDetailsQuery);
           if (!playerDetailsSnapshot.empty) {
             playerData = playerDetailsSnapshot.docs[0].data();
+            originalUserId = playerData.userId; // Store the original userId
           }
         }
 
         if (playerData) {
+          setOriginalUserId(originalUserId); // Set the originalUserId in state
           setFormData({
             ...formData,
             playerId: playerData.playerId.toString(),
@@ -366,6 +372,7 @@ const AddClubPlayerModal2 = ({ onClose, team, onPlayerAdded }) => {
     setIsNewPlayer(true);
     setPlayerIds(prev => [newPlayer, ...prev]);
     setFilteredPlayerIds(prev => [newPlayer, ...prev]);
+    setOriginalUserId(currentUserId); // For new players, set originalUserId to current user
   };
 
   const handleSubmit = async (e) => {
@@ -421,6 +428,9 @@ const AddClubPlayerModal2 = ({ onClose, team, onPlayerAdded }) => {
         })
         .filter(item => item !== null);
 
+      // Use originalUserId if it exists, otherwise use currentUserId for new players
+      const userIdToUse = originalUserId || currentUserId;
+
       const playerData = {
         playerId: parseInt(formData.playerId),
         name: playerName,
@@ -441,7 +451,7 @@ const AddClubPlayerModal2 = ({ onClose, team, onPlayerAdded }) => {
         bestBowling: formData.bestBowling || '0',
         bio: formData.bio || '',
         recentMatches: recentMatchesParsed,
-        userId: currentUserId,
+        userId: userIdToUse, // Use the original userId or current user for new players
         user: formData.user,
         audioUrl: formData.audioUrl || '',
         careerStats: {
@@ -558,6 +568,7 @@ const AddClubPlayerModal2 = ({ onClose, team, onPlayerAdded }) => {
       setIsNewPlayer(true);
       setPlayerIds(prev => [newPlayer, ...prev]);
       setFilteredPlayerIds(prev => [newPlayer, ...prev]);
+      setOriginalUserId(currentUserId); // Reset originalUserId for new player
       if (onPlayerAdded) {
         onPlayerAdded();
       }
