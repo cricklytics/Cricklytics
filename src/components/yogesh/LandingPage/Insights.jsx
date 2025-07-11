@@ -88,12 +88,8 @@ const Insights = () => {
       console.log("No authenticated user found.");
       return;
     }
-    console.log("Current User UID:", auth.currentUser.uid);
 
-    const q = query(
-      collection(db, 'clubTeams'),
-      where('createdBy', '==', auth.currentUser.uid)
-    );
+    const q = query(collection(db, 'clubTeams'));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       let playerFound = false;
@@ -101,26 +97,33 @@ const Insights = () => {
       let teamWins = 0;
       let teamLosses = 0;
 
-      for (const doc of snapshot.docs) {
+      snapshot.docs.forEach((doc) => {
         const teamData = doc.data();
-        console.log("Team Data:", JSON.stringify(teamData, null, 2));
         const players = teamData.players || [];
-        console.log("Players Array:", players);
+        
+        // Find player with current user ID and user="yes"
         const player = players.find(
-          (player) => player.userId === auth.currentUser.uid && player.user?.toLowerCase() === "yes"
+          (p) => p.userId === auth.currentUser.uid && p.user?.toLowerCase() === "yes"
         );
+        
         if (player) {
-          playerData = player;
+          playerData = {
+            ...player,
+            teamId: doc.id, // Store team ID for reference
+            teamData: { // Include relevant team data
+              wins: teamData.wins,
+              losses: teamData.losses,
+              matches: teamData.matches
+            }
+          };
           playerFound = true;
-          // Calculate wins: use teamData.wins if available, else matches - losses
-          teamWins = teamData.wins !== undefined ? teamData.wins : (teamData.matches || 0) - (teamData.losses || 0);
+          
+          // Calculate team wins and losses
+          teamWins = teamData.wins !== undefined ? teamData.wins : 
+                    (teamData.matches || 0) - (teamData.losses || 0);
           teamLosses = teamData.losses || 0;
-          console.log("Player Found:", JSON.stringify(playerData, null, 2));
-          console.log("Team Wins Calculated:", teamWins);
-          console.log("Team Losses:", teamLosses);
-          break;
         }
-      }
+      });
 
       const data = {
         batting: {},
@@ -134,196 +137,98 @@ const Insights = () => {
           bowling: {},
           fielding: {},
         };
-        console.log("Career Stats:", JSON.stringify(careerStats, null, 2));
 
-        // Calculate 30's based on run differences
-        let thirtiesCount = careerStats.batting.thirties ?? 0;
-        if (prevStats) {
-          const prevRuns = prevStats.batting?.runs ?? 0;
-          const newRuns = careerStats.batting.runs ?? 0;
-          const runDiff = newRuns - prevRuns;
-          if (runDiff >= 30 && runDiff < 50) {
-            thirtiesCount += 1;
-          }
-        }
-
-        // Calculate 3-wickets and 5-wickets based on wicket differences
-        let threeWicketsCount = careerStats.bowling.threeWickets ?? 0;
-        let fiveWicketsCount = careerStats.bowling.fiveWickets ?? 0;
-        if (prevStats) {
-          const prevWickets = prevStats.bowling?.wickets ?? 0;
-          const newWickets = careerStats.bowling.wickets ?? 0;
-          const wicketDiff = newWickets - prevWickets;
-          if (wicketDiff === 3) {
-            threeWicketsCount += 1;
-          } else if (wicketDiff === 5) {
-            fiveWicketsCount += 1;
-          }
-        }
-
-        // Update previous stats
-        setPrevStats(careerStats);
-
-        // Calculate batting average: runs / (innings - notOuts)
-        const battingRuns = careerStats.batting.runs ?? 0;
-        const battingInnings = careerStats.batting.innings ?? 0;
-        const battingNotOuts = careerStats.batting.notOuts ?? 0;
+        // Batting stats calculations
+        const battingStats = careerStats.batting || {};
+        const battingRuns = battingStats.runs || 0;
+        const battingInnings = battingStats.innings || 0;
+        const battingNotOuts = battingStats.notOuts || 0;
         const battingAverage = battingInnings - battingNotOuts > 0
           ? (battingRuns / (battingInnings - battingNotOuts)).toFixed(2)
           : 0;
-
-        // Calculate batting strike rate: (runs / balls) * 100
-        const battingBalls = careerStats.batting.balls ?? 0;
+        const battingBalls = battingStats.balls || 0;
         const battingStrikeRate = battingBalls > 0
           ? ((battingRuns / battingBalls) * 100).toFixed(2)
           : 0;
 
-        // Calculate bowling balls from overs
-        const overs = careerStats.bowling.overs ?? 0;
+        // Bowling stats calculations
+        const bowlingStats = careerStats.bowling || {};
+        const overs = bowlingStats.overs || 0;
         const bowlingBalls = Math.floor(overs) * 6 + Math.round((overs % 1) * 10);
-
-        // Calculate bowling average: runsConceded / wickets
-        const runsConceded = careerStats.bowling.runsConceded ?? 0;
-        const wickets = careerStats.bowling.wickets ?? 0;
-        const bowlingAverage = wickets > 0
-          ? (runsConceded / wickets).toFixed(2)
-          : 0;
-
-        // Calculate bowling economy: runsConceded / overs
-        const bowlingEconomy = overs > 0
-          ? (runsConceded / overs).toFixed(2)
-          : 0;
-
-        // Batting stats
-        data.batting.runs = [{ value: battingRuns }],
-        data.batting["high-score"] = [{ value: careerStats.batting.highest ?? 0 }],
-        data.batting.win = [{ value: teamWins }],
-        data.batting.lose = [{ value: teamLosses }],
-        data.batting.matches = [{ value: careerStats.batting.matches ?? 0 }],
-        data.batting.innings = [{ value: battingInnings }],
-        data.batting["strike-rate"] = [{ value: battingStrikeRate }],
-        data.batting["30s"] = [{ value: thirtiesCount }],
-        data.batting["50s"] = [{ value: careerStats.batting.fifties ?? 0 }],
-        data.batting["100s"] = [{ value: careerStats.batting.centuries ?? 0 }],
-        data.batting["4s"] = [{ value: careerStats.batting.fours ?? 0 }],
-        data.batting["6s"] = [{ value: careerStats.batting.sixes ?? 0 }],
-        data.batting.average = [{ value: battingAverage }];
-
-        // Bowling stats
-        data.bowling["best-bowl"] = [{ value: careerStats.bowling.bestBowling ?? "0/0" }],
-        data.bowling.match = [{ value: careerStats.batting.matches ?? 0 }],
-        data.bowling.innings = [{ value: careerStats.bowling.innings ?? 0 }],
-        data.bowling.overs = [{ value: careerStats.bowling.overs ?? 0 }],
-        data.bowling.balls = [{ value: bowlingBalls }],
-        data.bowling.maiden = [{ value: careerStats.bowling.maidens ?? 0 }],
-        data.bowling.runs = [{ value: careerStats.bowling.runsConceded ?? 0 }],
-        data.bowling.wickets = [{ value: careerStats.bowling.wickets ?? 0 }],
-        data.bowling["3-wickets"] = [{ value: threeWicketsCount }],
-        data.bowling["5-wickets"] = [{ value: fiveWicketsCount }],
-        data.bowling.economy = [{ value: bowlingEconomy }],
-        data.bowling.average = [{ value: bowlingAverage }],
-        data.bowling.wide = [{ value: careerStats.bowling.wides ?? 0 }],
-        data.bowling["no-balls"] = [{ value: careerStats.bowling.noBalls ?? 0 }],
-        data.bowling.dots = [{ value: careerStats.bowling.dotBalls ?? 0 }],
-        data.bowling["4s"] = [{ value: careerStats.bowling.foursConceded ?? 0 }],
-        data.bowling["6s"] = [{ value: careerStats.bowling.sixesConceded ?? 0 }];
+        const runsConceded = bowlingStats.runsConceded || 0;
+        const wickets = bowlingStats.wickets || 0;
+        const bowlingAverage = wickets > 0 ? (runsConceded / wickets).toFixed(2) : 0;
+        const bowlingEconomy = overs > 0 ? (runsConceded / overs).toFixed(2) : 0;
 
         // Fielding stats
-        data.fielding.matches = [{ value: careerStats.batting.matches ?? 0 }],
-        data.fielding.catch = [{ value: careerStats.fielding.catches ?? 0 }],
-        data.fielding.stumping = [{ value: careerStats.fielding.stumpings ?? 0 }],
-        data.fielding["run-out"] = [{ value: careerStats.fielding.runOuts ?? 0 }],
-        data.fielding["catch-and-bowl"] = [{ value: careerStats.fielding.catchAndBowl ?? 0 }];
+        const fieldingStats = careerStats.fielding || {};
+
+        // Set batting data
+        data.batting = {
+          runs: [{ value: battingRuns }],
+          "high-score": [{ value: battingStats.highest || 0 }],
+          win: [{ value: teamWins }],
+          lose: [{ value: teamLosses }],
+          matches: [{ value: battingStats.matches || 0 }],
+          innings: [{ value: battingInnings }],
+          "strike-rate": [{ value: battingStrikeRate }],
+          "30s": [{ value: battingStats.thirties || 0 }],
+          "50s": [{ value: battingStats.fifties || 0 }],
+          "100s": [{ value: battingStats.centuries || 0 }],
+          "4s": [{ value: battingStats.fours || 0 }],
+          "6s": [{ value: battingStats.sixes || 0 }],
+          average: [{ value: battingAverage }],
+        };
+
+        // Set bowling data
+        data.bowling = {
+          "best-bowl": [{ value: bowlingStats.bestBowling || "0/0" }],
+          match: [{ value: battingStats.matches || 0 }],
+          innings: [{ value: bowlingStats.innings || 0 }],
+          overs: [{ value: overs }],
+          balls: [{ value: bowlingBalls }],
+          maiden: [{ value: bowlingStats.maidens || 0 }],
+          runs: [{ value: runsConceded }],
+          wickets: [{ value: wickets }],
+          "3-wickets": [{ value: bowlingStats.threeWickets || 0 }],
+          "5-wickets": [{ value: bowlingStats.fiveWickets || 0 }],
+          economy: [{ value: bowlingEconomy }],
+          average: [{ value: bowlingAverage }],
+          wide: [{ value: bowlingStats.wides || 0 }],
+          "no-balls": [{ value: bowlingStats.noBalls || 0 }],
+          dots: [{ value: bowlingStats.dotBalls || 0 }],
+          "4s": [{ value: bowlingStats.foursConceded || 0 }],
+          "6s": [{ value: bowlingStats.sixesConceded || 0 }],
+        };
+
+        // Set fielding data
+        data.fielding = {
+          matches: [{ value: battingStats.matches || 0 }],
+          catch: [{ value: fieldingStats.catches || 0 }],
+          stumping: [{ value: fieldingStats.stumpings || 0 }],
+          "run-out": [{ value: fieldingStats.runOuts || 0 }],
+          "catch-and-bowl": [{ value: fieldingStats.catchAndBowl || 0 }],
+        };
+
+        setPrevStats(careerStats);
       } else {
-        console.log("No matching player found, using defaults.");
-        // Initialize with default values
-        data.batting.runs = [{ value: 0 }],
-        data.batting["high-score"] = [{ value: 0 }],
-        data.batting.win = [{ value: 0 }],
-        data.batting.lose = [{ value: 0 }],
-        data.batting.matches = [{ value: 0 }],
-        data.batting.innings = [{ value: 0 }],
-        data.batting["strike-rate"] = [{ value: 0 }],
-        data.batting["30s"] = [{ value: 0 }],
-        data.batting["50s"] = [{ value: 0 }],
-        data.batting["100s"] = [{ value: 0 }],
-        data.batting["4s"] = [{ value: 0 }],
-        data.batting["6s"] = [{ value: 0 }],
-        data.batting.average = [{ value: 0 }];
-
-        data.bowling["best-bowl"] = [{ value: "0/0" }],
-        data.bowling.match = [{ value: 0 }],
-        data.bowling.innings = [{ value: 0 }],
-        data.bowling.overs = [{ value: 0 }],
-        data.bowling.balls = [{ value: 0 }],
-        data.bowling.maiden = [{ value: 0 }],
-        data.bowling.runs = [{ value: 0 }],
-        data.bowling.wickets = [{ value: 0 }],
-        data.bowling["3-wickets"] = [{ value: 0 }],
-        data.bowling["5-wickets"] = [{ value: 0 }],
-        data.bowling.economy = [{ value: 0 }],
-        data.bowling.average = [{ value: 0 }],
-        data.bowling.wide = [{ value: 0 }],
-        data.bowling["no-balls"] = [{ value: 0 }],
-        data.bowling.dots = [{ value: 0 }],
-        data.bowling["4s"] = [{ value: 0 }],
-        data.bowling["6s"] = [{ value: 0 }];
-
-        data.fielding.matches = [{ value: 0 }],
-        data.fielding.catch = [{ value: 0 }],
-        data.fielding.stumping = [{ value: 0 }],
-        data.fielding["run-out"] = [{ value: 0 }],
-        data.fielding["catch-and-bowl"] = [{ value: 0 }];
-
+        // Set default values if no player found
+        Object.keys(subOptions).forEach(tab => {
+          subOptions[tab].forEach(option => {
+            data[tab][option.id] = [{ value: 0 }];
+          });
+        });
         setPrevStats(null);
       }
 
       setInsightsData(data);
-      console.log("Insights Data Set:", data);
     }, (error) => {
       console.error("Error fetching clubTeams data:", error);
+      // Set empty data on error
       setInsightsData({
-        batting: {
-          runs: [{ value: 0 }],
-          "high-score": [{ value: 0 }],
-          win: [{ value: 0 }],
-          lose: [{ value: 0 }],
-          matches: [{ value: 0 }],
-          innings: [{ value: 0 }],
-          "strike-rate": [{ value: 0 }],
-          "30s": [{ value: 0 }],
-          "50s": [{ value: 0 }],
-          "100s": [{ value: 0 }],
-          "4s": [{ value: 0 }],
-          "6s": [{ value: 0 }],
-          average: [{ value: 0 }],
-        },
-        bowling: {
-          "best-bowl": [{ value: "0/0" }],
-          match: [{ value: 0 }],
-          innings: [{ value: 0 }],
-          overs: [{ value: 0 }],
-          balls: [{ value: 0 }],
-          maiden: [{ value: 0 }],
-          runs: [{ value: 0 }],
-          wickets: [{ value: 0 }],
-          "3-wickets": [{ value: 0 }],
-          "5-wickets": [{ value: 0 }],
-          economy: [{ value: 0 }],
-          average: [{ value: 0 }],
-          wide: [{ value: 0 }],
-          "no-balls": [{ value: 0 }],
-          dots: [{ value: 0 }],
-          "4s": [{ value: 0 }],
-          "6s": [{ value: 0 }],
-        },
-        fielding: {
-          matches: [{ value: 0 }],
-          catch: [{ value: 0 }],
-          stumping: [{ value: 0 }],
-          "run-out": [{ value: 0 }],
-          "catch-and-bowl": [{ value: 0 }],
-        },
+        batting: Object.fromEntries(subOptions.batting.map(opt => [opt.id, [{ value: 0 }]])),
+        bowling: Object.fromEntries(subOptions.bowling.map(opt => [opt.id, [{ value: 0 }]])),
+        fielding: Object.fromEntries(subOptions.fielding.map(opt => [opt.id, [{ value: 0 }]])),
       });
       setPrevStats(null);
     });
@@ -351,6 +256,7 @@ const Insights = () => {
     };
   };
 
+  // [Rest of the component rendering code remains exactly the same...]
   return (
     <div
       className="min-h-full bg-fixed text-white p-5"

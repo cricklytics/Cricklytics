@@ -11,7 +11,7 @@ import sixAnimation from '../assets/Animation/six.json';
 import fourAnimation from '../assets/Animation/four.json';
 import outAnimation from '../assets/Animation/out.json';
 import { db, auth } from '../firebase';
-import { setDoc, doc, Timestamp, collection, query, where, getDocs, updateDoc, arrayUnion } from 'firebase/firestore';
+import { getDoc, setDoc, doc, Timestamp, collection, query, where, getDocs, updateDoc, arrayUnion } from 'firebase/firestore';
 
 // Error Boundary Component
 class ErrorBoundary extends Component {
@@ -145,7 +145,6 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
         photoUrl: player.image,
         user: player.user,
         playerId: player.playerId,
-        userId: currentUserId
       })));
       setBowlingTeamPlayers(selectedPlayersFromProps.right.map((player, index) => ({
         ...player,
@@ -153,7 +152,6 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
         photoUrl: player.image,
         user: player.user,
         playerId: player.playerId,
-        userId: currentUserId
       })));
     } else {
       setBattingTeamPlayers(selectedPlayersFromProps.right.map((player, index) => ({
@@ -162,7 +160,6 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
         photoUrl: player.image,
         user: player.user,
         playerId: player.playerId,
-        userId: currentUserId
       })));
       setBowlingTeamPlayers(selectedPlayersFromProps.left.map((player, index) => ({
         ...player,
@@ -170,7 +167,6 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
         photoUrl: player.image,
         user: player.user,
         playerId: player.playerId,
-        userId: currentUserId
       })));
     }
     
@@ -313,363 +309,424 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
   };
 
   const saveMatchData = async (isFinal = false) => {
-    try {
-      if (!auth.currentUser) {
-        console.error('No authenticated user found.');
-        return;
-      }
+  try {
+    if (!auth.currentUser) {
+      console.error('No authenticated user found.');
+      return;
+    }
 
-      const overs = `${overNumber - 1}.${validBalls}`;
-      const battingTeam = isChasing ? teamB : teamA;
-      const bowlingTeam = isChasing ? teamA : teamB;
-      const currentUserId = auth.currentUser.uid;
+    const overs = `${overNumber - 1}.${validBalls}`;
+    const battingTeam = isChasing ? teamB : teamA;
+    const bowlingTeam = isChasing ? teamA : teamB;
 
-      const playerStats = battingTeamPlayers.map(player => {
-        const stats = batsmenStats[player.index] || {};
-        const wicket = wicketOvers.find(w => w.batsmanIndex === player.index);
-        return {
-          index: player.index || '',
-          name: player.name || 'Unknown',
-          photoUrl: player.image || '',
-          role: player.role || '',
-          user: player.user || 'No',
-          playerId: player.playerId || '',
-          userId: currentUserId,
-          runs: stats.runs || 0,
-          balls: stats.balls || 0,
-          dotBalls: stats.dotBalls || 0,
-          ones: stats.ones || 0,
-          twos: stats.twos || 0,
-          threes: stats.threes || 0,
-          fours: stats.fours || 0,
-          sixes: stats.sixes || 0,
-          milestone: stats.milestone || null,
-          wicketOver: wicket ? wicket.over : null,
-          dismissalType: wicket ? wicket.type : null,
-          bowlerIndex: wicket ? wicket.bowlerIndex : null,
-          fielderIndex: wicket ? wicket.fielderIndex : null,
-          fielderRole: wicket ? wicket.fielderRole : null
-        };
-      });
-
-      const bowlerStatsArray = bowlingTeamPlayers.map(player => {
-        const stats = bowlerStats[player.index] || {};
-        return {
-          index: player.index || '',
-          name: player.name || 'Unknown',
-          photoUrl: player.image || '',
-          role: player.role || '',
-          user: player.user || 'No',
-          playerId: player.playerId || '',
-          userId: currentUserId,
-          wickets: stats.wickets || 0,
-          oversBowled: stats.oversBowled || '0.0',
-          runsConceded: stats.runsConceded || 0,
-          maidens: stats.maidens || 0,
-          noBalls: stats.noBalls || 0,
-          wides: stats.wides || 0,
-          dotBalls: stats.dotBalls || 0
-        };
-      });
-
-      const fieldingStats = bowlingTeamPlayers.map(player => {
-        const catches = wicketOvers.filter(w => 
-          w.fielderIndex === player.index && w.type === 'catch'
-        ).length;
-        const stumpings = wicketOvers.filter(w => 
-          w.fielderIndex === player.index && w.type === 'stumping' && w.fielderRole === 'wicketKeeper'
-        ).length;
-        const runOuts = wicketOvers.filter(w => 
-          w.fielderIndex === player.index && w.type === 'runout' && w.fielderRole === 'fielder'
-        ).length;
-        
-        return {
-          index: player.index || '',
-          name: player.name || 'Unknown',
-          photoUrl: player.image || '',
-          role: player.role || '',
-          user: player.user || 'No',
-          playerId: player.playerId || '',
-          userId: currentUserId,
-          catches,
-          stumpings,
-          runOuts
-        };
-      });
-
-      const matchData = {
-        matchId,
-        userId: currentUserId,
-        createdAt: Timestamp.fromDate(new Date()),
-        Format: maxOvers,
-        umpire: umpire,
-        teamA: {
-          name: teamA?.teamName || 'Team A',
-          flagUrl: teamA?.flagUrl || '',
-          players: selectedPlayersFromProps.left.map(p => ({
-            name: p.name || 'Unknown',
-            index: p.name + selectedPlayersFromProps.left.findIndex(pl => pl.name === p.name),
-            photoUrl: p.image || '',
-            role: p.role || '',
-            user: p.user || 'No',
-            playerId: p.playerId || '',
-            userId: currentUserId
-          })),
-          totalScore: isChasing ? (firstInningsData?.totalScore || 0) : playerScore,
-          wickets: isChasing ? (firstInningsData?.wickets || 0) : outCount,
-          overs: isChasing ? (firstInningsData?.overs || '0.0') : overs,
-          result: isFinal ? (playerScore < targetScore - 1 ? 'Win' : playerScore === targetScore - 1 ? 'Tie' : 'Loss') : null
-        },
-        teamB: {
-          name: teamB?.teamName || 'Team B',
-          flagUrl: teamB?.flagUrl || '',
-          players: selectedPlayersFromProps.right.map(p => ({
-            name: p.name || 'Unknown',
-            index: p.name + selectedPlayersFromProps.right.findIndex(pl => pl.name === p.name),
-            photoUrl: p.image || '',
-            role: p.role || '',
-            user: p.user || 'No',
-            playerId: p.playerId || '',
-            userId: currentUserId
-          })),
-          totalScore: isChasing ? playerScore : (firstInningsData?.totalScore || 0),
-          wickets: isChasing ? outCount : (firstInningsData?.wickets || 0),
-          overs: isChasing ? overs : (firstInningsData?.overs || '0.0'),
-          result: isFinal ? (playerScore < targetScore - 1 ? 'Loss' : playerScore === targetScore - 1 ? 'Tie' : 'Win') : null
-        },
-        firstInnings: firstInningsData || {
-          teamName: teamA?.teamName || 'Team A',
-          totalScore: playerScore,
-          wickets: outCount,
-          overs,
-          playerStats,
-          bowlerStats: bowlerStatsArray,
-          fieldingStats
-        },
-        secondInnings: isChasing ? {
-          teamName: teamB?.teamName || 'Team B',
-          totalScore: playerScore,
-          wickets: outCount,
-          overs,
-          playerStats,
-          bowlerStats: bowlerStatsArray,
-          fieldingStats
-        } : null,
-        matchResult: isFinal ? (playerScore < targetScore - 1 ? teamA?.teamName || 'Team A' : playerScore === targetScore - 1 ? 'Tie' : teamB?.teamName || 'Team B') : null
+    // Prepare player stats (unchanged from original)
+    const playerStats = battingTeamPlayers.map(player => {
+      const stats = batsmenStats[player.index] || {};
+      const wicket = wicketOvers.find(w => w.batsmanIndex === player.index);
+      return {
+        index: player.index || '',
+        name: player.name || 'Unknown',
+        photoUrl: player.image || '',
+        role: player.role || '',
+        user: player.user || 'No',
+        playerId: player.playerId || '',
+        runs: stats.runs || 0,
+        balls: stats.balls || 0,
+        dotBalls: stats.dotBalls || 0,
+        ones: stats.ones || 0,
+        twos: stats.twos || 0,
+        threes: stats.threes || 0,
+        fours: stats.fours || 0,
+        sixes: stats.sixes || 0,
+        milestone: stats.milestone || null,
+        wicketOver: wicket ? wicket.over : null,
+        dismissalType: wicket ? wicket.type : null,
+        bowlerIndex: wicket ? wicket.bowlerIndex : null,
+        fielderIndex: wicket ? wicket.fielderIndex : null,
+        fielderRole: wicket ? wicket.fielderRole : null
       };
+    });
 
-      // Save to scoringpage collection
-      await setDoc(doc(db, 'scoringpage', matchId), matchData);
-      console.log('Match data updated successfully in scoringpage:', matchData);
+    // Prepare bowler stats (unchanged from original)
+    const bowlerStatsArray = bowlingTeamPlayers.map(player => {
+      const stats = bowlerStats[player.index] || {};
+      return {
+        index: player.index || '',
+        name: player.name || 'Unknown',
+        photoUrl: player.image || '',
+        role: player.role || '',
+        user: player.user || 'No',
+        playerId: player.playerId || '',
+        wickets: stats.wickets || 0,
+        oversBowled: stats.oversBowled || '0.0',
+        runsConceded: stats.runsConceded || 0,
+        maidens: stats.maidens || 0,
+        noBalls: stats.noBalls || 0,
+        wides: stats.wides || 0,
+        dotBalls: stats.dotBalls || 0
+      };
+    });
 
-      // Update clubTeams collection when match is finished
-      if (isFinal) {
-        const updateTeamPlayers = async (team, teamPlayers, playerStatsArray, bowlerStatsArray, fieldingStatsArray) => {
-          const teamQuery = query(
-            collection(db, 'clubTeams'),
-            where('teamName', '==', team.teamName),
-            where('createdBy', '==', currentUserId)
-          );
-          const teamSnapshot = await getDocs(teamQuery);
+    // Prepare fielding stats (unchanged from original)
+    const fieldingStats = bowlingTeamPlayers.map(player => {
+      const catches = wicketOvers.filter(w => 
+        w.fielderIndex === player.index && w.type === 'catch'
+      ).length;
+      const stumpings = wicketOvers.filter(w => 
+        w.fielderIndex === player.index && w.type === 'stumping' && w.fielderRole === 'wicketKeeper'
+      ).length;
+      const runOuts = wicketOvers.filter(w => 
+        w.fielderIndex === player.index && w.type === 'runout' && w.fielderRole === 'fielder'
+      ).length;
+      
+      return {
+        index: player.index || '',
+        name: player.name || 'Unknown',
+        photoUrl: player.image || '',
+        role: player.role || '',
+        user: player.user || 'No',
+        playerId: player.playerId || '',
+        catches,
+        stumpings,
+        runOuts
+      };
+    });
 
-          if (!teamSnapshot.empty) {
-            const teamDoc = teamSnapshot.docs[0];
-            const teamData = teamDoc.data();
-            const existingPlayers = teamData.players || [];
+    // Prepare match data (unchanged from original)
+    const matchData = {
+      matchId,
+      userId: auth.currentUser.uid,
+      createdAt: Timestamp.fromDate(new Date()),
+      Format: maxOvers,
+      umpire: umpire,
+      teamA: {
+        name: teamA?.teamName || 'Team A',
+        flagUrl: teamA?.flagUrl || '',
+        players: selectedPlayersFromProps.left.map(p => ({
+          name: p.name || 'Unknown',
+          index: p.name + selectedPlayersFromProps.left.findIndex(pl => pl.name === p.name),
+          photoUrl: p.image || '',
+          role: p.role || '',
+          user: p.user || 'No',
+          playerId: p.playerId || '',
+        })),
+        totalScore: isChasing ? (firstInningsData?.totalScore || 0) : playerScore,
+        wickets: isChasing ? (firstInningsData?.wickets || 0) : outCount,
+        overs: isChasing ? (firstInningsData?.overs || '0.0') : overs,
+        result: isFinal ? (playerScore < targetScore - 1 ? 'Win' : playerScore === targetScore - 1 ? 'Tie' : 'Loss') : null
+      },
+      teamB: {
+        name: teamB?.teamName || 'Team B',
+        flagUrl: teamB?.flagUrl || '',
+        players: selectedPlayersFromProps.right.map(p => ({
+          name: p.name || 'Unknown',
+          index: p.name + selectedPlayersFromProps.right.findIndex(pl => pl.name === p.name),
+          photoUrl: p.image || '',
+          role: p.role || '',
+          user: p.user || 'No',
+          playerId: p.playerId || '',
+        })),
+        totalScore: isChasing ? playerScore : (firstInningsData?.totalScore || 0),
+        wickets: isChasing ? outCount : (firstInningsData?.wickets || 0),
+        overs: isChasing ? overs : (firstInningsData?.overs || '0.0'),
+        result: isFinal ? (playerScore < targetScore - 1 ? 'Loss' : playerScore === targetScore - 1 ? 'Tie' : 'Win') : null
+      },
+      firstInnings: firstInningsData || {
+        teamName: teamA?.teamName || 'Team A',
+        totalScore: playerScore,
+        wickets: outCount,
+        overs,
+        playerStats,
+        bowlerStats: bowlerStatsArray,
+        fieldingStats
+      },
+      secondInnings: isChasing ? {
+        teamName: teamB?.teamName || 'Team B',
+        totalScore: playerScore,
+        wickets: outCount,
+        overs,
+        playerStats,
+        bowlerStats: bowlerStatsArray,
+        fieldingStats
+      } : null,
+      matchResult: isFinal ? (playerScore < targetScore - 1 ? teamA?.teamName || 'Team A' : playerScore === targetScore - 1 ? 'Tie' : teamB?.teamName || 'Team B') : null
+    };
 
-            // Create maps for batting, bowling, and fielding stats using playerId
-            const playerStatsMap = playerStatsArray.reduce((map, stat) => {
-              if (stat.playerId) map[stat.playerId] = stat;
-              return map;
-            }, {});
-            const bowlerStatsMap = bowlerStatsArray.reduce((map, stat) => {
-              if (stat.playerId) map[stat.playerId] = stat;
-              return map;
-            }, {});
-            const fieldingStatsMap = fieldingStatsArray.reduce((map, stat) => {
-              if (stat.playerId) map[stat.playerId] = stat;
-              return map;
-            }, {});
+    // Save to scoringpage collection (unchanged from original)
+    await setDoc(doc(db, 'scoringpage', matchId), matchData);
+    console.log('Match data updated successfully in scoringpage:', matchData);
+
+    // Update clubTeams collection when match is finished
+    if (isFinal) {
+      // Function to update player stats in any team
+      const updatePlayerStats = async (teamDocRef, playerId, newStats) => {
+        const teamDoc = await getDoc(teamDocRef);
+        if (teamDoc.exists()) {
+          const teamData = teamDoc.data();
+          const players = teamData.players || [];
+          
+          const playerIndex = players.findIndex(p => p.playerId === playerId);
+          if (playerIndex !== -1) {
+            const player = players[playerIndex];
+            
+            // Initialize careerStats if undefined
+            const careerStats = player.careerStats || {
+              batting: {
+                matches: 0,
+                innings: 0,
+                notOuts: 0,
+                runs: 0,
+                balls: 0,
+                highest: 0,
+                fours: 0,
+                sixes: 0,
+                centuries: 0,
+                fifties: 0,
+                average: 0,
+                strikeRate: 0
+              },
+              bowling: {
+                innings: 0,
+                wickets: 0,
+                runsConceded: 0,
+                overs: 0,
+                maidens: 0,
+                noBalls: 0,
+                wides: 0,
+                dotBalls: 0,
+                bestBowling: '0/0',
+                average: 0,
+                economy: 0,
+                strikeRate: 0
+              },
+              fielding: {
+                catches: 0,
+                stumpings: 0,
+                runOuts: 0
+              }
+            };
+
+            // Determine best bowling figure
+            const currentBest = careerStats.bowling.bestBowling || '0/0';
+            const [currentWickets, currentRuns] = currentBest.split('/').map(Number);
+            let newBestBowling = currentBest;
+            if (newStats.wickets > currentWickets || 
+                (newStats.wickets === currentWickets && newStats.runsConceded < currentRuns)) {
+              newBestBowling = `${newStats.wickets}/${newStats.runsConceded}`;
+            }
+
+            // Calculate centuries and fifties
+            const centuries = newStats.milestone === 'Century' ? 1 : 0;
+            const fifties = newStats.milestone === 'Half-Century' ? 1 : 0;
 
             // Update player stats
-            const updatedPlayers = existingPlayers.map(player => {
-              const matchPlayerStats = playerStatsMap[player.playerId] || {};
-              const matchBowlerStats = bowlerStatsMap[player.playerId] || {};
-              const matchFieldingStats = fieldingStatsMap[player.playerId] || {};
-              
-              const runs = matchPlayerStats.runs || 0;
-              const balls = matchPlayerStats.balls || 0;
-              const fours = matchPlayerStats.fours || 0;
-              const sixes = matchPlayerStats.sixes || 0;
-              const wickets = matchBowlerStats.wickets || 0;
-              const runsConceded = matchBowlerStats.runsConceded || 0;
-              const oversBowled = parseFloat(matchBowlerStats.oversBowled) || 0;
-              const maidens = matchBowlerStats.maidens || 0;
-              const noBalls = matchBowlerStats.noBalls || 0;
-              const wides = matchBowlerStats.wides || 0;
-              const dotBalls = matchBowlerStats.dotBalls || 0;
-              const centuries = matchPlayerStats.milestone === 'Century' ? 1 : 0;
-              const fifties = matchPlayerStats.milestone === 'Half-Century' ? 1 : 0;
-              const catches = matchFieldingStats.catches || 0;
-              const stumpings = matchFieldingStats.stumpings || 0;
-              const runOuts = matchFieldingStats.runOuts || 0;
-
-              // Initialize careerStats if undefined
-              const careerStats = player.careerStats || {
+            players[playerIndex] = {
+              ...player,
+              matches: (player.matches || 0) + 1,
+              runs: (player.runs || 0) + newStats.runs,
+              wickets: (player.wickets || 0) + newStats.wickets,
+              careerStats: {
+                ...careerStats,
                 batting: {
-                  matches: 0,
-                  innings: 0,
-                  notOuts: 0,
-                  runs: 0,
-                  balls: 0,
-                  highest: 0,
-                  fours: 0,
-                  sixes: 0,
-                  centuries: 0,
-                  fifties: 0,
+                  ...careerStats.batting,
+                  matches: (careerStats.batting.matches || 0) + 1,
+                  innings: (careerStats.batting.innings || 0) + (newStats.runs > 0 || newStats.balls > 0 ? 1 : 0),
+                  notOuts: (careerStats.batting.notOuts || 0) + (newStats.wicketOver ? 0 : newStats.balls > 0 ? 1 : 0),
+                  runs: (careerStats.batting.runs || 0) + newStats.runs,
+                  balls: (careerStats.batting.balls || 0) + newStats.balls,
+                  highest: Math.max(careerStats.batting.highest || 0, newStats.runs),
+                  fours: (careerStats.batting.fours || 0) + newStats.fours,
+                  sixes: (careerStats.batting.sixes || 0) + newStats.sixes,
+                  centuries: (careerStats.batting.centuries || 0) + centuries,
+                  fifties: (careerStats.batting.fifties || 0) + fifties,
                   average: 0,
                   strikeRate: 0
                 },
                 bowling: {
-                  innings: 0,
-                  wickets: 0,
-                  runsConceded: 0,
-                  overs: 0,
-                  maidens: 0,
-                  noBalls: 0,
-                  wides: 0,
-                  dotBalls: 0,
-                  bestBowling: '0/0',
+                  ...careerStats.bowling,
+                  innings: (careerStats.bowling.innings || 0) + (newStats.oversBowled > 0 ? 1 : 0),
+                  wickets: (careerStats.bowling.wickets || 0) + newStats.wickets,
+                  runsConceded: (careerStats.bowling.runsConceded || 0) + newStats.runsConceded,
+                  overs: (careerStats.bowling.overs || 0) + parseFloat(newStats.oversBowled),
+                  maidens: (careerStats.bowling.maidens || 0) + newStats.maidens,
+                  noBalls: (careerStats.bowling.noBalls || 0) + newStats.noBalls,
+                  wides: (careerStats.bowling.wides || 0) + newStats.wides,
+                  dotBalls: (careerStats.bowling.dotBalls || 0) + newStats.dotBalls,
+                  bestBowling: newBestBowling,
                   average: 0,
                   economy: 0,
                   strikeRate: 0
                 },
                 fielding: {
-                  catches: 0,
-                  stumpings: 0,
-                  runOuts: 0
+                  catches: (careerStats.fielding.catches || 0) + newStats.catches,
+                  stumpings: (careerStats.fielding.stumpings || 0) + newStats.stumpings,
+                  runOuts: (careerStats.fielding.runOuts || 0) + newStats.runOuts
                 }
-              };
-
-              // Determine best bowling figure
-              const currentBest = careerStats.bowling.bestBowling || '0/0';
-              const [currentWickets, currentRuns] = currentBest.split('/').map(Number);
-              let newBestBowling = currentBest;
-              if (wickets > currentWickets || (wickets === currentWickets && runsConceded < currentRuns)) {
-                newBestBowling = `${wickets}/${runsConceded}`;
               }
+            };
 
-              return {
-                ...player,
-                userId: currentUserId,
-                matches: (player.matches || 0) + 1,
-                runs: (player.runs || 0) + runs,
-                wickets: (player.wickets || 0) + wickets,
-                careerStats: {
-                  ...careerStats,
-                  batting: {
-                    ...careerStats.batting,
-                    matches: (careerStats.batting.matches || 0) + 1,
-                    innings: (careerStats.batting.innings || 0) + (runs > 0 || balls > 0 ? 1 : 0),
-                    notOuts: (careerStats.batting.notOuts || 0) + (matchPlayerStats.wicketOver ? 0 : balls > 0 ? 1 : 0),
-                    runs: (careerStats.batting.runs || 0) + runs,
-                    balls: (careerStats.batting.balls || 0) + balls,
-                    highest: Math.max(careerStats.batting.highest || 0, runs),
-                    fours: (careerStats.batting.fours || 0) + fours,
-                    sixes: (careerStats.batting.sixes || 0) + sixes,
-                    centuries: (careerStats.batting.centuries || 0) + centuries,
-                    fifties: (careerStats.batting.fifties || 0) + fifties,
-                    average: 0,
-                    strikeRate: 0
-                  },
-                  bowling: {
-                    ...careerStats.bowling,
-                    innings: (careerStats.bowling.innings || 0) + (oversBowled > 0 ? 1 : 0),
-                    wickets: (careerStats.bowling.wickets || 0) + wickets,
-                    runsConceded: (careerStats.bowling.runsConceded || 0) + runsConceded,
-                    overs: (careerStats.bowling.overs || 0) + oversBowled,
-                    maidens: (careerStats.bowling.maidens || 0) + maidens,
-                    noBalls: (careerStats.bowling.noBalls || 0) + noBalls,
-                    wides: (careerStats.bowling.wides || 0) + wides,
-                    dotBalls: (careerStats.bowling.dotBalls || 0) + dotBalls,
-                    bestBowling: newBestBowling,
-                    average: 0,
-                    economy: 0,
-                    strikeRate: 0
-                  },
-                  fielding: {
-                    catches: (careerStats.fielding.catches || 0) + catches,
-                    stumpings: (careerStats.fielding.stumpings || 0) + stumpings,
-                    runOuts: (careerStats.fielding.runOuts || 0) + runOuts
-                  }
-                }
-              };
+            await updateDoc(teamDocRef, {
+              players: players
             });
-
-            // Update team with new player data
-            await updateDoc(doc(db, 'clubTeams', teamDoc.id), {
-              players: updatedPlayers,
-              matches: (teamData.matches || 0) + 1,
-              wins: (teamData.wins || 0) + (matchData.matchResult === team.teamName ? 1 : 0),
-              losses: (teamData.losses || 0) + (matchData.matchResult && matchData.matchResult !== team.teamName && matchData.matchResult !== 'Tie' ? 1 : 0),
-              points: (teamData.points || 0) + (matchData.matchResult === team.teamName ? 2 : matchData.matchResult === 'Tie' ? 1 : 0),
-              lastMatch: matchData.matchResult || ''
-            });
-            console.log(`Updated clubTeams for ${team.teamName}`);
           }
-        };
+        }
+      };
 
-        // Update both teams, considering both innings
-        const firstInningsBattingTeam = isChasing ? teamA : teamB;
-        const firstInningsBowlingTeam = isChasing ? teamB : teamA;
-        const secondInningsBattingTeam = isChasing ? teamB : teamA;
-        const secondInningsBowlingTeam = isChasing ? teamA : teamB;
+      // Function to find team documents by name (NEW - finds all teams with matching name)
+      const findTeamsByName = async (teamName) => {
+        const teamsRef = collection(db, 'clubTeams');
+        const q = query(teamsRef, where("teamName", "==", teamName));
+        const querySnapshot = await getDocs(q);
+        return querySnapshot.docs;
+      };
 
-        // Combine stats from both innings for each team
-        const allPlayerStats = [...(firstInningsData?.playerStats || []), ...playerStats];
-        const allBowlerStats = [...(firstInningsData?.bowlerStats || []), ...bowlerStatsArray];
-        const allFieldingStats = [...(firstInningsData?.fieldingStats || []), ...fieldingStats];
+      // Combine all player stats from both innings (unchanged from original)
+      const allPlayerStats = [...(firstInningsData?.playerStats || []), ...playerStats];
+      const allBowlerStats = [...(firstInningsData?.bowlerStats || []), ...bowlerStatsArray];
+      const allFieldingStats = [...(firstInningsData?.fieldingStats || []), ...fieldingStats];
 
-        // Update first innings batting team (second innings bowling team)
-        await updateTeamPlayers(
-          firstInningsBattingTeam,
-          selectedPlayersFromProps[isChasing ? 'left' : 'right'].map(p => ({
-            ...p,
-            playerId: p.playerId,
-            runs: allPlayerStats.find(stat => stat.playerId === p.playerId)?.runs || 0,
-            balls: allPlayerStats.find(stat => stat.playerId === p.playerId)?.balls || 0,
-            fours: allPlayerStats.find(stat => stat.playerId === p.playerId)?.fours || 0,
-            sixes: allPlayerStats.find(stat => stat.playerId === p.playerId)?.sixes || 0,
-            milestone: allPlayerStats.find(stat => stat.playerId === p.playerId)?.milestone || null,
-            wicketOver: allPlayerStats.find(stat => stat.playerId === p.playerId)?.wicketOver || null
-          })),
-          allPlayerStats,
-          allBowlerStats,
-          allFieldingStats
-        );
+      // Create a map of all players with their combined stats (unchanged from original)
+      const allPlayersMap = new Map();
 
-        // Update first innings bowling team (second innings batting team)
-        await updateTeamPlayers(
-          firstInningsBowlingTeam,
-          selectedPlayersFromProps[isChasing ? 'right' : 'left'].map(p => ({
-            ...p,
-            playerId: p.playerId,
-            runs: allPlayerStats.find(stat => stat.playerId === p.playerId)?.runs || 0,
-            balls: allPlayerStats.find(stat => stat.playerId === p.playerId)?.balls || 0,
-            fours: allPlayerStats.find(stat => stat.playerId === p.playerId)?.fours || 0,
-            sixes: allPlayerStats.find(stat => stat.playerId === p.playerId)?.sixes || 0,
-            milestone: allPlayerStats.find(stat => stat.playerId === p.playerId)?.milestone || null,
-            wicketOver: allPlayerStats.find(stat => stat.playerId === p.playerId)?.wicketOver || null
-          })),
-          allPlayerStats,
-          allBowlerStats,
-          allFieldingStats
-        );
+      // Add batting stats
+      allPlayerStats.forEach(stat => {
+        if (!allPlayersMap.has(stat.playerId)) {
+          allPlayersMap.set(stat.playerId, {
+            ...stat,
+            wickets: 0,
+            oversBowled: '0.0',
+            runsConceded: 0,
+            maidens: 0,
+            noBalls: 0,
+            wides: 0,
+            dotBalls: 0,
+            catches: 0,
+            stumpings: 0,
+            runOuts: 0
+          });
+        } else {
+          const existing = allPlayersMap.get(stat.playerId);
+          allPlayersMap.set(stat.playerId, {
+            ...existing,
+            ...stat
+          });
+        }
+      });
+
+      // Add bowling stats
+      allBowlerStats.forEach(stat => {
+        if (!allPlayersMap.has(stat.playerId)) {
+          allPlayersMap.set(stat.playerId, {
+            playerId: stat.playerId,
+            runs: 0,
+            balls: 0,
+            fours: 0,
+            sixes: 0,
+            ...stat,
+            catches: 0,
+            stumpings: 0,
+            runOuts: 0
+          });
+        } else {
+          const existing = allPlayersMap.get(stat.playerId);
+          allPlayersMap.set(stat.playerId, {
+            ...existing,
+            wickets: stat.wickets,
+            oversBowled: stat.oversBowled,
+            runsConceded: stat.runsConceded,
+            maidens: stat.maidens,
+            noBalls: stat.noBalls,
+            wides: stat.wides,
+            dotBalls: stat.dotBalls
+          });
+        }
+      });
+
+      // Add fielding stats
+      allFieldingStats.forEach(stat => {
+        if (!allPlayersMap.has(stat.playerId)) {
+          allPlayersMap.set(stat.playerId, {
+            playerId: stat.playerId,
+            runs: 0,
+            balls: 0,
+            fours: 0,
+            sixes: 0,
+            wickets: 0,
+            oversBowled: '0.0',
+            runsConceded: 0,
+            maidens: 0,
+            noBalls: 0,
+            wides: 0,
+            dotBalls: 0,
+            catches: stat.catches,
+            stumpings: stat.stumpings,
+            runOuts: stat.runOuts
+          });
+        } else {
+          const existing = allPlayersMap.get(stat.playerId);
+          allPlayersMap.set(stat.playerId, {
+            ...existing,
+            catches: stat.catches,
+            stumpings: stat.stumpings,
+            runOuts: stat.runOuts
+          });
+        }
+      });
+
+      // Find all team documents for both teams (NEW)
+      const teamADocs = await findTeamsByName(teamA.teamName);
+      const teamBDocs = await findTeamsByName(teamB.teamName);
+
+      // Update all players in all Team A documents (NEW)
+      for (const teamDoc of teamADocs) {
+        for (const player of selectedPlayersFromProps.left) {
+          const playerStats = allPlayersMap.get(player.playerId);
+          if (playerStats) {
+            await updatePlayerStats(teamDoc.ref, player.playerId, playerStats);
+          }
+        }
+
+        // Update team stats for Team A
+        const isWinner = matchData.matchResult === teamA.teamName;
+        await updateDoc(teamDoc.ref, {
+          matches: (teamDoc.data().matches || 0) + 1,
+          wins: isWinner ? (teamDoc.data().wins || 0) + 1 : (teamDoc.data().wins || 0),
+          points: isWinner ? (teamDoc.data().points || 0) + 2 : 
+                 matchData.matchResult === 'Tie' ? (teamDoc.data().points || 0) + 1 : 
+                 (teamDoc.data().points || 0),
+          losses: !isWinner && matchData.matchResult !== 'Tie' ? 
+                 (teamDoc.data().losses || 0) + 1 : (teamDoc.data().losses || 0),
+          lastMatch: matchData.matchResult || ''
+        });
       }
-    } catch (error) {
-      console.error('Error saving match data:', error);
+
+      // Update all players in all Team B documents (NEW)
+      for (const teamDoc of teamBDocs) {
+        for (const player of selectedPlayersFromProps.right) {
+          const playerStats = allPlayersMap.get(player.playerId);
+          if (playerStats) {
+            await updatePlayerStats(teamDoc.ref, player.playerId, playerStats);
+          }
+        }
+
+        // Update team stats for Team B
+        const isWinner = matchData.matchResult === teamB.teamName;
+        await updateDoc(teamDoc.ref, {
+          matches: (teamDoc.data().matches || 0) + 1,
+          wins: isWinner ? (teamDoc.data().wins || 0) + 1 : (teamDoc.data().wins || 0),
+          points: isWinner ? (teamDoc.data().points || 0) + 2 : 
+                 matchData.matchResult === 'Tie' ? (teamDoc.data().points || 0) + 1 : 
+                 (teamDoc.data().points || 0),
+          losses: !isWinner && matchData.matchResult !== 'Tie' ? 
+                 (teamDoc.data().losses || 0) + 1 : (teamDoc.data().losses || 0),
+          lastMatch: matchData.matchResult || ''
+        });
+      }
     }
-  };
+  } catch (error) {
+    console.error('Error saving match data:', error);
+  }
+};
 
   const handleScoreButtonClick = (value, isLabel) => {
     if (gameFinished) return;

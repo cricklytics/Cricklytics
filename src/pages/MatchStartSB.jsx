@@ -9,7 +9,7 @@ import advertisement1 from '../assets/sophita/HomePage/Advertisement1.webp';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Startmatch from './StartmatchSB';
 import nav from '../assets/kumar/right-chevron.png';
-import placeholderFlag from '../assets/sophita/HomePage/Netherland.jpeg';
+import placeholderFlag from '../assets/sophita/HomePage/flag.png';
 import { db, storage, auth } from '../firebase';
 import { collection, addDoc, getDocs, query, where, serverTimestamp, onSnapshot, orderBy } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -839,7 +839,7 @@ const FixtureGenerator = () => {
               <FireworksCanvas />
               <div className="relative z-20 text-center p-8 flex flex-col items-center justify-between h-full w-full">
                 <div>
-                  {matchData && matchData.matchResult && matchData.matchResult !== 'Tie' && (
+                  {/* {matchData && matchData.matchResult && matchData.matchResult !== 'Tie' && (
                     <div className="mb-4">
                       {liveTeamA.name === matchData.matchResult ? (
                         <div className="w-24 h-24 mx-auto flex items-center justify-center rounded-full shadow-lg overflow-hidden">
@@ -861,7 +861,7 @@ const FixtureGenerator = () => {
                         </div>
                       ) : null}
                     </div>
-                  )}
+                  )} */}
                   <img
                     src={trophy}
                     alt="Trophy"
@@ -873,7 +873,7 @@ const FixtureGenerator = () => {
                         <img
                           src={liveTeamA.name === matchData.matchResult ? liveTeamA.flag : liveTeamB.flag}
                           alt={`${matchData.matchResult} Flag`}
-                          className="w-6 h-6 mr-2 object-cover"
+                          className="w-10 h-10 mr-2 object-cover rounded-full aspect-square"
                           onError={(e) => (e.target.src = placeholderFlag)}
                         />
                         {matchData.matchResult} won the match!
