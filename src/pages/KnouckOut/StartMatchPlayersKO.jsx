@@ -91,6 +91,7 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
   const [showAnimation, setShowAnimation] = useState(false);
   const [animationType, setAnimationType] = useState(null);
   const [firstInningsData, setFirstInningsData] = useState(null);
+  const [stateHistory, setStateHistory] = useState([]); // New state to track navigation history
 
   // Dynamic player data
   const [battingTeamPlayers, setBattingTeamPlayers] = useState([]);
@@ -136,7 +137,17 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
     setBatsmenStats({});
     setBowlerStats({});
     setWicketOvers([]);
+    setStateHistory([]); // Reset history on team change
   }, [isChasing, selectedPlayersFromProps, teamA, teamB, navigate]);
+
+  // Update state history when transitioning to bowler selection or starting the game
+  useEffect(() => {
+    if (bowlerVisible && !showThirdButtonOnly) {
+      setStateHistory(prev => [...prev, { view: 'toss', bowlerVisible: false, showThirdButtonOnly: false }]);
+    } else if (showThirdButtonOnly) {
+      setStateHistory(prev => [...prev, { view: 'toss', bowlerVisible: true, showThirdButtonOnly: false }]);
+    }
+  }, [bowlerVisible, showThirdButtonOnly]);
 
   const displayModal = (title, message) => {
     setModalContent({ title, message });
@@ -152,7 +163,18 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
     if (gameFinished && showModal) {
       return;
     }
-    navigate(-1, { state: { ...location.state, matchId } });
+
+    // Check if there are previous states in the history
+    if (stateHistory.length > 0) {
+      const previousState = stateHistory[stateHistory.length - 1];
+      setCurrentView(previousState.view);
+      setBowlerVisible(previousState.bowlerVisible);
+      setShowThirdButtonOnly(previousState.showThirdButtonOnly);
+      setStateHistory(prev => prev.slice(0, -1)); // Remove the last state
+    } else {
+      // If no internal states to go back to, navigate to the previous route
+      navigate(-1, { state: { ...location.state, matchId } });
+    }
   };
 
   const updateBatsmanScore = (batsmanIndex, runs) => {
@@ -267,8 +289,8 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
       });
 
       const matchData = {
-        tournamentId, // Added tournamentId field
-        currentPhase, // Added currentPhase field
+        tournamentId,
+        currentPhase,
         matchId,
         userId: auth.currentUser.uid,
         createdAt: Timestamp.fromDate(new Date()),
@@ -752,6 +774,7 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
     setActiveLabel(null);
     setActiveNumber(null);
     setShowRunInfo(false);
+    setStateHistory([]); // Reset history on innings reset
     saveMatchData();
   };
 
@@ -1192,18 +1215,17 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
           </div>
         )}
 
-        {currentView === 'toss' && !striker && !nonStriker && !bowlerVisible && !showThirdButtonOnly && (
-          <button
-            onClick={goBack}
-            className="absolute left-4 top-24 md:left-10 md:top-32 z-10 w-10 h-10 flex items-center justify-center"
-          >
-            <img
-              alt="Back"
-              className="w-6 h-6 transform rotate-180 mb-5"
-              src={backButton}
-            />
-          </button>
-        )}
+        <button
+          onClick={goBack}
+          className="absolute left-4 top-24 md:left-10 md:top-32 z-10 w-10 h-10 flex items-center justify-center"
+        >
+          <img
+            alt="Back"
+            className="w-6 h-6 transform rotate-180 mb-5"
+            src={backButton}
+            onError={(e) => (e.target.src = '')}
+          />
+        </button>
 
         {showModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -1242,16 +1264,7 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
           </div>
         )}
 
-        {(currentView !== 'toss' || striker || nonStriker || bowlerVisible || showThirdButtonOnly) && (
-          <button
-            onClick={goBack}
-            className="absolute left-4 top-24 md:left-10 md:top-32 z-10 w-10 h-10 flex items-center justify-center"
-          >
-            <img src={backButton} alt="Back" className="w-6 h-6 transform rotate-180 mb-5" onError={(e) => (e.target.src = '')} />
-          </button>
-        )}
-
-        {currentView === 'toss' && !showThirdButtonOnly && (
+        {currentView === 'toss' && (
           <>
             <div id="toss" className="text-center mb-4">
               <h2 className="text-white font-bold text-3xl md:text-[3rem] mt-20 md:mt-6">
