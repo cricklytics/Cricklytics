@@ -50,6 +50,7 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
   const [playedWickets, setPlayedWickets] = useState(0);
   const [currentView, setCurrentView] = useState('toss');
   const [showThirdButtonOnly, setShowThirdButtonOnly] = useState(false);
+  const [viewHistory, setViewHistory] = useState(['toss']); // New state to track view history
   const [topPlays, setTopPlays] = useState([]);
   const [currentOverBalls, setCurrentOverBalls] = useState([]);
   const [pastOvers, setPastOvers] = useState([]);
@@ -72,7 +73,7 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
   const [batsmenScores, setBatsmenScores] = useState({});
   const [batsmenBalls, setBatsmenBalls] = useState({});
   const [batsmenStats, setBatsmenStats] = useState({});
-  const [bowlerStats, setBowlerStats] = useState({}); // New state for bowler stats
+  const [bowlerStats, setBowlerStats] = useState({});
   const [wicketOvers, setWicketOvers] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [modalContent, setModalContent] = useState({ title: '', message: '' });
@@ -96,7 +97,6 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
     console.log('Selected Match:', { matchId, phase });
     console.log('Tournament ID:', tournamentId);
     console.log('Tournament Name:', tournamentName);
-
 
     if (!teamA || !teamB || !selectedPlayersFromProps.left || !selectedPlayersFromProps.right || !tournamentId || !matchId || !phase) {
       console.error("Missing match data in location state. Redirecting.");
@@ -147,13 +147,42 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
   const handleButtonClick = (view) => {
     setCurrentView(view);
     setShowThirdButtonOnly(view === 'start');
+    setViewHistory(prev => [...prev, view]); // Push new view to history
   };
 
   const goBack = () => {
     if (gameFinished && showModal) {
       return;
     }
-    navigate(-1);
+
+    // If in a modal or dropdown, close it first
+    if (showBowlerDropdown) {
+      setShowBowlerDropdown(false);
+      return;
+    }
+    if (showBatsmanDropdown) {
+      cancelBatsmanDropdown();
+      return;
+    }
+
+    // If there's a previous view in history, go back to it
+    if (viewHistory.length > 1) {
+      const newHistory = [...viewHistory];
+      newHistory.pop(); // Remove current view
+      const previousView = newHistory[newHistory.length - 1];
+      setViewHistory(newHistory);
+      setCurrentView(previousView);
+      setShowThirdButtonOnly(previousView === 'start');
+      
+      // If going back to toss, reset bowler selection
+      if (previousView === 'toss') {
+        setBowlerVisible(false);
+        setSelectedBowler(null);
+      }
+    } else {
+      // If no previous internal state, navigate to previous page
+      navigate(-1);
+    }
   };
 
   const updateBatsmanScore = (batsmanIndex, runs) => {
@@ -661,6 +690,7 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
         setTargetScore(playerScore + 1);
         setIsChasing(true);
         resetInnings();
+        setViewHistory(['toss']); // Reset view history for new innings
         saveMatchData();
         displayModal('Innings Break', `You need to chase ${playerScore + 1} runs`);
       } else {
@@ -721,6 +751,7 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
     setBowlerVisible(false);
     setCurrentView('toss');
     setShowThirdButtonOnly(false);
+    setViewHistory(['toss']); // Reset view history
     setBatsmenScores({});
     setBatsmenBalls({});
     setBatsmenStats({});
@@ -740,6 +771,7 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
     resetInnings();
     setIsChasing(false);
     setTargetScore(0);
+    setViewHistory(['toss']);
   };
 
   const getStrikeRate = (batsmanIndex) => {
@@ -1030,6 +1062,7 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
       setBowlerVisible(false);
       setCurrentView('toss');
       setShowThirdButtonOnly(false);
+      setViewHistory(['toss']);
     }
   };
 
@@ -1095,18 +1128,17 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
           </div>
         )}
 
-        {currentView === 'toss' && !striker && !nonStriker && !bowlerVisible && !showThirdButtonOnly && (
-          <button
-            onClick={goBack}
-            className="absolute left-4 top-24 md:left-10 md:top-32 z-10 w-10 h-10 flex items-center justify-center"
-          >
-            <img
-              alt="Back"
-              className="w-6 h-6 transform rotate-180 mb-5"
-              src={backButton}
-            />
-          </button>
-        )}
+        <button
+          onClick={goBack}
+          className="absolute left-4 top-24 md:left-10 md:top-32 z-10 w-10 h-10 flex items-center justify-center"
+        >
+          <img
+            alt="Back"
+            className="w-6 h-6 transform rotate-180 mb-5"
+            src={backButton}
+            onError={(e) => (e.target.src = '')}
+          />
+        </button>
 
         {showModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -1145,20 +1177,7 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
           </div>
         )}
 
-        {(currentView !== 'toss' || striker || nonStriker || bowlerVisible || showThirdButtonOnly) && (
-          <button
-            onClick={goBack}
-            className="absolute left-4 top-24 md:left-10 md:top-32 z-10 w-10 h-10 flex items-center justify-center"
-          >
-            <img src={backButton} alt="Back" className="w-6 h-6 transform rotate-180 mb-5" onError={(e) => (e.target.src = '')} />
-          </button>
-        )}
-
-        {!showThirdButtonOnly && (
-          <div className=""></div>
-        )}
-
-        {currentView === 'toss' && !showThirdButtonOnly && (
+        {currentView === 'toss' && (
           <>
             <div id="toss" className="text-center mb-4">
               <h2 className="text-white font-bold text-3xl md:text-[3rem] mt-20 md:mt-6">
@@ -1218,7 +1237,6 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
                           </button>
                         </div>
                         <div>{nonStriker.name}</div>
-                        <div className="text-sm">{nonStriker.wheels}</div>
                         <div className="text-sm">{nonStriker.role}</div>
                       </div>
                     )}
@@ -1233,7 +1251,7 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
                   <div
                     key={player.index}
                     onClick={() => handlePlayerSelect(player)}
-                    className={`cursor-pointer flex flex-col items-center text-white text-center ${selectedBatsmenIndices.includes(player.index)} ? 'opacity-50' : ''}`}
+                    className={`cursor-pointer flex flex-col items-center text-white text-center ${selectedBatsmenIndices.includes(player.index) ? 'opacity-50' : ''}`}
                   >
                     <div className="w-20 h-20 md:w-15 md:h-15 lg:w-15 lg:h-15 w-full rounded-full border-[5px] border-[#F0167C] overflow-hidden items-center justify-center aspect-square">
                       <img
@@ -1253,7 +1271,10 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
             {striker && nonStriker && !bowlerVisible && (
               <button
                 id="choosebowler"
-                onClick={() => setBowlerVisible(true)}
+                onClick={() => {
+                  setBowlerVisible(true);
+                  setViewHistory(prev => [...prev, 'bowler-selection']);
+                }}
                 className="w-30 rounded-3xl h-10 mt-4 bg-black text-white text-sm font-bold shadow-lg bg-[url('../assets/kumar/button.png')] transform transition duration-200 hover:scale-105 hover:shadow-xl active:scale-95 active:shadow-md"
                 style={{
                   backgroundSize: 'cover',
@@ -1399,10 +1420,7 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
                 {showPastOvers && (
                   <div className="mt-2 md:mt-4 text-white w-full">
                     <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-4 text-center">Overs History</h3>
-
-                    {/* Outer box: set width to auto and remove restrictive max-width */}
                     <div className="bg-[#4C0025] p-3 rounded-lg inline-block" style={{ minHeight: '100px' }}>
-                      {/* Inner content grows freely, and flex-wrap ensures wrapping */}
                       <div className="flex items-center gap-3 flex-wrap">
                         {[...pastOvers, currentOverBalls.length > 0 ? currentOverBalls : null]
                           .filter(Boolean)
@@ -1439,7 +1457,6 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
                     </div>
                   </div>
                 )}
-
               </div>
               <div className="hidden sm:block w-20 text-white text-center">
                 <h3 className="text-lg md:text-xl font-bold">Bowler</h3>

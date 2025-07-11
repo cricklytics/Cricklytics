@@ -25,65 +25,70 @@ const AddTournamentModal = ({ onClose, onTournamentAdded, currentUserId }) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
+// AddTournamentModal.jsx
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setLoading(true);
+  setError(null);
+  setSuccess(false);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-    setSuccess(false);
+  if (!currentUserId) {
+    setError("No authenticated user found. Please log in.");
+    setLoading(false);
+    return;
+  }
 
-    if (!currentUserId) {
-      setError("No authenticated user found. Please log in.");
-      setLoading(false);
-      return;
-    }
+  const tournamentName = formData.name.trim();
+  if (!tournamentName) {
+    setError("Tournament name cannot be empty.");
+    setLoading(false);
+    return;
+  }
 
-    const tournamentName = formData.name.trim();
-    if (!tournamentName) {
-      setError("Tournament name cannot be empty.");
-      setLoading(false);
-      return;
-    }
+  try {
+    const tournamentId = `${tournamentName.toLowerCase().replace(/\s+/g, '_')}_${formData.season.replace(/\s+/g, '_')}`;
 
-    try {
-      const tournamentId = `${tournamentName.toLowerCase().replace(/\s+/g, '_')}_${formData.season.replace(/\s+/g, '_')}`;
+    const dataToSave = {
+      ...formData,
+      teams: parseInt(formData.teams) || 0,
+      matches: parseInt(formData.matches) || 0,
+      createdAt: new Date(),
+      userId: currentUserId,
+      clubName: clubName || '',
+    };
 
-      const dataToSave = {
-        ...formData,
-        teams: parseInt(formData.teams) || 0,
-        matches: parseInt(formData.matches) || 0,
-        createdAt: new Date(),
-        userId: currentUserId,
-        clubName: clubName || '', // Store clubName from context, default to empty string if undefined
-      };
+    // Save to Firestore
+    await setDoc(doc(db, "tournaments", tournamentId), dataToSave);
 
-      await setDoc(doc(db, "tournaments", tournamentId), dataToSave);
-      setSuccess(true);
-      onTournamentAdded();
+    // Pass the new tournament data back to the parent
+    onTournamentAdded({
+      id: tournamentId,
+      ...dataToSave,
+    });
 
-      setTimeout(() => {
-        setFormData({
-          name: '',
-          location: '',
-          season: '',
-          teams: '',
-          matches: '',
-          startDate: '',
-          endDate: '',
-          currentStage: '',
-          defendingChampion: '',
-        });
-        onClose();
-      }, 1500);
+    setSuccess(true);
 
-    } catch (err) {
-      console.error("Error adding tournament:", err);
-      setError("Failed to add tournament: " + err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+    setTimeout(() => {
+      setFormData({
+        name: '',
+        location: '',
+        season: '',
+        teams: '',
+        matches: '',
+        startDate: '',
+        endDate: '',
+        currentStage: '',
+        defendingChampion: '',
+      });
+      onClose();
+    }, 1500);
+  } catch (err) {
+    console.error("Error adding tournament:", err);
+    setError("Failed to add tournament: " + err.message);
+  } finally {
+    setLoading(false);
+  }
+};
   return (
     <AnimatePresence>
       <motion.div

@@ -79,6 +79,26 @@ const Tournament = () => {
     setShowRoleModal(false);
   };
 
+  const handleTournamentAdded = (newTournament) => {
+    setTournaments((prevTournaments) => {
+      if (prevTournaments.some((t) => t.id === newTournament.id)) {
+        return prevTournaments;
+      }
+      const updatedTournaments = [...prevTournaments, newTournament];
+      return updatedTournaments.sort((a, b) => {
+        const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt);
+        const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt);
+        return dateB - dateA;
+      });
+    });
+
+    setSelectedTournamentId(newTournament.id);
+    setTournamentData(newTournament);
+    sessionStorage.setItem('selectedTournamentId', newTournament.id);
+    setTournamentError(null);
+    setShowAddTournamentModal(false);
+  };
+
   // Effect to listen for auth state changes
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
@@ -129,6 +149,9 @@ const Tournament = () => {
     if (!clubName) {
       setLoadingTournament(false);
       setTournaments([]);
+      setTournamentData(null);
+      setSelectedTournamentId(null);
+      sessionStorage.removeItem('selectedTournamentId');
       return;
     }
 
@@ -146,23 +169,31 @@ const Tournament = () => {
           id: doc.id,
           ...doc.data()
         }));
+
         setTournaments(fetchedTournaments);
 
-        // Check if stored selectedTournamentId is valid
         const storedTournamentId = sessionStorage.getItem('selectedTournamentId');
         const isValidTournament = fetchedTournaments.some(t => t.id === storedTournamentId);
 
         if (storedTournamentId && isValidTournament) {
-          // Use stored tournament ID
           const selected = fetchedTournaments.find(t => t.id === storedTournamentId);
           setSelectedTournamentId(storedTournamentId);
           setTournamentData(selected || null);
         } else {
-          // Set first tournament as default and store it
-          if (fetchedTournaments.length > 0) {
-            setSelectedTournamentId(fetchedTournaments[0].id);
-            setTournamentData(fetchedTournaments[0]);
-            sessionStorage.setItem('selectedTournamentId', fetchedTournaments[0].id);
+          const newestTournament = fetchedTournaments.sort((a, b) => {
+            const dateA = a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt);
+            const dateB = b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt);
+            return dateB - dateA;
+          })[0];
+
+          if (newestTournament) {
+            setSelectedTournamentId(newestTournament.id);
+            setTournamentData(newestTournament);
+            sessionStorage.setItem('selectedTournamentId', newestTournament.id);
+          } else {
+            setSelectedTournamentId(null);
+            setTournamentData(null);
+            sessionStorage.removeItem('selectedTournamentId');
           }
         }
       } else {
@@ -248,109 +279,108 @@ const Tournament = () => {
     return () => unsubscribeMatches();
   }, [tournamentData]);
 
-  // Fetch top performers and calculate tournament statistics with real-time updates
+  // Fetch top performers and calculate tournament statistics
   useEffect(() => {
-    const fetchData = () => {
-      setLoadingPerformers(true);
-      setPerformersError(null);
-      setLoadingStats(true);
-      setStatsError(null);
+    if (!clubName || !tournamentData?.name) {
+      setLoadingPerformers(false);
+      setLoadingStats(false);
+      setPerformersError("You must be logged in and select a tournament to view performers.");
+      setStatsError("You must be logged in and select a tournament to view statistics.");
+      setTopBattingPerformers([]);
+      setTopBowlingPerformers([]);
+      setTotalRuns(0);
+      setTotalWickets(0);
+      setTotalHalfCenturies(0);
+      setAverageWicketsPerPlayer(0);
+      return;
+    }
 
-      if (!clubName || !tournamentData?.name) {
-        setLoadingPerformers(false);
-        setLoadingStats(false);
-        setPerformersError("You must be logged in and select a tournament to view performers.");
-        setStatsError("You must be logged in and select a tournament to view statistics.");
-        return () => {}; // Return empty cleanup
-      }
+    setLoadingPerformers(true);
+    setPerformersError(null);
+    setLoadingStats(true);
+    setStatsError(null);
 
-      const playersQuery = query(
-        collection(db, 'clubPlayers'),
-        where('tournamentName', '==', tournamentData.name),
-        where('clubName', '==', clubName)
-      );
+    const playersQuery = query(
+      collection(db, 'clubPlayers'),
+      where('clubName', '==', clubName),
+      where('tournamentName', '==', tournamentData.name)
+    );
 
-      const unsubscribePlayers = onSnapshot(playersQuery, (querySnapshot) => {
-        const playersData = querySnapshot.docs.map(doc => ({
+    const unsubscribePlayers = onSnapshot(playersQuery, (querySnapshot) => {
+      const players = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
           id: doc.id,
-          ...doc.data()
-        }));
-
-        if (playersData.length === 0) {
-          setPerformersError("No players found for this tournament.");
-          setStatsError("No statistics available for this tournament.");
-          setTopBattingPerformers([]);
-          setTopBowlingPerformers([]);
-          setTotalRuns(0);
-          setTotalWickets(0);
-          setTotalHalfCenturies(0);
-          setAverageWicketsPerPlayer(0);
-          return;
-        }
-
-        const playersWithBattingStats = playersData.filter(
-          p => p.careerStats?.batting?.runs !== undefined && p.careerStats.batting.runs !== null
-        );
-        const playersWithBowlingStats = playersData.filter(
-          p => p.careerStats?.bowling?.wickets !== undefined && p.careerStats.bowling.wickets !== null
-        );
-
-        const sortedBatting = [...playersWithBattingStats].sort(
-          (a, b) => (b.careerStats.batting.runs || 0) - (a.careerStats.batting.runs || 0)
-        );
-        setTopBattingPerformers(sortedBatting.slice(0, 2));
-
-        const sortedBowling = [...playersWithBowlingStats].sort(
-          (a, b) => (b.careerStats.bowling.wickets || 0) - (a.careerStats.bowling.wickets || 0)
-        );
-        setTopBowlingPerformers(sortedBowling.slice(0, 2));
-
-        let calculatedTotalRuns = 0;
-        let calculatedTotalWickets = 0;
-        let calculatedTotalHalfCenturies = 0;
-        let totalPlayersWithWickets = 0;
-
-        playersData.forEach(player => {
-          if (player.careerStats?.batting?.runs !== undefined && player.careerStats.batting.runs !== null) {
-            calculatedTotalRuns += player.careerStats.batting.runs;
-          }
-
-          if (player.careerStats?.bowling?.wickets !== undefined && player.careerStats.bowling.wickets !== null) {
-            calculatedTotalWickets += player.careerStats.bowling.wickets;
-            if (player.careerStats.bowling.wickets > 0) {
-              totalPlayersWithWickets++;
-            }
-          }
-
-          if (player.careerStats?.batting?.fifties !== undefined && player.careerStats.batting.fifties !== null) {
-            calculatedTotalHalfCenturies += player.careerStats.batting.fifties;
-          } else if (
-            player.careerStats?.batting?.scoresAbove50 !== undefined &&
-            player.careerStats.batting.scoresAbove50 !== null
-          ) {
-            calculatedTotalHalfCenturies += player.careerStats.batting.scoresAbove50;
-          }
-        });
-
-        setTotalRuns(calculatedTotalRuns);
-        setTotalWickets(calculatedTotalWickets);
-        setTotalHalfCenturies(calculatedTotalHalfCenturies);
-
-        const avgWickets =
-          totalPlayersWithWickets > 0 ? (calculatedTotalWickets / totalPlayersWithWickets).toFixed(2) : 0;
-        setAverageWicketsPerPlayer(avgWickets);
-      }, (err) => {
-        console.error("Error fetching performers and stats:", err);
-        setPerformersError("Failed to load top performers.");
-        setStatsError("Failed to load tournament statistics.");
+          name: data.name,
+          matches: data.careerStats?.batting?.matches || 0,
+          innings: data.careerStats?.batting?.innings || 0,
+          runs: data.careerStats?.batting?.runs || 0,
+          highestScore: data.careerStats?.batting?.highest || 0,
+          notOuts: data.careerStats?.batting?.notOuts || 0,
+          battingAverage: data.careerStats?.batting?.average || 0,
+          strikeRate: data.careerStats?.batting?.strikeRate || 0,
+          centuries: data.careerStats?.batting?.centuries || 0,
+          fifties: data.careerStats?.batting?.fifties || 0,
+          fours: data.careerStats?.batting?.fours || 0,
+          sixes: data.careerStats?.batting?.sixes || 0,
+          wickets: data.careerStats?.bowling?.wickets || 0,
+          bowlingAverage: data.careerStats?.bowling?.average || 0,
+          economy: data.careerStats?.bowling?.economy || 0,
+        };
       });
 
-      return () => unsubscribePlayers();
-    };
+      if (players.length === 0) {
+        setPerformersError("No players found for this tournament.");
+        setStatsError("No statistics available for this tournament.");
+        setTopBattingPerformers([]);
+        setTopBowlingPerformers([]);
+        setTotalRuns(0);
+        setTotalWickets(0);
+        setTotalHalfCenturies(0);
+        setAverageWicketsPerPlayer(0);
+        setLoadingPerformers(false);
+        setLoadingStats(false);
+        return;
+      }
 
-    const unsubscribe = fetchData();
-    return unsubscribe;
-  }, [tournamentData, clubName]);
+      // Sort and set top batting performers
+      const sortedBatting = players
+        .filter(p => p.runs > 0)
+        .sort((a, b) => b.runs - a.runs)
+        .slice(0, 2);
+      setTopBattingPerformers(sortedBatting);
+
+      // Sort and set top bowling performers
+      const sortedBowling = players
+        .filter(p => p.wickets > 0)
+        .sort((a, b) => b.wickets - a.wickets)
+        .slice(0, 2);
+      setTopBowlingPerformers(sortedBowling);
+
+      // Calculate tournament statistics
+      const totalRuns = players.reduce((sum, player) => sum + (player.runs || 0), 0);
+      const totalWickets = players.reduce((sum, player) => sum + (player.wickets || 0), 0);
+      const totalHalfCenturies = players.reduce((sum, player) => sum + (player.fifties || 0), 0);
+      const totalPlayersWithWickets = players.filter(p => p.wickets > 0).length;
+      const averageWickets = totalPlayersWithWickets > 0 ? (totalWickets / totalPlayersWithWickets).toFixed(2) : 0;
+
+      setTotalRuns(totalRuns);
+      setTotalWickets(totalWickets);
+      setTotalHalfCenturies(totalHalfCenturies);
+      setAverageWicketsPerPlayer(averageWickets);
+
+      setLoadingPerformers(false);
+      setLoadingStats(false);
+    }, (err) => {
+      console.error("Error fetching performers and stats:", err);
+      setPerformersError("Failed to load top performers: " + err.message);
+      setStatsError("Failed to load tournament statistics: " + err.message);
+      setLoadingPerformers(false);
+      setLoadingStats(false);
+    });
+
+    return () => unsubscribePlayers();
+  }, [clubName, tournamentData]);
 
   if (authLoading) {
     return (
@@ -415,7 +445,7 @@ const Tournament = () => {
                   </div>
                   <div className="mt-4 md:mt-0 bg-gray-700 p-4 rounded-lg border border-gray-600">
                     <h3 className="font-semibold text-gray-300">Defending Champions</h3>
-                    <p className="text-xl font-bold text-blue-400">...</p>
+                    <p className="text-xl font-bold text-blue-400">{tournamentData.defendingChampion || '...'}</p>
                     <p className="text-sm text-gray-400 mt-1">
                       {tournamentData.startDate} - {tournamentData.endDate}
                     </p>
@@ -531,7 +561,7 @@ const Tournament = () => {
                               <div className="flex-1">
                                 <p className="font-medium text-gray-100">{player.name}</p>
                                 <p className="text-xs text-gray-400">
-                                  {player.careerStats?.batting?.runs || 0} runs | Avg: {player.careerStats?.batting?.average || '-'} | SR: {player.careerStats?.batting?.strikeRate || '-'}
+                                  {player.runs} runs | Avg: {player.battingAverage.toFixed(2)} | SR: {player.strikeRate.toFixed(2)}
                                 </p>
                               </div>
                             </div>
@@ -553,7 +583,7 @@ const Tournament = () => {
                               <div className="flex-1">
                                 <p className="font-medium text-gray-100">{player.name}</p>
                                 <p className="text-xs text-gray-400">
-                                  {player.careerStats?.bowling?.wickets || 0} wkts | Avg: {player.careerStats?.bowling?.average || '-'} | Econ: {player.careerStats?.bowling?.economy || '-'}
+                                  {player.wickets} wkts | Avg: {player.bowlingAverage.toFixed(2)} | Econ: {player.economy.toFixed(2)}
                                 </p>
                               </div>
                             </div>
@@ -602,9 +632,7 @@ const Tournament = () => {
       {showAddTournamentModal && currentUserId && (
         <AddTournamentModal
           onClose={() => setShowAddTournamentModal(false)}
-          onTournamentAdded={() => {
-            setShowAddTournamentModal(false);
-          }}
+          onTournamentAdded={handleTournamentAdded}
           currentUserId={currentUserId}
           clubName={clubName}
         />

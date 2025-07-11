@@ -5,6 +5,8 @@ import { db } from '../../firebase';
 import { collection, getDocs, query, where, doc, getDoc, updateDoc } from 'firebase/firestore';
 import logo from '../../assets/pawan/PlayerProfile/picture-312.png';
 import bgImg from '../../assets/sophita/HomePage/advertisement5.jpeg';
+import nav from '../../assets/kumar/right-chevron.png';
+import { IoChevronBack } from "react-icons/io5";
 
 const PlayerSelector = ({
   teamA,
@@ -19,7 +21,8 @@ const PlayerSelector = ({
   groupPhase,
   matchId,
   tournamentName,
-  tournamentImageUrl, // Add this prop
+  tournamentImageUrl,
+  onBack, // Add new prop for handling back
 }) => {
   const [leftSearch, setLeftSearch] = useState('');
   const [rightSearch, setRightSearch] = useState('');
@@ -87,9 +90,13 @@ const PlayerSelector = ({
         phase: groupPhase,
         matchId,
         tournamentName,
-        tournamentImageUrl, // Pass tournamentImageUrl
+        tournamentImageUrl,
       },
     });
+  };
+
+  const handleBack = () => {
+    onBack(); // Call the onBack callback to toggle showPlayerSelector to false
   };
 
   return (
@@ -111,8 +118,14 @@ const PlayerSelector = ({
           transition={{ duration: 0.5, delay: 0.2 }}
           className="max-w-5xl mx-auto p-6 bg-gradient-to-br from-blue-50 to-indigo-50 bg-opacity-90 rounded-xl shadow-xl border border-blue-100"
         >
-          <h1 className="text-4xl font-bold mb-6 text-black">Select Players</h1>
-
+          <div className="flex items-center mb-6">
+            <IoChevronBack
+              className="w-8 h-8 text-black-500 cursor-pointer mt-[5px] ml-[5px]"
+              onClick={handleBack}
+            />
+            <h1 className="text-4xl font-bold text-black">Select Players</h1>
+          </div>
+          
           <div className="flex flex-col md:flex-row gap-8">
             <motion.div className="flex-1" whileHover={{ scale: 1.02 }}>
               <div className="flex items-center gap-2 mb-3">
@@ -669,6 +682,10 @@ const Startmatch = ({
     setShowPlayerSelector(true);
   };
 
+  const handleBackFromPlayerSelector = () => {
+    setShowPlayerSelector(false);
+  };
+
   const hasValue = value => value !== '' && value !== null && value !== undefined;
 
   if (loadingTeams || loadingTournament) {
@@ -714,7 +731,8 @@ const Startmatch = ({
         groupPhase={groupPhase}
         matchId={selectedMatchId}
         tournamentName={tournamentName}
-        tournamentImageUrl={tournamentImageUrl} // Pass tournamentImageUrl
+        tournamentImageUrl={tournamentImageUrl}
+        onBack={handleBackFromPlayerSelector} // Pass the back handler
       />
     );
   }
