@@ -456,6 +456,10 @@ const FixtureGenerator = () => {
   const [matchDateTime, setMatchDateTime] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
+  // const { tournamentName } = location.state || {};
+  const { tournamentName: stateTournamentName } = location.state || {};
+  const tournamentName = stateTournamentName || localStorage.getItem('tournamentName') || 'Default Tournament';
+  console.log(tournamentName);
 
   // Fetch match data from Firestore for Live Score and Match Analytics
   useEffect(() => {
@@ -613,9 +617,9 @@ const FixtureGenerator = () => {
     switch (activeTab) {
       case 'Knockout Brackets':
         if (location.state?.origin) {
-          navigate('/TournamentPage');
+          navigate('/TournamentPage', { state: { tournamentName } });
         } else {
-          navigate('/TournamentPage');
+          navigate('/TournamentPage', { state: { tournamentName } });
         }
         break;
       case 'Start Match':

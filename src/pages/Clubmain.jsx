@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { FiSearch, FiFilter, FiStar, FiMapPin, FiUsers, FiChevronDown, FiPlusCircle } from 'react-icons/fi';
+import { FiSearch, FiFilter, FiStar, FiMapPin, FiUsers, FiChevronDown, FiPlusCircle, FiEdit, FiTrash2 } from 'react-icons/fi';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import backButton from '../assets/kumar/right-chevron.png';
 import { v4 as uuidv4 } from 'uuid';
 import { db, storage, serverTimestamp, auth } from '../firebase';
-import { collection, addDoc, query, onSnapshot } from 'firebase/firestore';
+import { collection, addDoc, query, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { onAuthStateChanged } from 'firebase/auth';
 
@@ -21,6 +21,8 @@ const Clubsmain = () => {
     establishedAfter: ''
   });
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingClubId, setEditingClubId] = useState(null);
   const [newClub, setNewClub] = useState({
     name: '',
     location: '',
@@ -80,12 +82,12 @@ const Clubsmain = () => {
     setNewClub(prev => ({ ...prev, logoFile: e.target.files[0] }));
   };
 
-  const handleAddClub = async (e) => {
+  const handleAddOrUpdateClub = async (e) => {
     e.preventDefault();
     setError(null);
 
     if (!currentUserId) {
-      setError("You must be logged in to add a club.");
+      setError("You must be logged in to add or edit a club.");
       return;
     }
 
@@ -131,14 +133,21 @@ const Clubsmain = () => {
           phone: newClub.phone
         },
         achievements: parseList(newClub.achievementsText),
-        createdAt: serverTimestamp(),
+        createdAt: isEditing ? newClub.createdAt : serverTimestamp(),
         tournamentId: newClub.tournamentId,
-        createdBy: currentUserId, // Add createdBy field
-        userId: currentUserId 
+        createdBy: currentUserId,
+        userId: currentUserId
       };
 
-      await addDoc(collection(db, 'clubs'), clubData);
+      if (isEditing) {
+        await updateDoc(doc(db, 'clubs', editingClubId), clubData);
+      } else {
+        await addDoc(collection(db, 'clubs'), clubData);
+      }
+
       setIsModalOpen(false);
+      setIsEditing(false);
+      setEditingClubId(null);
       setNewClub({
         name: '',
         location: '',
@@ -157,9 +166,44 @@ const Clubsmain = () => {
         tournamentId: uuidv4()
       });
     } catch (err) {
-      console.error("Error adding club:", err);
-      setError("Failed to add club. Please check your inputs and try again.");
+      console.error("Error adding/updating club:", err);
+      setError(`Failed to ${isEditing ? 'update' : 'add'} club. Please check your inputs and try again.`);
       setUploadingLogo(false);
+    }
+  };
+
+  const handleEditClub = (club) => {
+    setIsEditing(true);
+    setEditingClubId(club.id);
+    setNewClub({
+      name: club.name,
+      location: club.location,
+      established: club.established.toString(),
+      members: club.members.toString(),
+      category: club.category,
+      logoFile: null,
+      logoUrl: club.logo,
+      description: club.description,
+      upcomingMatchesText: club.upcomingMatches.map(match => `${match.opponent} - ${match.date} - ${match.venue}`).join(', '),
+      facilitiesText: club.facilities.join(', '),
+      email: club.contact.email,
+      website: club.contact.website,
+      phone: club.contact.phone,
+      achievementsText: club.achievements.join(', '),
+      tournamentId: club.tournamentId,
+      createdAt: club.createdAt
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleDeleteClub = async (clubId) => {
+    if (!window.confirm("Are you sure you want to delete this club?")) return;
+
+    try {
+      await deleteDoc(doc(db, 'clubs', clubId));
+    } catch (err) {
+      console.error("Error deleting club:", err);
+      setError("Failed to delete club. Please try again.");
     }
   };
 
@@ -208,7 +252,7 @@ const Clubsmain = () => {
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             className="px-3 py-1 md:px-4 md:py-2 bg-green-600 hover:bg-green-700 rounded-md text-white text-sm md:text-base font-medium transition-colors"
-            onClick={() => navigate('/join')} // Placeholder navigation
+            onClick={() => navigate('/join')}
           >
             Join Now
           </motion.button>
@@ -312,7 +356,27 @@ const Clubsmain = () => {
                 <motion.button
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.98 }}
-                  onClick={() => setIsModalOpen(true)}
+                  onClick={() => {
+                    setIsEditing(false);
+                    setNewClub({
+                      name: '',
+                      location: '',
+                      established: '',
+                      members: '',
+                      category: '',
+                      logoFile: null,
+                      logoUrl: '',
+                      description: '',
+                      upcomingMatchesText: '',
+                      facilitiesText: '',
+                      email: '',
+                      website: '',
+                      phone: '',
+                      achievementsText: '',
+                      tournamentId: uuidv4()
+                    });
+                    setIsModalOpen(true);
+                  }}
                   className="flex items-center justify-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors text-white text-sm sm:text-base"
                 >
                   <FiPlusCircle /> Add Club
@@ -421,49 +485,77 @@ const Clubsmain = () => {
                       transition={{ delay: index * 0.05 }}
                       layout
                     >
-                      <Link
-                        to={`/clubs/${club.id}`}
-                        className="block bg-gray-800 rounded-lg shadow-md overflow-hidden transition-all duration-200 hover:shadow-lg hover:transform hover:-translate-y-1 border border-gray-700"
-                      >
-                        <motion.div
-                          whileHover={{ scale: 1.01 }}
-                          className="p-3 sm:p-4 flex items-center"
+                      <div className="flex items-center bg-gray-800 rounded-lg shadow-md overflow-hidden transition-all duration-200 hover:shadow-lg hover:transform hover:-translate-y-1 border border-gray-700">
+                        <Link
+                          to={`/clubs/${club.id}`}
+                          className="flex-grow"
                         >
-                          <div className="flex-shrink-0 mr-3 sm:mr-4">
-                            <motion.img
-                              whileHover={{ rotate: 5, scale: 1.1 }}
-                              src={club.logo || 'https://via.placeholder.com/60'}
-                              alt={`${club.name} logo`}
-                              className="w-12 h-12 sm:w-16 sm:h-16 object-contain rounded-full border-2 border-blue-400"
-                            />
-                          </div>
-                          <div className="flex-grow overflow-hidden">
-                            <div className="flex items-center justify-between">
-                              <h2 className="text-sm sm:text-lg font-bold text-white truncate">{club.name}</h2>
-                              {club.category === 'Premier' && (
-                                <motion.span
-                                  animate={{ scale: [1, 1.1, 1] }}
-                                  transition={{ repeat: Infinity, duration: 2 }}
-                                  className="flex items-center text-yellow-400 text-xs sm:text-sm ml-2"
-                                >
-                                  <FiStar className="mr-1" /> Premier
-                                </motion.span>
-                              )}
+                          <motion.div
+                            whileHover={{ scale: 1.01 }}
+                            className="p-3 sm:p-4 flex items-center"
+                          >
+                            <div className="flex-shrink-0 mr-3 sm:mr-4">
+                              <motion.img
+                                whileHover={{ rotate: 5, scale: 1.1 }}
+                                src={club.logo || 'https://via.placeholder.com/60'}
+                                alt={`${club.name} logo`}
+                                className="w-12 h-12 sm:w-16 sm:h-16 object-contain rounded-full border-2 border-blue-400"
+                              />
                             </div>
-                            <div className="flex items-center text-xs sm:text-sm text-gray-400 mt-1 truncate">
-                              <FiMapPin className="mr-1 flex-shrink-0" />
-                              <span className="truncate">{club.location}</span>
+                            <div className="flex-grow overflow-hidden">
+                              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                                {/* Top Row: Club Name & Premier Tag */}
+                                <div className="flex justify-between items-center w-full">
+                                  <h2 className="text-sm sm:text-lg font-bold text-white truncate">{club.name}</h2>
+                                  {club.category === 'Premier' && (
+                                    <motion.span
+                                      animate={{ scale: [1, 1.1, 1] }}
+                                      transition={{ repeat: Infinity, duration: 2 }}
+                                      className="flex items-center text-yellow-400 text-xs sm:text-sm"
+                                    >
+                                      <FiStar className="mr-1" /> Premier
+                                    </motion.span>
+                                  )}
+                                </div>
+
+                                {/* Bottom Row: Buttons (only for owner) */}
+                                {currentUserId === club.createdBy && (
+                                  <div className="flex flex-col sm:flex-row p-2 space-y-2 sm:space-y-0 sm:space-x-2">
+                                    <motion.button
+                                      whileHover={{ scale: 1.05 }}
+                                      whileTap={{ scale: 0.95 }}
+                                      onClick={() => handleEditClub(club)}
+                                      className="p-2 bg-blue-600 hover:bg-blue-700 rounded-md text-white transition-colors"
+                                    >
+                                      <FiEdit />
+                                    </motion.button>
+                                    <motion.button
+                                      whileHover={{ scale: 1.05 }}
+                                      whileTap={{ scale: 0.95 }}
+                                      onClick={() => handleDeleteClub(club.id)}
+                                      className="p-2 bg-red-600 hover:bg-red-700 rounded-md text-white transition-colors"
+                                    >
+                                      <FiTrash2 />
+                                    </motion.button>
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="flex items-center text-xs sm:text-sm text-gray-400 mt-1 truncate">
+                                <FiMapPin className="mr-1 flex-shrink-0" />
+                                <span className="truncate">{club.location}</span>
+                              </div>
+                              <div className="flex items-center text-xs sm:text-sm text-gray-400 mt-1 truncate">
+                                <FiUsers className="mr-1 flex-shrink-0" />
+                                <span className="truncate">{club.members} members | Est. {club.established}</span>
+                              </div>
+                              <div className="flex items-center text-xs sm:text-sm text-gray-400 mt-1 truncate">
+                                <span className="truncate">Tournament ID: {club.tournamentId}</span>
+                              </div>
                             </div>
-                            <div className="flex items-center text-xs sm:text-sm text-gray-400 mt-1 truncate">
-                              <FiUsers className="mr-1 flex-shrink-0" />
-                              <span className="truncate">{club.members} members | Est. {club.established}</span>
-                            </div>
-                            <div className="flex items-center text-xs sm:text-sm text-gray-400 mt-1 truncate">
-                              <span className="truncate">Tournament ID: {club.tournamentId}</span>
-                            </div>
-                          </div>
-                        </motion.div>
-                      </Link>
+                          </motion.div>
+                        </Link>
+                      </div>
                     </motion.div>
                   ))
                 ) : (
@@ -494,7 +586,7 @@ const Clubsmain = () => {
         </div>
       </div>
 
-      {/* Add Club Modal */}
+      {/* Add/Edit Club Modal */}
       <AnimatePresence>
         {isModalOpen && (
           <motion.div
@@ -509,14 +601,14 @@ const Clubsmain = () => {
               exit={{ scale: 0.9, y: 50 }}
               className="bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-lg border border-gray-700 overflow-y-auto max-h-[90vh]"
             >
-              <h2 className="text-2xl font-bold text-white mb-4">Add New Club</h2>
+              <h2 className="text-2xl font-bold text-white mb-4">{isEditing ? 'Edit Club' : 'Add New Club'}</h2>
               {error && (
                 <div className="text-red-500 text-sm mb-4 flex justify-between items-center">
                   {error}
-                  <button onClick={() => setError(null)} className="ml-2 text-gray-400 hover:text-gray-200">&times;</button>
+                  <button onClick={() => setError(null)} className="ml-2 text-gray-400 hover:text-gray-200">×</button>
                 </div>
               )}
-              <form onSubmit={handleAddClub} className="space-y-4">
+              <form onSubmit={handleAddOrUpdateClub} className="space-y-4">
                 <div>
                   <label htmlFor="tournamentId" className="block text-sm font-medium text-gray-300">Tournament ID</label>
                   <input
@@ -693,7 +785,7 @@ const Clubsmain = () => {
                     className="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   ></textarea>
                 </div>
-                
+
                 <div>
                   <label htmlFor="facilitiesText" className="block text-sm font-medium text-gray-300">Facilities (comma-separated)</label>
                   <input
@@ -711,7 +803,11 @@ const Clubsmain = () => {
                     type="button"
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    onClick={() => setIsModalOpen(false)}
+                    onClick={() => {
+                      setIsModalOpen(false);
+                      setIsEditing(false);
+                      setEditingClubId(null);
+                    }}
                     className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
                   >
                     Cancel
@@ -723,7 +819,7 @@ const Clubsmain = () => {
                     className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
                     disabled={uploadingLogo}
                   >
-                    {uploadingLogo ? 'Adding...' : 'Add Club'}
+                    {uploadingLogo ? (isEditing ? 'Updating...' : 'Adding...') : (isEditing ? 'Update Club' : 'Add Club')}
                   </motion.button>
                 </div>
               </form>

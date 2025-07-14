@@ -338,6 +338,7 @@ const TournamentBracket = () => {
     }
     if (location.state?.tournamentName) {
       setTournamentName(location.state.tournamentName); // Add this line
+      console.log(tournamentName);
     }
   }, [location.state]);
 

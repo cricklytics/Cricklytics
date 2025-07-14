@@ -43,6 +43,8 @@ const Selection = () => {
   const [groups, setGroups] = useState([]);
   const [teamStats, setTeamStats] = useState({});
   const [roundWinners, setRoundWinners] = useState({});
+  const { tournamentName } = location.state || {};
+  console.log(tournamentName);
 
   // Automatically select Knockout format on component mount
   useEffect(() => {
@@ -316,10 +318,10 @@ useEffect(() => {
   };
 
   const handleNext = () => {
-    navigate('/flowchart', {
+    navigate('/match-start-ko', {
       state: {
         teams,
-        format,
+        // format,
         matches,
         rounds,
         currentStage,
@@ -329,7 +331,10 @@ useEffect(() => {
         groups,
         teamStats,
         roundWinners,
-        // tournamentName // Add this line
+        tournamentName, // Add this line
+        format: 'knockout',
+        origin: 'selection',
+        activeTab: 'Knockout Brackets'
       }
     });
   };
