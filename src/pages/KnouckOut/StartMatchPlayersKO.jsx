@@ -9,6 +9,7 @@ import { Player } from '@lottiefiles/react-lottie-player';
 import sixAnimation from '../../assets/Animation/six.json';
 import fourAnimation from '../../assets/Animation/four.json';
 import outAnimation from '../../assets/Animation/out.json';
+import MainWheel from "../../components/yogesh/wagonwheel/mainwheel"
 
 // Error Boundary Component
 class ErrorBoundary extends Component {
@@ -91,9 +92,11 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
   const [showAnimation, setShowAnimation] = useState(false);
   const [animationType, setAnimationType] = useState(null);
   const [firstInningsData, setFirstInningsData] = useState(null);
-  const [stateHistory, setStateHistory] = useState([]); // New state to track navigation history
-
-  // Dynamic player data
+  const [stateHistory, setStateHistory] = useState([]);
+  const [showMainWheel, setShowMainWheel] = useState(false);
+  const [selectedRun, setSelectedRun] = useState(null);
+  const [showCatchModal, setShowCatchModal] = useState(false); // New state for catch modal
+  const [catchRuns, setCatchRuns] = useState(0); // New state for catch runs
   const [battingTeamPlayers, setBattingTeamPlayers] = useState([]);
   const [bowlingTeamPlayers, setBowlingTeamPlayers] = useState([]);
 
@@ -137,10 +140,9 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
     setBatsmenStats({});
     setBowlerStats({});
     setWicketOvers([]);
-    setStateHistory([]); // Reset history on team change
+    setStateHistory([]);
   }, [isChasing, selectedPlayersFromProps, teamA, teamB, navigate]);
 
-  // Update state history when transitioning to bowler selection or starting the game
   useEffect(() => {
     if (bowlerVisible && !showThirdButtonOnly) {
       setStateHistory(prev => [...prev, { view: 'toss', bowlerVisible: false, showThirdButtonOnly: false }]);
@@ -164,15 +166,13 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
       return;
     }
 
-    // Check if there are previous states in the history
     if (stateHistory.length > 0) {
       const previousState = stateHistory[stateHistory.length - 1];
       setCurrentView(previousState.view);
       setBowlerVisible(previousState.bowlerVisible);
       setShowThirdButtonOnly(previousState.showThirdButtonOnly);
-      setStateHistory(prev => prev.slice(0, -1)); // Remove the last state
+      setStateHistory(prev => prev.slice(0, -1));
     } else {
-      // If no internal states to go back to, navigate to the previous route
       navigate(-1, { state: { ...location.state, matchId } });
     }
   };
@@ -459,29 +459,11 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
 
     if (pendingOut && !isLabel && typeof value === 'number') {
       if (value !== 0 && value !== 1 && value !== 2) return;
+      setCatchRuns(value);
       playAnimation('out');
       setTimeout(() => {
-        runsToAdd = value;
-        setPlayerScore(prev => prev + runsToAdd);
-        setTopPlays(prev => [...prev, `O+${value}`]);
-        const newBalls = [...currentOverBalls, `O+${value}`];
-        setCurrentOverBalls(newBalls);
-        setCurrentOverScores(calculateCurrentOverScores(newBalls));
-        if (striker) {
-          updateBatsmanScore(striker.index, value);
-          updateBatsmanStats(striker.index, value);
-          updateBatsmanBalls(striker.index);
-          recordWicketOver(striker.index);
-        }
-        setValidBalls(prev => prev + 1);
-        isValidBall = true;
-        if (selectedBowler) {
-          updateBowlerStats(selectedBowler.index, true, true, runsToAdd);
-        }
-        setShowBatsmanDropdown(true);
-        saveMatchData();
-      }, 5000);
-      setPendingOut(false);
+        setShowCatchModal(true);
+      }, 3000);
       return;
     }
 
@@ -533,6 +515,41 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
       }
     }
 
+    if (!pendingOut && !pendingWide && !pendingNoBall && !pendingLegBy && typeof value === 'number') {
+      setSelectedRun(value);
+      setShowMainWheel(true);
+    }
+
+    saveMatchData();
+  };
+
+  const handleCatchModalConfirm = () => {
+    let runsToAdd = catchRuns;
+    setPlayerScore(prev => prev + runsToAdd);
+    setTopPlays(prev => [...prev, `O+${catchRuns}`]);
+    const newBalls = [...currentOverBalls, `O+${catchRuns}`];
+    setCurrentOverBalls(newBalls);
+    setCurrentOverScores(calculateCurrentOverScores(newBalls));
+    if (striker) {
+      updateBatsmanScore(striker.index, catchRuns);
+      updateBatsmanStats(striker.index, catchRuns);
+      updateBatsmanBalls(striker.index);
+      recordWicketOver(striker.index);
+    }
+    setValidBalls(prev => prev + 1);
+    if (selectedBowler) {
+      updateBowlerStats(selectedBowler.index, true, true, runsToAdd);
+    }
+    setShowCatchModal(false);
+    setPendingOut(false);
+    setShowBatsmanDropdown(true);
+    saveMatchData();
+  };
+
+  const handleCatchModalCancel = () => {
+    setShowCatchModal(false);
+    setPendingOut(false);
+    setCatchRuns(0);
     saveMatchData();
   };
 
@@ -774,7 +791,9 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
     setActiveLabel(null);
     setActiveNumber(null);
     setShowRunInfo(false);
-    setStateHistory([]); // Reset history on innings reset
+    setShowCatchModal(false);
+    setCatchRuns(0);
+    setStateHistory([]);
     saveMatchData();
   };
 
@@ -1039,8 +1058,8 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
               rounds.push(newRound);
 
               await updateDoc(tournamentDocRef, {
-                rounds: rounds,
-                updatedAt: new Date(),
+                  rounds: rounds,
+                  updatedAt: new Date(),
               });
               console.log(`Created new round ${currentPhase} with match and winner ${winnerTeamName} in tournament ${tournamentId}`);
             }
@@ -1258,6 +1277,29 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
                   className="w-40 h-12 bg-[#FF62A1] text-white font-bold text-lg rounded-lg border-2 border-white"
                 >
                   OK
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showCatchModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-[#4C0025] p-6 rounded-lg max-w-md w-full">
+              <h3 className="text-white text-xl font-bold mb-4">Confirm Catch</h3>
+              <p className="text-white mb-6">Caught out for {catchRuns} run{catchRuns !== 1 ? 's' : ''}. Confirm?</p>
+              <div className="flex justify-center gap-4">
+                <button
+                  onClick={handleCatchModalConfirm}
+                  className="w-24 h-10 bg-[#FF62A1] text-white font-bold text-lg rounded-lg border-2 border-white"
+                >
+                  Confirm
+                </button>
+                <button
+                  onClick={handleCatchModalCancel}
+                  className="w-24 h-10 bg-gray-500 text-white font-bold text-lg rounded-lg border-2 border-white"
+                >
+                  Cancel
                 </button>
               </div>
             </div>
@@ -1682,6 +1724,29 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
             >
               Start Chase
             </button>
+          </div>
+        )}
+
+
+                  {/* Place MainWheel here, outside condition */}
+        {showMainWheel && (
+          <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center">
+            <div className="relative bg-white p-6 rounded-lg w-[90%] max-w-3xl mx-auto">
+              
+              {/* Close Button in Top-Right */}
+              <button
+                onClick={() => setShowMainWheel(false)}
+                className="absolute top-8 right-8 bg-black text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-gray-800 transition"
+              >
+                ✕
+              </button>
+        
+              {/* Main Content */}
+              <MainWheel
+                run={selectedRun}
+                onClose={() => setShowMainWheel(false)}
+              />
+            </div>
           </div>
         )}
       </section>
