@@ -39,6 +39,8 @@ const Selection2 = () => {
 
       setLoading(true);
       try {
+        const currentUserId = auth.currentUser?.uid;
+
         // Case 1: Fetch by passedTournamentId
         if (passedTournamentId) {
           const tournamentRef = doc(db, 'roundrobin', passedTournamentId);
@@ -46,6 +48,14 @@ const Selection2 = () => {
 
           if (tournamentDoc.exists()) {
             const tournamentData = tournamentDoc.data();
+
+            // Check if the userId matches the current user's ID
+            if (tournamentData.userId !== currentUserId) {
+              setError('You do not have permission to view this tournament.');
+              setLoading(false);
+              return;
+            }
+
             hasStoredSchedule.current = true;
 
             const fetchedTeams = Array.isArray(teamNames) && teamNames.length > 0
@@ -79,7 +89,13 @@ const Selection2 = () => {
         // Case 2: No passedTournamentId, try to fetch recent tournament with tournamentWinner: null
         else if (!passedTournamentId && !(Array.isArray(teamNames) && teamNames.length > 0)) {
           const tournamentsCollectionRef = collection(db, 'roundrobin');
-          const q = query(tournamentsCollectionRef, where('tournamentWinner', '==', null), orderBy('createdAt', 'desc'), limit(1));
+          const q = query(
+            tournamentsCollectionRef,
+            where('tournamentWinner', '==', null),
+            where('userId', '==', currentUserId), // Add userId filter
+            orderBy('createdAt', 'desc'),
+            limit(1)
+          );
           const querySnapshot = await getDocs(q);
 
           if (!querySnapshot.empty) {
@@ -102,7 +118,7 @@ const Selection2 = () => {
 
             console.log(`Recent tournament fetched with ID: ${tournamentData.tournamentId}`);
           } else {
-            setError('No ongoing tournaments found.');
+            setError('No ongoing tournaments found for this user.');
           }
         } 
         // Case 3: Generate new schedule if teamNames is provided
@@ -262,6 +278,15 @@ const Selection2 = () => {
 
       if (tournamentDoc.exists()) {
         const tournamentData = tournamentDoc.data();
+        
+        // Check if the userId matches the current user's ID
+        const currentUserId = auth.currentUser?.uid;
+        if (tournamentData.userId !== currentUserId) {
+          setError('You do not have permission to view this tournament flowchart.');
+          setLoading(false);
+          return;
+        }
+
         const flowchart = [];
 
         if (tournamentData.roundRobin && Object.keys(tournamentData.roundRobin).length > 0) {

@@ -95,8 +95,11 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
   const [stateHistory, setStateHistory] = useState([]);
   const [showMainWheel, setShowMainWheel] = useState(false);
   const [selectedRun, setSelectedRun] = useState(null);
-  const [showCatchModal, setShowCatchModal] = useState(false); // New state for catch modal
-  const [catchRuns, setCatchRuns] = useState(0); // New state for catch runs
+  const [showCatchModal, setShowCatchModal] = useState(false);
+  const [selectedCatchType, setSelectedCatchType] = useState('');
+  const [selectedFielder, setSelectedFielder] = useState(null);
+
+  // Dynamic player data
   const [battingTeamPlayers, setBattingTeamPlayers] = useState([]);
   const [bowlingTeamPlayers, setBowlingTeamPlayers] = useState([]);
 
@@ -230,9 +233,9 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
     });
   };
 
-  const recordWicketOver = (batsmanIndex) => {
+  const recordWicketOver = (batsmanIndex, catchDetails = null) => {
     const currentOver = `${overNumber - 1}.${validBalls}`;
-    setWicketOvers(prev => [...prev, { batsmanIndex, over: currentOver }]);
+    setWicketOvers(prev => [...prev, { batsmanIndex, over: currentOver, catchDetails }]);
   };
 
   const playAnimation = (type) => {
@@ -271,7 +274,8 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
           fours: stats.fours || 0,
           sixes: stats.sixes || 0,
           milestone: stats.milestone || null,
-          wicketOver: wicket ? wicket.over : null
+          wicketOver: wicket ? wicket.over : null,
+          catchDetails: wicket?.catchDetails || null
         };
       });
 
@@ -459,11 +463,10 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
 
     if (pendingOut && !isLabel && typeof value === 'number') {
       if (value !== 0 && value !== 1 && value !== 2) return;
-      setCatchRuns(value);
-      playAnimation('out');
+      playAnimation('out'); // Play the out animation first
       setTimeout(() => {
-        setShowCatchModal(true);
-      }, 3000);
+        setShowCatchModal(true); // Show the catch modal after the animation
+      }, 3000); // Adjust the delay to match the animation duration (3000ms = 3 seconds)
       return;
     }
 
@@ -523,34 +526,34 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
     saveMatchData();
   };
 
-  const handleCatchModalConfirm = () => {
-    let runsToAdd = catchRuns;
-    setPlayerScore(prev => prev + runsToAdd);
-    setTopPlays(prev => [...prev, `O+${catchRuns}`]);
-    const newBalls = [...currentOverBalls, `O+${catchRuns}`];
-    setCurrentOverBalls(newBalls);
-    setCurrentOverScores(calculateCurrentOverScores(newBalls));
-    if (striker) {
-      updateBatsmanScore(striker.index, catchRuns);
-      updateBatsmanStats(striker.index, catchRuns);
-      updateBatsmanBalls(striker.index);
-      recordWicketOver(striker.index);
-    }
-    setValidBalls(prev => prev + 1);
-    if (selectedBowler) {
-      updateBowlerStats(selectedBowler.index, true, true, runsToAdd);
-    }
-    setShowCatchModal(false);
-    setPendingOut(false);
-    setShowBatsmanDropdown(true);
-    saveMatchData();
-  };
-
-  const handleCatchModalCancel = () => {
-    setShowCatchModal(false);
-    setPendingOut(false);
-    setCatchRuns(0);
-    saveMatchData();
+  const handleCatchSubmit = () => {
+    if (!selectedCatchType || !selectedFielder) return;
+    
+    playAnimation('out');
+    setTimeout(() => {
+      const runsToAdd = activeNumber || 0;
+      setPlayerScore(prev => prev + runsToAdd);
+      setTopPlays(prev => [...prev, `O+${runsToAdd}`]);
+      const newBalls = [...currentOverBalls, `O+${runsToAdd}`];
+      setCurrentOverBalls(newBalls);
+      setCurrentOverScores(calculateCurrentOverScores(newBalls));
+      if (striker) {
+        updateBatsmanScore(striker.index, runsToAdd);
+        updateBatsmanStats(striker.index, runsToAdd);
+        updateBatsmanBalls(striker.index);
+        recordWicketOver(striker.index, { type: selectedCatchType, fielder: selectedFielder.name });
+      }
+      setValidBalls(prev => prev + 1);
+      if (selectedBowler) {
+        updateBowlerStats(selectedBowler.index, true, true, runsToAdd);
+      }
+      setShowBatsmanDropdown(true);
+      setShowCatchModal(false);
+      setSelectedCatchType('');
+      setSelectedFielder(null);
+      setPendingOut(false);
+      saveMatchData();
+    }, 5000);
   };
 
   useEffect(() => {
@@ -664,7 +667,8 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
             fours: stats.fours || 0,
             sixes: stats.sixes || 0,
             milestone: stats.milestone || null,
-            wicketOver: wicket ? wicket.over : null
+            wicketOver: wicket ? wicket.over : null,
+            catchDetails: wicket?.catchDetails || null
           };
         });
         const bowlerStatsArray = bowlingTeamPlayers.map(player => {
@@ -792,7 +796,8 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
     setActiveNumber(null);
     setShowRunInfo(false);
     setShowCatchModal(false);
-    setCatchRuns(0);
+    setSelectedCatchType('');
+    setSelectedFielder(null);
     setStateHistory([]);
     saveMatchData();
   };
@@ -940,6 +945,15 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
     saveMatchData();
   };
 
+  const cancelCatchModal = () => {
+    setShowCatchModal(false);
+    setSelectedCatchType('');
+    setSelectedFielder(null);
+    setPendingOut(false);
+    setActiveLabel(null);
+    saveMatchData();
+  };
+
   const handleModalOkClick = async () => {
     setShowModal(false);
 
@@ -1058,8 +1072,8 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
               rounds.push(newRound);
 
               await updateDoc(tournamentDocRef, {
-                  rounds: rounds,
-                  updatedAt: new Date(),
+                rounds: rounds,
+                updatedAt: new Date(),
               });
               console.log(`Created new round ${currentPhase} with match and winner ${winnerTeamName} in tournament ${tournamentId}`);
             }
@@ -1285,21 +1299,54 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
 
         {showCatchModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-[#4C0025] p-6 rounded-lg max-w-md w-full">
-              <h3 className="text-white text-xl font-bold mb-4">Confirm Catch</h3>
-              <p className="text-white mb-6">Caught out for {catchRuns} run{catchRuns !== 1 ? 's' : ''}. Confirm?</p>
-              <div className="flex justify-center gap-4">
-                <button
-                  onClick={handleCatchModalConfirm}
-                  className="w-24 h-10 bg-[#FF62A1] text-white font-bold text-lg rounded-lg border-2 border-white"
+            <div className="bg-[#4C0025] p-6 rounded-lg max-w-md w-full mx-4 relative">
+              <button
+                onClick={cancelCatchModal}
+                className="absolute top-2 right-2 w-6 h-6 text-white font-bold flex items-center justify-center text-xl"
+              >
+                ×
+              </button>
+              <h3 className="text-white text-xl font-bold mb-4">Select Catch Details</h3>
+              <div className="mb-4">
+                <label className="text-white block mb-2">Catch Type:</label>
+                <select
+                  value={selectedCatchType}
+                  onChange={(e) => setSelectedCatchType(e.target.value)}
+                  className="w-full p-2 rounded bg-gray-800 text-white"
                 >
-                  Confirm
-                </button>
-                <button
-                  onClick={handleCatchModalCancel}
-                  className="w-24 h-10 bg-gray-500 text-white font-bold text-lg rounded-lg border-2 border-white"
+                  <option value="">Select Catch Type</option>
+                  <option value="Diving">Diving</option>
+                  <option value="Running">Running</option>
+                  <option value="Overhead">Overhead</option>
+                  <option value="One-handed">One-handed</option>
+                  <option value="Standard">Standard</option>
+                </select>
+              </div>
+              <div className="mb-4">
+                <label className="text-white block mb-2">Fielder:</label>
+                <select
+                  value={selectedFielder?.index || ''}
+                  onChange={(e) => {
+                    const fielder = bowlingTeamPlayers.find(p => p.index === e.target.value);
+                    setSelectedFielder(fielder);
+                  }}
+                  className="w-full p-2 rounded bg-gray-800 text-white"
                 >
-                  Cancel
+                  <option value="">Select Fielder</option>
+                  {bowlingTeamPlayers.map(player => (
+                    <option key={player.index} value={player.index}>{player.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex justify-center">
+                <button
+                  onClick={handleCatchSubmit}
+                  disabled={!selectedCatchType || !selectedFielder}
+                  className={`w-40 h-12 text-white font-bold text-lg rounded-lg border-2 border-white ${
+                    selectedCatchType && selectedFielder ? 'bg-[#FF62A1] hover:bg-[#FF4A8D]' : 'bg-gray-500 cursor-not-allowed'
+                  }`}
+                >
+                  Submit
                 </button>
               </div>
             </div>
