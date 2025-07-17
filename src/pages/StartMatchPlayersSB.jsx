@@ -2335,4 +2335,4 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
   );
 }
 
-export default StartMatchPlayers;
+export default StartMatchPlayers; 
