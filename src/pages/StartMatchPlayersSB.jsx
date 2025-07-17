@@ -256,59 +256,60 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
     processBallWithWagonWheelData();
   };
 
-  const processBallWithWagonWheelData = () => {
-    const isWicket = selectedRun === 'W';
-    
-    const ballData = {
-      inning: isChasing ? 2 : 1,
-      over: overNumber - 1,
-      ball: validBalls + 1,
-      runs: isWicket ? 0 : selectedRun,
-      shotDirection: selectedDirection?.label || '',
-      shotPosition: selectedDirection?.position || '',
-      shotType: selectedShotType?.name || '',
-      ballTrajectory: selectedTrajectory?.name || '',
-      wicketType: isWicket ? 'catch' : '',
-      timestamp: new Date().toISOString()
-    };
-
-    // Update score
-    if (!isWicket) {
-      setPlayerScore(prev => prev + selectedRun);
-      setTopPlays(prev => [...prev, selectedRun]);
-      setCurrentOverBalls(prev => [...prev, selectedRun]);
-      
-      if (striker) {
-        updateBatsmanScore(striker.index, selectedRun);
-        updateBatsmanStats(striker.index, selectedRun, selectedRun === 0);
-        updateBatsmanBalls(striker.index);
-      }
-    }
-
-    // Update bowler stats
-    if (selectedBowler) {
-      updateBowlerStats(selectedBowler.index, isWicket, true, isWicket ? 0 : selectedRun);
-    }
-
-    // Handle odd runs (striker change)
-    if (!isWicket && selectedRun % 2 !== 0) {
-      const temp = striker;
-      setStriker(nonStriker);
-      setNonStriker(temp);
-    }
-
-    // Reset wagon wheel selections
-    setSelectedDirection(null);
-    setSelectedShotType(null);
-    setSelectedTrajectory(null);
-    setSelectedRun(null);
-
-    // Update valid balls count
-    setValidBalls(prev => prev + 1);
-
-    // Save match data
-    saveMatchData();
+const processBallWithWagonWheelData = () => {
+  const isWicket = selectedRun === 'W';
+  
+  const ballData = {
+    inning: isChasing ? 2 : 1,
+    over: overNumber - 1,
+    ball: validBalls + 1,
+    runs: isWicket ? 0 : selectedRun,
+    shotDirection: selectedDirection?.label || '',
+    shotPosition: selectedDirection?.position || '',
+    shotType: selectedShotType?.name || '',
+    ballTrajectory: selectedTrajectory?.name || '',
+    wicketType: isWicket ? 'catch' : '',
+    timestamp: new Date().toISOString()
   };
+
+  // Update score
+  if (!isWicket) {
+    setPlayerScore(prev => prev + selectedRun);
+    setCurrentOverRuns(prev => prev + selectedRun);
+    setTopPlays(prev => [...prev, selectedRun]);
+    setCurrentOverBalls(prev => [...prev, selectedRun]);
+    
+    if (striker) {
+      updateBatsmanScore(striker.index, selectedRun);
+      updateBatsmanStats(striker.index, selectedRun, selectedRun === 0);
+      updateBatsmanBalls(striker.index);
+    }
+  }
+
+  // Update bowler stats
+  if (selectedBowler) {
+    updateBowlerStats(selectedBowler.index, isWicket, true, isWicket ? 0 : selectedRun);
+  }
+
+  // Handle odd runs (striker change)
+  if (!isWicket && selectedRun % 2 !== 0) {
+    const temp = striker;
+    setStriker(nonStriker);
+    setNonStriker(temp);
+  }
+
+  // Reset wagon wheel selections
+  setSelectedDirection(null);
+  setSelectedShotType(null);
+  setSelectedTrajectory(null);
+  setSelectedRun(null);
+
+  // Update valid balls count
+  setValidBalls(prev => prev + 1);
+
+  // Save match data
+  saveMatchData();
+};
 
   const renderWagonWheel = () => {
     return (
@@ -910,164 +911,151 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
 };
 
   const handleScoreButtonClick = (value, isLabel) => {
-    if (gameFinished) return;
+  if (gameFinished) return;
 
-    let runsToAdd = 0;
-    let isValidBall = false;
-    let isDotBall = false;
+  let runsToAdd = 0;
+  let isValidBall = false;
+  let isDotBall = false;
 
-    if (isLabel) {
-      setActiveNumber(null);
-      setActiveLabel(value);
-    } else {
-      setActiveLabel(null);
-      setActiveNumber(value);
-      isDotBall = value === 0;
+  if (isLabel) {
+    setActiveNumber(null);
+    setActiveLabel(value);
+  } else {
+    setActiveLabel(null);
+    setActiveNumber(value);
+    isDotBall = value === 0;
+  }
+
+  // Handle pending wide
+  if (pendingWide && !isLabel && typeof value === 'number') {
+    setShowRunInfo(false);
+    runsToAdd = 1 + value;
+    setPlayerScore(prev => prev + runsToAdd);
+    setCurrentOverRuns(prev => prev + runsToAdd);
+    setTopPlays(prev => [...prev, `W+${value}`]);
+    setCurrentOverBalls(prev => [...prev, `W+${value}`]);
+    if (selectedBowler) updateBowlerStats(selectedBowler.index, false, false, runsToAdd, false, true);
+    if (value % 2 !== 0) {
+      const temp = striker;
+      setStriker(nonStriker);
+      setNonStriker(temp);
     }
-
-    // Handle pending wide
-    if (pendingWide && !isLabel && typeof value === 'number') {
-      setShowRunInfo(false);
-      runsToAdd = 1 + value;
-      setPlayerScore(prev => prev + runsToAdd);
-      setCurrentOverRuns(prev => prev + runsToAdd);
-      setTopPlays(prev => [...prev, `W+${value}`]);
-      setCurrentOverBalls(prev => [...prev, `W+${value}`]);
-      if (selectedBowler) updateBowlerStats(selectedBowler.index, false, false, runsToAdd, false, true);
-      if (value % 2 !== 0) {
-        const temp = striker;
-        setStriker(nonStriker);
-        setNonStriker(temp);
-      }
-      setPendingWide(false);
-      saveMatchData();
-      return;
-    }
-
-    // Handle pending no-ball
-    if (pendingNoBall && !isLabel && typeof value === 'number') {
-      setShowRunInfo(false);
-      runsToAdd = 1 + value;
-      setPlayerScore(prev => prev + runsToAdd);
-      setCurrentOverRuns(prev => prev + runsToAdd);
-      setTopPlays(prev => [...prev, `NB+${value}`]);
-      setCurrentOverBalls(prev => [...prev, `NB+${value}`]);
-      if (striker) {
-        updateBatsmanScore(striker.index, value);
-        updateBatsmanStats(striker.index, value);
-        updateBatsmanBalls(striker.index);
-      }
-      if (selectedBowler) updateBowlerStats(selectedBowler.index, false, false, runsToAdd, true);
-      if (value % 2 !== 0) {
-        const temp = striker;
-        setStriker(nonStriker);
-        setNonStriker(temp);
-      }
-      setPendingNoBall(false);
-      saveMatchData();
-      return;
-    }
-
-    // Handle pending leg-bye
-    if (pendingLegBy && !isLabel && typeof value === 'number') {
-      setShowRunInfo(false);
-      runsToAdd = value;
-      setPlayerScore(prev => prev + runsToAdd);
-      setCurrentOverRuns(prev => prev + runsToAdd);
-      setTopPlays(prev => [...prev, `L+${value}`]);
-      setCurrentOverBalls(prev => [...prev, `L+${value}`]);
-      setValidBalls(prev => prev + 1);
-      isValidBall = true;
-      if (striker) updateBatsmanBalls(striker.index);
-      if (value % 2 !== 0) {
-        const temp = striker;
-        setStriker(nonStriker);
-        setNonStriker(temp);
-      }
-      setPendingLegBy(false);
-      saveMatchData();
-      return;
-    }
-
-    // Handle pending out
-    if (pendingOut && !isLabel && typeof value === 'number') {
-      playAnimation('out');
-      setTimeout(() => {
-        runsToAdd = value;
-        setPlayerScore(prev => prev + runsToAdd);
-        setCurrentOverRuns(prev => prev + runsToAdd);
-        setTopPlays(prev => [...prev, `O+${value}`]);
-        setCurrentOverBalls(prev => [...prev, `O+${value}`]);
-        if (striker) {
-          updateBatsmanScore(striker.index, value);
-          updateBatsmanStats(striker.index, value);
-          updateBatsmanBalls(striker.index);
-        }
-        setValidBalls(prev => prev + 1);
-        isValidBall = true;
-        setShowOutTypeModal(true);
-        saveMatchData();
-      }, 5000);
-      setPendingOut(false);
-      return;
-    }
-
-    if (isLabel) {
-      if (value === 'Wide' || value === 'No-ball' || value === 'Leg By') {
-        setShowRunInfo(true);
-      } else {
-        setShowRunInfo(false);
-      }
-
-      if (value === 'Wide') {
-        setPendingWide(true);
-        return;
-      } else if (value === 'No-ball') {
-        setPendingNoBall(true);
-        return;
-      } else if (value === 'Leg By') {
-        setPendingLegBy(true);
-        return;
-      } else if (value === 'OUT' || value === 'lbw') {
-        setPendingOut(true);
-        return;
-      }
-    } else {
-      setShowRunInfo(false);
-      runsToAdd = value;
-      setPlayerScore(prev => prev + runsToAdd);
-      setCurrentOverRuns(prev => prev + runsToAdd);
-      setTopPlays(prev => [...prev, value]);
-      setCurrentOverBalls(prev => [...prev, value]);
-      setValidBalls(prev => prev + 1);
-      isValidBall = true;
-      if (striker) {
-        updateBatsmanScore(striker.index, value);
-        updateBatsmanStats(striker.index, value);
-        updateBatsmanBalls(striker.index);
-      }
-      if (selectedBowler) updateBowlerStats(selectedBowler.index, false, true, value, false, false, isDotBall);
-      if (value % 2 !== 0) {
-        const temp = striker;
-        setStriker(nonStriker);
-        setNonStriker(temp);
-      }
-      if (value === 6) {
-        playAnimation('six');
-        setTimeout(() => {
-          setShowWagonWheel(true);
-        }, 3000);
-      } else if (value === 4) {
-        playAnimation('four');
-        setTimeout(() => {
-          setShowWagonWheel(true);
-        }, 3000);
-      }
-
-    }
-
+    setPendingWide(false);
     saveMatchData();
-  };
+    return;
+  }
+
+  // Handle pending no-ball
+  if (pendingNoBall && !isLabel && typeof value === 'number') {
+    setShowRunInfo(false);
+    runsToAdd = 1 + value;
+    setPlayerScore(prev => prev + runsToAdd);
+    setCurrentOverRuns(prev => prev + runsToAdd);
+    setTopPlays(prev => [...prev, `NB+${value}`]);
+    setCurrentOverBalls(prev => [...prev, `NB+${value}`]);
+    if (striker) {
+      updateBatsmanScore(striker.index, value);
+      updateBatsmanStats(striker.index, value);
+      updateBatsmanBalls(striker.index);
+    }
+    if (selectedBowler) updateBowlerStats(selectedBowler.index, false, false, runsToAdd, true);
+    if (value % 2 !== 0) {
+      const temp = striker;
+      setStriker(nonStriker);
+      setNonStriker(temp);
+    }
+    setPendingNoBall(false);
+    saveMatchData();
+    return;
+  }
+
+  // Handle pending leg-bye
+  if (pendingLegBy && !isLabel && typeof value === 'number') {
+    setShowRunInfo(false);
+    runsToAdd = value;
+    setPlayerScore(prev => prev + runsToAdd);
+    setCurrentOverRuns(prev => prev + runsToAdd);
+    setTopPlays(prev => [...prev, `L+${value}`]);
+    setCurrentOverBalls(prev => [...prev, `L+${value}`]);
+    setValidBalls(prev => prev + 1);
+    isValidBall = true;
+    if (striker) updateBatsmanBalls(striker.index);
+    if (value % 2 !== 0) {
+      const temp = striker;
+      setStriker(nonStriker);
+      setNonStriker(temp);
+    }
+    setPendingLegBy(false);
+    saveMatchData();
+    return;
+  }
+
+  // Handle pending out
+  if (pendingOut && !isLabel && typeof value === 'number') {
+    playAnimation('out');
+    setTimeout(() => {
+      runsToAdd = value;
+      setPlayerScore(prev => prev + runsToAdd);
+      setCurrentOverRuns(prev => prev + runsToAdd);
+      setTopPlays(prev => [...prev, `O+${value}`]);
+      setCurrentOverBalls(prev => [...prev, `O+${value}`]);
+      if (striker) {
+        updateBatsmanScore(striker.index, value);
+        updateBatsmanStats(striker.index, value);
+        updateBatsmanBalls(striker.index);
+      }
+      setValidBalls(prev => prev + 1);
+      isValidBall = true;
+      setShowOutTypeModal(true);
+      saveMatchData();
+    }, 5000);
+    setPendingOut(false);
+    return;
+  }
+
+  if (isLabel) {
+    if (value === 'Wide' || value === 'No-ball' || value === 'Leg By') {
+      setShowRunInfo(true);
+    } else {
+      setShowRunInfo(false);
+    }
+
+    if (value === 'Wide') {
+      setPendingWide(true);
+      return;
+    } else if (value === 'No-ball') {
+      setPendingNoBall(true);
+      return;
+    } else if (value === 'Leg By') {
+      setPendingLegBy(true);
+      return;
+    } else if (value === 'OUT' || value === 'lbw') {
+      setPendingOut(true);
+      return;
+    }
+  } else {
+    setShowRunInfo(false);
+    setSelectedRun(value);
+    
+    if (value === 6) {
+      playAnimation('six');
+      setTimeout(() => {
+        setShowWagonWheel(true);
+      }, 3000);
+      return;
+    } else if (value === 4) {
+      playAnimation('four');
+      setTimeout(() => {
+        setShowWagonWheel(true);
+      }, 3000);
+      return;
+    } else {
+      setShowWagonWheel(true);
+    }
+  }
+
+  saveMatchData();
+};
 
   const handleOutTypeSelect = (type) => {
     setOutType(type);
