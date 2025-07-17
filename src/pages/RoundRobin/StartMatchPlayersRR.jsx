@@ -46,11 +46,59 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
   const selectedPlayersFromProps = location.state?.selectedPlayers || { left: [], right: [] };
   const tournamentName = location.state?.tournamentName;
 
+  // Wagon Wheel State
+  const [showWagonWheel, setShowWagonWheel] = useState(false);
+  const [showShotTypeModal, setShowShotTypeModal] = useState(false);
+  const [showTrajectoryModal, setShowTrajectoryModal] = useState(false);
+  const [selectedDirection, setSelectedDirection] = useState(null);
+  const [selectedShotType, setSelectedShotType] = useState(null);
+  const [selectedTrajectory, setSelectedTrajectory] = useState(null);
+  const [ballAnimation, setBallAnimation] = useState(false);
+  const [animationDirection, setAnimationDirection] = useState(null);
+  const [selectedRun, setSelectedRun] = useState(null);
+
+  // Shot directions with angles and positions
+  const SHOT_DIRECTIONS = [
+    { label: "Straight", angle: 0, position: "long-on/long-off", color: "#2196F3" },
+    { label: "Cover", angle: 45, position: "extra cover", color: "#2196F3" },
+    { label: "Mid-Wicket", angle: 135, position: "mid-wicket", color: "#2196F3" },
+    { label: "Square Leg", angle: 180, position: "square leg", color: "#2196F3" },
+    { label: "Fine Leg", angle: 225, position: "fine leg", color: "#2196F3" },
+    { label: "Third Man", angle: 315, position: "third man", color: "#2196F3" },
+    { label: "Point", angle: 270, position: "point", color: "#2196F3" },
+    { label: "Long Off", angle: 90, position: "long-off", color: "#2196F3" }
+  ];
+
+  // Detailed shot types
+  const SHOT_TYPES = [
+    { name: "Cover Drive", class: "drive", color: "#009688" },
+    { name: "Pull Shot", class: "pull", color: "#009688" },
+    { name: "Hook Shot", class: "hook", color: "#009688" },
+    { name: "Lofted Shot", class: "loft", color: "#009688" },
+    { name: "Straight Drive", class: "drive", color: "#009688" },
+    { name: "Square Cut", class: "cut", color: "#009688" },
+    { name: "Sweep Shot", class: "sweep", color: "#009688" },
+    { name: "Flick Shot", class: "flick", color: "#009688" },
+    { name: "Defensive", class: "defense", color: "#009688" },
+    { name: "Reverse Sweep", class: "sweep", color: "#009688" }
+  ];
+
+  // Ball trajectories
+  const TRAJECTORIES = [
+    { name: "Flat", color: "#FF9800" },
+    { name: "Lofted", color: "#FF9800" },
+    { name: "Ground", color: "#FF9800" },
+    { name: "Skier", color: "#FF9800" },
+    { name: "Bouncer", color: "#FF9800" },
+    { name: "Full toss", color: "#FF9800" }
+  ];
+
+  // Original match state
   const [playedOvers, setPlayedOvers] = useState(0);
   const [playedWickets, setPlayedWickets] = useState(0);
   const [currentView, setCurrentView] = useState('toss');
   const [showThirdButtonOnly, setShowThirdButtonOnly] = useState(false);
-  const [viewHistory, setViewHistory] = useState(['toss']); // New state to track view history
+  const [viewHistory, setViewHistory] = useState(['toss']);
   const [topPlays, setTopPlays] = useState([]);
   const [currentOverBalls, setCurrentOverBalls] = useState([]);
   const [pastOvers, setPastOvers] = useState([]);
@@ -139,6 +187,140 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
     setWicketOvers([]);
   }, [isChasing, selectedPlayersFromProps, teamA, teamB, navigate, tournamentId, matchId, phase]);
 
+  // Wagon Wheel Functions
+  const handleDirectionSelect = (direction) => {
+    setSelectedDirection(direction);
+    setAnimationDirection(direction);
+    setBallAnimation(true);
+    
+    setTimeout(() => {
+      setBallAnimation(false);
+      setShowWagonWheel(false);
+      setShowShotTypeModal(true);
+    }, 800);
+  };
+
+  const handleShotTypeSelect = (shotType) => {
+    setSelectedShotType(shotType);
+    setShowShotTypeModal(false);
+    setShowTrajectoryModal(true);
+  };
+
+  const handleTrajectorySelect = (trajectory) => {
+    setSelectedTrajectory(trajectory);
+    setShowTrajectoryModal(false);
+    
+    // Process the ball with all selected data
+    processBallWithWagonWheelData();
+  };
+
+  const processBallWithWagonWheelData = () => {
+    const isWicket = selectedRun === 'W';
+    
+    const ballData = {
+      inning: isChasing ? 2 : 1,
+      over: overNumber - 1,
+      ball: validBalls + 1,
+      runs: isWicket ? 0 : selectedRun,
+      shotDirection: selectedDirection?.label || '',
+      shotPosition: selectedDirection?.position || '',
+      shotType: selectedShotType?.name || '',
+      ballTrajectory: selectedTrajectory?.name || '',
+      wicketType: isWicket ? 'catch' : '',
+      timestamp: new Date().toISOString()
+    };
+
+    // Update score
+    if (!isWicket) {
+      setPlayerScore(prev => prev + selectedRun);
+      setTopPlays(prev => [...prev, selectedRun]);
+      setCurrentOverBalls(prev => [...prev, selectedRun]);
+      
+      if (striker) {
+        updateBatsmanScore(striker.index, selectedRun);
+        updateBatsmanStats(striker.index, selectedRun, selectedRun === 0);
+        updateBatsmanBalls(striker.index);
+      }
+    }
+
+    // Update bowler stats
+    if (selectedBowler) {
+      updateBowlerStats(selectedBowler.index, isWicket, true, isWicket ? 0 : selectedRun);
+    }
+
+    // Handle odd runs (striker change)
+    if (!isWicket && selectedRun % 2 !== 0) {
+      const temp = striker;
+      setStriker(nonStriker);
+      setNonStriker(temp);
+    }
+
+    // Reset wagon wheel selections
+    setSelectedDirection(null);
+    setSelectedShotType(null);
+    setSelectedTrajectory(null);
+    setSelectedRun(null);
+
+    // Update valid balls count
+    setValidBalls(prev => prev + 1);
+
+    // Save match data
+    saveMatchData();
+  };
+
+  const renderWagonWheel = () => {
+    return (
+      <div className="relative w-[350px] h-[350px] mx-auto my-4">
+        {/* Cricket field background */}
+        <div className="absolute inset-0 bg-green-800 rounded-full border-4 border-green-600 flex items-center justify-center overflow-hidden">
+          {/* Pitch */}
+          <div className="absolute w-12 h-4 bg-brown-800 transform rotate-90"></div>
+          
+          {/* Field markings */}
+          <div className="absolute w-full h-full rounded-full border-2 border-green-500 border-opacity-50"></div>
+          <div className="absolute w-3/4 h-3/4 rounded-full border-2 border-green-500 border-opacity-50"></div>
+          <div className="absolute w-1/2 h-1/2 rounded-full border-2 border-green-500 border-opacity-50"></div>
+          
+          {/* Current ball animation */}
+          {ballAnimation && (
+            <div 
+              className={`absolute z-20 w-6 h-6 bg-white rounded-full shadow-xl animate-ball-flight`}
+              style={{
+                '--direction-angle': `${animationDirection.angle}deg`,
+                '--distance': selectedRun === 6 ? '150px' : 
+                              selectedRun === 4 ? '120px' : 
+                              '80px'
+              }}
+            >
+              <div className="absolute -top-5 -left-5 w-10 text-center text-xs font-bold text-white bg-black bg-opacity-70 rounded-full p-1">
+                {selectedRun}
+              </div>
+            </div>
+          )}
+          
+          {/* Direction buttons */}
+          {SHOT_DIRECTIONS.map((dir) => (
+            <button
+              key={dir.label}
+              onClick={() => handleDirectionSelect(dir)}
+              className={`absolute transform -translate-x-1/2 -translate-y-1/2 
+                px-3 py-2 rounded-md text-white font-bold text-xs
+                transition-all duration-200 shadow hover:shadow-md
+                flex items-center justify-center min-w-[80px] hover:scale-105 z-10`}
+              style={{
+                top: `${50 - Math.sin(dir.angle * Math.PI / 180) * 40}%`,
+                left: `${50 + Math.cos(dir.angle * Math.PI / 180) * 40}%`,
+                backgroundColor: dir.color
+              }}
+            >
+              {dir.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   const displayModal = (title, message) => {
     setModalContent({ title, message });
     setShowModal(true);
@@ -147,7 +329,7 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
   const handleButtonClick = (view) => {
     setCurrentView(view);
     setShowThirdButtonOnly(view === 'start');
-    setViewHistory(prev => [...prev, view]); // Push new view to history
+    setViewHistory(prev => [...prev, view]);
   };
 
   const goBack = () => {
@@ -155,7 +337,6 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
       return;
     }
 
-    // If in a modal or dropdown, close it first
     if (showBowlerDropdown) {
       setShowBowlerDropdown(false);
       return;
@@ -165,22 +346,19 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
       return;
     }
 
-    // If there's a previous view in history, go back to it
     if (viewHistory.length > 1) {
       const newHistory = [...viewHistory];
-      newHistory.pop(); // Remove current view
+      newHistory.pop();
       const previousView = newHistory[newHistory.length - 1];
       setViewHistory(newHistory);
       setCurrentView(previousView);
       setShowThirdButtonOnly(previousView === 'start');
       
-      // If going back to toss, reset bowler selection
       if (previousView === 'toss') {
         setBowlerVisible(false);
         setSelectedBowler(null);
       }
     } else {
-      // If no previous internal state, navigate to previous page
       navigate(-1);
     }
   };
@@ -459,9 +637,30 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
         if (selectedBowler) updateBowlerStats(selectedBowler.index, true, true, runsToAdd);
         setShowBatsmanDropdown(true);
         saveMatchData();
-      }, 5000);
+      }, 3000);
       setPendingOut(false);
       return;
+    }
+
+    // Handle regular runs with animations
+    if (!isLabel) {
+      setSelectedRun(value);
+      
+      if (value === 6) {
+        playAnimation('six');
+        setTimeout(() => {
+          setShowWagonWheel(true);
+        }, 3000);
+        return;
+      } else if (value === 4) {
+        playAnimation('four');
+        setTimeout(() => {
+          setShowWagonWheel(true);
+        }, 3000);
+        return;
+      } else {
+        setShowWagonWheel(true);
+      }
     }
 
     const extraBalls = ['No-ball', 'Wide', 'No ball'];
@@ -476,34 +675,16 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
 
       if (value === 'Six') {
         playAnimation('six');
-        runsToAdd = 6;
-        setPlayerScore(prev => prev + runsToAdd);
-        setTopPlays(prev => [...prev, 6]);
-        setCurrentOverBalls(prev => [...prev, 6]);
-        if (striker) {
-          updateBatsmanScore(striker.index, 6);
-          updateBatsmanStats(striker.index, 6);
-          updateBatsmanBalls(striker.index);
-        }
-        setValidBalls(prev => prev + 1);
-        isValidBall = true;
-        if (selectedBowler) updateBowlerStats(selectedBowler.index, false, true, runsToAdd);
-        saveMatchData();
+        setSelectedRun(6);
+        setTimeout(() => {
+          setShowWagonWheel(true);
+        }, 3000);
       } else if (value === 'Four') {
         playAnimation('four');
-        runsToAdd = 4;
-        setPlayerScore(prev => prev + runsToAdd);
-        setTopPlays(prev => [...prev, 4]);
-        setCurrentOverBalls(prev => [...prev, 4]);
-        if (striker) {
-          updateBatsmanScore(striker.index, 4);
-          updateBatsmanStats(striker.index, 4);
-          updateBatsmanBalls(striker.index);
-        }
-        setValidBalls(prev => prev + 1);
-        isValidBall = true;
-        if (selectedBowler) updateBowlerStats(selectedBowler.index, false, true, runsToAdd);
-        saveMatchData();
+        setSelectedRun(4);
+        setTimeout(() => {
+          setShowWagonWheel(true);
+        }, 3000);
       } else if (value === 'Wide') {
         setPendingWide(true);
         return;
@@ -525,31 +706,6 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
         }
         saveMatchData();
       }
-    } else {
-      setShowRunInfo(false);
-      runsToAdd = value;
-      setPlayerScore(prev => prev + runsToAdd);
-      setTopPlays(prev => [...prev, value]);
-      setCurrentOverBalls(prev => [...prev, value]);
-      setValidBalls(prev => prev + 1);
-      isValidBall = true;
-      if (striker) {
-        updateBatsmanScore(striker.index, value);
-        updateBatsmanStats(striker.index, value, value === 0);
-        updateBatsmanBalls(striker.index);
-      }
-      if (selectedBowler) updateBowlerStats(selectedBowler.index, false, true, runsToAdd);
-      if (value % 2 !== 0) {
-        const temp = striker;
-        setStriker(nonStriker);
-        setNonStriker(temp);
-      }
-      if (value === 6) {
-        playAnimation('six');
-      } else if (value === 4) {
-        playAnimation('four');
-      }
-      saveMatchData();
     }
   };
 
@@ -690,7 +846,7 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
         setTargetScore(playerScore + 1);
         setIsChasing(true);
         resetInnings();
-        setViewHistory(['toss']); // Reset view history for new innings
+        setViewHistory(['toss']);
         saveMatchData();
         displayModal('Innings Break', `You need to chase ${playerScore + 1} runs`);
       } else {
@@ -751,7 +907,7 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
     setBowlerVisible(false);
     setCurrentView('toss');
     setShowThirdButtonOnly(false);
-    setViewHistory(['toss']); // Reset view history
+    setViewHistory(['toss']);
     setBatsmenScores({});
     setBatsmenBalls({});
     setBatsmenStats({});
@@ -1128,6 +1284,109 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
           </div>
         )}
 
+        {/* Wagon Wheel Modal */}
+        {showWagonWheel && (
+          <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4">
+            <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-6 rounded-3xl w-full max-w-2xl shadow-2xl border-4 border-gray-700">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold text-white drop-shadow-lg">
+                  {selectedRun !== null && `${selectedRun === 'W' ? 'Wicket' : `${selectedRun} Run${selectedRun !== 1 ? 's' : ''}`} - Select Shot Direction`}
+                </h3>
+                <button 
+                  onClick={() => setShowWagonWheel(false)}
+                  className="text-white hover:text-gray-300 text-2xl transition-transform hover:scale-110"
+                >
+                  ×
+                </button>
+              </div>
+              
+              {renderWagonWheel()}
+              
+              <div className="text-center text-gray-200 italic text-sm drop-shadow-md">
+                Click on the fielding position where the ball went
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Shot Type Modal */}
+        {showShotTypeModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4">
+            <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-6 rounded-3xl w-full max-w-md shadow-2xl border-4 border-gray-700">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold text-white drop-shadow-lg">
+                  {selectedRun === 'W' ? 'Wicket' : `${selectedRun} Run${selectedRun !== 1 ? 's' : ''}`} - {selectedDirection.label} - Select Shot Type
+                </h3>
+                <button 
+                  onClick={() => setShowShotTypeModal(false)}
+                  className="text-white hover:text-gray-300 text-2xl transition-transform hover:scale-110"
+                >
+                  ×
+                </button>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-3 mb-6">
+                {SHOT_TYPES.filter(shot => {
+                  // Filter shots based on direction
+                  if (selectedDirection.label.includes("Straight")) {
+                    return ["drive", "loft", "defense"].includes(shot.class);
+                  }
+                  if (selectedDirection.label.includes("Cover")) {
+                    return ["drive", "cut"].includes(shot.class);
+                  }
+                  if (selectedDirection.label.includes("Square")) {
+                    return ["cut", "pull"].includes(shot.class);
+                  }
+                  return true;
+                }).map((type) => (
+                  <button
+                    key={type.name}
+                    onClick={() => handleShotTypeSelect(type)}
+                    className="px-3 py-2 text-white rounded-lg font-medium text-sm 
+                      transition-all duration-200 shadow hover:shadow-lg hover:scale-105"
+                    style={{ backgroundColor: type.color }}
+                  >
+                    {type.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Trajectory Modal */}
+        {showTrajectoryModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4">
+            <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-6 rounded-3xl w-full max-w-md shadow-2xl border-4 border-gray-700">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold text-white drop-shadow-lg">
+                  {selectedRun === 'W' ? 'Wicket' : `${selectedRun} Run${selectedRun !== 1 ? 's' : ''}`} - {selectedDirection.label} - {selectedShotType.name} - Select Ball Trajectory
+                </h3>
+                <button 
+                  onClick={() => setShowTrajectoryModal(false)}
+                  className="text-white hover:text-gray-300 text-2xl transition-transform hover:scale-110"
+                >
+                  ×
+                </button>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-3 mb-6">
+                {TRAJECTORIES.map((trajectory) => (
+                  <button
+                    key={trajectory.name}
+                    onClick={() => handleTrajectorySelect(trajectory)}
+                    className="px-3 py-2 text-white rounded-lg font-medium text-sm 
+                      transition-all duration-200 shadow hover:shadow-lg hover:scale-105"
+                    style={{ backgroundColor: trajectory.color }}
+                  >
+                    {trajectory.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         <button
           onClick={goBack}
           className="absolute left-4 top-24 md:left-10 md:top-32 z-10 w-10 h-10 flex items-center justify-center"
@@ -1417,6 +1676,7 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
                     {showPastOvers ? 'Hide Overs' : 'Show Overs'}
                   </button>
                 </div>
+
                 {showPastOvers && (
                   <div className="mt-2 md:mt-4 text-white w-full">
                     <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-4 text-center">Overs History</h3>
@@ -1601,6 +1861,28 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
           </div>
         )}
       </section>
+
+      {/* CSS for animations */}
+      <style jsx global>{`
+        @keyframes ballFlight {
+          0% {
+            transform: translate(0, 0);
+            opacity: 1;
+          }
+          100% {
+            transform: 
+              translate(
+                calc(cos(var(--direction-angle) * 1deg) * var(--distance)),
+                calc(sin(var(--direction-angle) * 1deg) * var(--distance) * -1)
+              );
+            opacity: 0;
+          }
+        }
+        
+        .animate-ball-flight {
+          animation: ballFlight 0.8s ease-out forwards;
+        }
+      `}</style>
     </ErrorBoundary>
   );
 }

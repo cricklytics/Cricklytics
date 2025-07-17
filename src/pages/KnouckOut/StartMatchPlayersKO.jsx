@@ -45,11 +45,54 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
   const currentPhase = location.state?.currentPhase;
   const matchId = location.state?.matchId;
 
-  // Log for debugging
-  console.log('Tournament ID in StartMatchPlayers:', tournamentId);
-  console.log('Current Phase in StartMatchPlayers:', currentPhase);
-  console.log('Match ID in StartMatchPlayers:', matchId);
+  // Wagon Wheel State
+  const [showWagonWheel, setShowWagonWheel] = useState(false);
+  const [showShotTypeModal, setShowShotTypeModal] = useState(false);
+  const [showTrajectoryModal, setShowTrajectoryModal] = useState(false);
+  const [selectedDirection, setSelectedDirection] = useState(null);
+  const [selectedShotType, setSelectedShotType] = useState(null);
+  const [selectedTrajectory, setSelectedTrajectory] = useState(null);
+  const [ballAnimation, setBallAnimation] = useState(false);
+  const [animationDirection, setAnimationDirection] = useState(null);
+  const [selectedRun, setSelectedRun] = useState(null);
 
+  // Shot directions with angles and positions
+  const SHOT_DIRECTIONS = [
+    { label: "Straight", angle: 0, position: "long-on/long-off", color: "#2196F3" },
+    { label: "Cover", angle: 45, position: "extra cover", color: "#2196F3" },
+    { label: "Mid-Wicket", angle: 135, position: "mid-wicket", color: "#2196F3" },
+    { label: "Square Leg", angle: 180, position: "square leg", color: "#2196F3" },
+    { label: "Fine Leg", angle: 225, position: "fine leg", color: "#2196F3" },
+    { label: "Third Man", angle: 315, position: "third man", color: "#2196F3" },
+    { label: "Point", angle: 270, position: "point", color: "#2196F3" },
+    { label: "Long Off", angle: 90, position: "long-off", color: "#2196F3" }
+  ];
+
+  // Detailed shot types
+  const SHOT_TYPES = [
+    { name: "Cover Drive", class: "drive", color: "#009688" },
+    { name: "Pull Shot", class: "pull", color: "#009688" },
+    { name: "Hook Shot", class: "hook", color: "#009688" },
+    { name: "Lofted Shot", class: "loft", color: "#009688" },
+    { name: "Straight Drive", class: "drive", color: "#009688" },
+    { name: "Square Cut", class: "cut", color: "#009688" },
+    { name: "Sweep Shot", class: "sweep", color: "#009688" },
+    { name: "Flick Shot", class: "flick", color: "#009688" },
+    { name: "Defensive", class: "defense", color: "#009688" },
+    { name: "Reverse Sweep", class: "sweep", color: "#009688" }
+  ];
+
+  // Ball trajectories
+  const TRAJECTORIES = [
+    { name: "Flat", color: "#FF9800" },
+    { name: "Lofted", color: "#FF9800" },
+    { name: "Ground", color: "#FF9800" },
+    { name: "Skier", color: "#FF9800" },
+    { name: "Bouncer", color: "#FF9800" },
+    { name: "Full toss", color: "#FF9800" }
+  ];
+
+  // Original match state
   const [currentView, setCurrentView] = useState('toss');
   const [showThirdButtonOnly, setShowThirdButtonOnly] = useState(false);
   const [topPlays, setTopPlays] = useState([]);
@@ -91,7 +134,7 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
   const [showAnimation, setShowAnimation] = useState(false);
   const [animationType, setAnimationType] = useState(null);
   const [firstInningsData, setFirstInningsData] = useState(null);
-  const [stateHistory, setStateHistory] = useState([]); // New state to track navigation history
+  const [stateHistory, setStateHistory] = useState([]);
 
   // Dynamic player data
   const [battingTeamPlayers, setBattingTeamPlayers] = useState([]);
@@ -137,8 +180,142 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
     setBatsmenStats({});
     setBowlerStats({});
     setWicketOvers([]);
-    setStateHistory([]); // Reset history on team change
+    setStateHistory([]);
   }, [isChasing, selectedPlayersFromProps, teamA, teamB, navigate]);
+
+  // Wagon Wheel Functions
+  const handleDirectionSelect = (direction) => {
+    setSelectedDirection(direction);
+    setAnimationDirection(direction);
+    setBallAnimation(true);
+    
+    setTimeout(() => {
+      setBallAnimation(false);
+      setShowWagonWheel(false);
+      setShowShotTypeModal(true);
+    }, 800);
+  };
+
+  const handleShotTypeSelect = (shotType) => {
+    setSelectedShotType(shotType);
+    setShowShotTypeModal(false);
+    setShowTrajectoryModal(true);
+  };
+
+  const handleTrajectorySelect = (trajectory) => {
+    setSelectedTrajectory(trajectory);
+    setShowTrajectoryModal(false);
+    processBallWithWagonWheelData();
+  };
+
+  const processBallWithWagonWheelData = () => {
+    const isWicket = selectedRun === 'W';
+    
+    const ballData = {
+      inning: isChasing ? 2 : 1,
+      over: overNumber - 1,
+      ball: validBalls + 1,
+      runs: isWicket ? 0 : selectedRun,
+      shotDirection: selectedDirection?.label || '',
+      shotPosition: selectedDirection?.position || '',
+      shotType: selectedShotType?.name || '',
+      ballTrajectory: selectedTrajectory?.name || '',
+      wicketType: isWicket ? 'catch' : '',
+      timestamp: new Date().toISOString()
+    };
+
+    // Update score
+    if (!isWicket) {
+      setPlayerScore(prev => prev + selectedRun);
+      setTopPlays(prev => [...prev, selectedRun]);
+      const newBalls = [...currentOverBalls, selectedRun];
+      setCurrentOverBalls(newBalls);
+      setCurrentOverScores(calculateCurrentOverScores(newBalls));
+      
+      if (striker) {
+        updateBatsmanScore(striker.index, selectedRun);
+        updateBatsmanStats(striker.index, selectedRun);
+        updateBatsmanBalls(striker.index);
+      }
+    }
+
+    // Update bowler stats
+    if (selectedBowler) {
+      updateBowlerStats(selectedBowler.index, isWicket, true, isWicket ? 0 : selectedRun);
+    }
+
+    // Handle odd runs (striker change)
+    if (!isWicket && selectedRun % 2 !== 0) {
+      const temp = striker;
+      setStriker(nonStriker);
+      setNonStriker(temp);
+    }
+
+    // Reset wagon wheel selections
+    setSelectedDirection(null);
+    setSelectedShotType(null);
+    setSelectedTrajectory(null);
+    setSelectedRun(null);
+
+    // Update valid balls count
+    setValidBalls(prev => prev + 1);
+
+    // Save match data
+    saveMatchData();
+  };
+
+  const renderWagonWheel = () => {
+    return (
+      <div className="relative w-[350px] h-[350px] mx-auto my-4">
+        {/* Cricket field background */}
+        <div className="absolute inset-0 bg-green-800 rounded-full border-4 border-green-600 flex items-center justify-center overflow-hidden">
+          {/* Pitch */}
+          <div className="absolute w-12 h-4 bg-brown-800 transform rotate-90"></div>
+          
+          {/* Field markings */}
+          <div className="absolute w-full h-full rounded-full border-2 border-green-500 border-opacity-50"></div>
+          <div className="absolute w-3/4 h-3/4 rounded-full border-2 border-green-500 border-opacity-50"></div>
+          <div className="absolute w-1/2 h-1/2 rounded-full border-2 border-green-500 border-opacity-50"></div>
+          
+          {/* Current ball animation */}
+          {ballAnimation && (
+            <div 
+              className={`absolute z-20 w-6 h-6 bg-white rounded-full shadow-xl animate-ball-flight`}
+              style={{
+                '--direction-angle': `${animationDirection.angle}deg`,
+                '--distance': selectedRun === 6 ? '150px' : 
+                              selectedRun === 4 ? '120px' : 
+                              '80px'
+              }}
+            >
+              <div className="absolute -top-5 -left-5 w-10 text-center text-xs font-bold text-white bg-black bg-opacity-70 rounded-full p-1">
+                {selectedRun}
+              </div>
+            </div>
+          )}
+          
+          {/* Direction buttons */}
+          {SHOT_DIRECTIONS.map((dir) => (
+            <button
+              key={dir.label}
+              onClick={() => handleDirectionSelect(dir)}
+              className={`absolute transform -translate-x-1/2 -translate-y-1/2 
+                px-3 py-2 rounded-md text-white font-bold text-xs
+                transition-all duration-200 shadow hover:shadow-md
+                flex items-center justify-center min-w-[80px] hover:scale-105 z-10`}
+              style={{
+                top: `${50 - Math.sin(dir.angle * Math.PI / 180) * 40}%`,
+                left: `${50 + Math.cos(dir.angle * Math.PI / 180) * 40}%`,
+                backgroundColor: dir.color
+              }}
+            >
+              {dir.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  };
 
   // Update state history when transitioning to bowler selection or starting the game
   useEffect(() => {
@@ -170,9 +347,8 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
       setCurrentView(previousState.view);
       setBowlerVisible(previousState.bowlerVisible);
       setShowThirdButtonOnly(previousState.showThirdButtonOnly);
-      setStateHistory(prev => prev.slice(0, -1)); // Remove the last state
+      setStateHistory(prev => prev.slice(0, -1));
     } else {
-      // If no internal states to go back to, navigate to the previous route
       navigate(-1, { state: { ...location.state, matchId } });
     }
   };
@@ -506,34 +682,24 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
         return;
       }
     } else {
-      setShowRunInfo(false);
-      runsToAdd = value;
-      setPlayerScore(prev => prev + runsToAdd);
-      setTopPlays(prev => [...prev, value]);
-      const newBalls = [...currentOverBalls, value];
-      setCurrentOverBalls(newBalls);
-      setCurrentOverScores(calculateCurrentOverScores(newBalls));
-      setValidBalls(prev => prev + 1);
-      isValidBall = true;
-      if (striker) {
-        updateBatsmanScore(striker.index, value);
-        updateBatsmanStats(striker.index, value);
-        updateBatsmanBalls(striker.index);
-      }
-      if (selectedBowler) updateBowlerStats(selectedBowler.index, false, true, runsToAdd);
-      if (value % 2 !== 0) {
-        const temp = striker;
-        setStriker(nonStriker);
-        setNonStriker(temp);
-      }
+      setSelectedRun(value);
+      
       if (value === 6) {
         playAnimation('six');
+        setTimeout(() => {
+          setShowWagonWheel(true);
+        }, 3000);
+        return;
       } else if (value === 4) {
         playAnimation('four');
+        setTimeout(() => {
+          setShowWagonWheel(true);
+        }, 3000);
+        return;
+      } else {
+        setShowWagonWheel(true);
       }
     }
-
-    saveMatchData();
   };
 
   useEffect(() => {
@@ -774,7 +940,7 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
     setActiveLabel(null);
     setActiveNumber(null);
     setShowRunInfo(false);
-    setStateHistory([]); // Reset history on innings reset
+    setStateHistory([]);
     saveMatchData();
   };
 
@@ -1215,6 +1381,109 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
           </div>
         )}
 
+        {/* Wagon Wheel Modal */}
+        {showWagonWheel && (
+          <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4">
+            <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-6 rounded-3xl w-full max-w-2xl shadow-2xl border-4 border-gray-700">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold text-white drop-shadow-lg">
+                  {selectedRun !== null && `${selectedRun === 'W' ? 'Wicket' : `${selectedRun} Run${selectedRun !== 1 ? 's' : ''}`} - Select Shot Direction`}
+                </h3>
+                <button 
+                  onClick={() => setShowWagonWheel(false)}
+                  className="text-white hover:text-gray-300 text-2xl transition-transform hover:scale-110"
+                >
+                  ×
+                </button>
+              </div>
+              
+              {renderWagonWheel()}
+              
+              <div className="text-center text-gray-200 italic text-sm drop-shadow-md">
+                Click on the fielding position where the ball went
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Shot Type Modal */}
+        {showShotTypeModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4">
+            <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-6 rounded-3xl w-full max-w-md shadow-2xl border-4 border-gray-700">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold text-white drop-shadow-lg">
+                  {selectedRun === 'W' ? 'Wicket' : `${selectedRun} Run${selectedRun !== 1 ? 's' : ''}`} - {selectedDirection.label} - Select Shot Type
+                </h3>
+                <button 
+                  onClick={() => setShowShotTypeModal(false)}
+                  className="text-white hover:text-gray-300 text-2xl transition-transform hover:scale-110"
+                >
+                  ×
+                </button>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-3 mb-6">
+                {SHOT_TYPES.filter(shot => {
+                  // Filter shots based on direction
+                  if (selectedDirection.label.includes("Straight")) {
+                    return ["drive", "loft", "defense"].includes(shot.class);
+                  }
+                  if (selectedDirection.label.includes("Cover")) {
+                    return ["drive", "cut"].includes(shot.class);
+                  }
+                  if (selectedDirection.label.includes("Square")) {
+                    return ["cut", "pull"].includes(shot.class);
+                  }
+                  return true;
+                }).map((type) => (
+                  <button
+                    key={type.name}
+                    onClick={() => handleShotTypeSelect(type)}
+                    className="px-3 py-2 text-white rounded-lg font-medium text-sm 
+                      transition-all duration-200 shadow hover:shadow-lg hover:scale-105"
+                    style={{ backgroundColor: type.color }}
+                  >
+                    {type.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Trajectory Modal */}
+        {showTrajectoryModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4">
+            <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-6 rounded-3xl w-full max-w-md shadow-2xl border-4 border-gray-700">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xl font-bold text-white drop-shadow-lg">
+                  {selectedRun === 'W' ? 'Wicket' : `${selectedRun} Run${selectedRun !== 1 ? 's' : ''}`} - {selectedDirection.label} - {selectedShotType.name} - Select Ball Trajectory
+                </h3>
+                <button 
+                  onClick={() => setShowTrajectoryModal(false)}
+                  className="text-white hover:text-gray-300 text-2xl transition-transform hover:scale-110"
+                >
+                  ×
+                </button>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-3 mb-6">
+                {TRAJECTORIES.map((trajectory) => (
+                  <button
+                    key={trajectory.name}
+                    onClick={() => handleTrajectorySelect(trajectory)}
+                    className="px-3 py-2 text-white rounded-lg font-medium text-sm 
+                      transition-all duration-200 shadow hover:shadow-lg hover:scale-105"
+                    style={{ backgroundColor: trajectory.color }}
+                  >
+                    {trajectory.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         <button
           onClick={goBack}
           className="absolute left-4 top-24 md:left-10 md:top-32 z-10 w-10 h-10 flex items-center justify-center"
@@ -1392,9 +1661,7 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
                       onClick={() => handleBowlerSelect(player)}
                       className={`cursor-pointer flex flex-col items-center text-white text-center ${selectedBowler?.index === player.index ? 'opacity-50' : ''}`}
                     >
-                      <div
-                        className={`w-20 h-20 md:w-15 md:h-15 lg:w-15 lg:h-15 rounded-full border-[5px] border-[#12BFA5] overflow-hidden flex items-center justify-center aspect-square`}
-                      >
+                      <div className={`w-20 h-20 md:w-15 md:h-15 lg:w-15 lg:h-15 rounded-full border-[5px] border-[#12BFA5] overflow-hidden flex items-center justify-center aspect-square`}>
                         <img
                           src={player.photoUrl}
                           alt="Player"
@@ -1420,7 +1687,7 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
             )}
           </>
         )}
-
+        
         {showThirdButtonOnly && (
           <div id="start" className="relative flex flex-col w-full h-full items-center px-4 mt-20 md:mt-10">
             <h2 className="gap-5 text-4xl md:text-3xl lg:text-5xl text-white font-bold text-center">Score Board</h2>
