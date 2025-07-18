@@ -9,6 +9,7 @@ import { doc, getDoc, updateDoc, increment, setDoc, Timestamp } from 'firebase/f
 import sixAnimation from '../../assets/Animation/six.json';
 import fourAnimation from '../../assets/Animation/four.json';
 import outAnimation from '../../assets/Animation/out.json';
+import MainWheel from "../../components/yogesh/wagonwheel/mainwheel"
 
 // Error Boundary Component
 class ErrorBoundary extends Component {
@@ -46,54 +47,6 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
   const selectedPlayersFromProps = location.state?.selectedPlayers || { left: [], right: [] };
   const tournamentName = location.state?.tournamentName;
 
-  // Wagon Wheel State
-  const [showWagonWheel, setShowWagonWheel] = useState(false);
-  const [showShotTypeModal, setShowShotTypeModal] = useState(false);
-  const [showTrajectoryModal, setShowTrajectoryModal] = useState(false);
-  const [selectedDirection, setSelectedDirection] = useState(null);
-  const [selectedShotType, setSelectedShotType] = useState(null);
-  const [selectedTrajectory, setSelectedTrajectory] = useState(null);
-  const [ballAnimation, setBallAnimation] = useState(false);
-  const [animationDirection, setAnimationDirection] = useState(null);
-  const [selectedRun, setSelectedRun] = useState(null);
-
-  // Shot directions with angles and positions
-  const SHOT_DIRECTIONS = [
-    { label: "Straight", angle: 0, position: "long-on/long-off", color: "#2196F3" },
-    { label: "Cover", angle: 45, position: "extra cover", color: "#2196F3" },
-    { label: "Mid-Wicket", angle: 135, position: "mid-wicket", color: "#2196F3" },
-    { label: "Square Leg", angle: 180, position: "square leg", color: "#2196F3" },
-    { label: "Fine Leg", angle: 225, position: "fine leg", color: "#2196F3" },
-    { label: "Third Man", angle: 315, position: "third man", color: "#2196F3" },
-    { label: "Point", angle: 270, position: "point", color: "#2196F3" },
-    { label: "Long Off", angle: 90, position: "long-off", color: "#2196F3" }
-  ];
-
-  // Detailed shot types
-  const SHOT_TYPES = [
-    { name: "Cover Drive", class: "drive", color: "#009688" },
-    { name: "Pull Shot", class: "pull", color: "#009688" },
-    { name: "Hook Shot", class: "hook", color: "#009688" },
-    { name: "Lofted Shot", class: "loft", color: "#009688" },
-    { name: "Straight Drive", class: "drive", color: "#009688" },
-    { name: "Square Cut", class: "cut", color: "#009688" },
-    { name: "Sweep Shot", class: "sweep", color: "#009688" },
-    { name: "Flick Shot", class: "flick", color: "#009688" },
-    { name: "Defensive", class: "defense", color: "#009688" },
-    { name: "Reverse Sweep", class: "sweep", color: "#009688" }
-  ];
-
-  // Ball trajectories
-  const TRAJECTORIES = [
-    { name: "Flat", color: "#FF9800" },
-    { name: "Lofted", color: "#FF9800" },
-    { name: "Ground", color: "#FF9800" },
-    { name: "Skier", color: "#FF9800" },
-    { name: "Bouncer", color: "#FF9800" },
-    { name: "Full toss", color: "#FF9800" }
-  ];
-
-  // Original match state
   const [playedOvers, setPlayedOvers] = useState(0);
   const [playedWickets, setPlayedWickets] = useState(0);
   const [currentView, setCurrentView] = useState('toss');
@@ -136,10 +89,19 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
   const [animationType, setAnimationType] = useState(null);
   const [pendingLegBy, setPendingLegBy] = useState(false);
   const [firstInningsData, setFirstInningsData] = useState(null);
+  const [showMainWheel, setShowMainWheel] = useState(false);
+  const [selectedRun, setSelectedRun] = useState(null);
+  // New states for catch modal
+  const [showCatchModal, setShowCatchModal] = useState(false);
+  const [selectedCatchType, setSelectedCatchType] = useState('');
+  const [selectedFielder, setSelectedFielder] = useState(null);
+  const [catchRuns, setCatchRuns] = useState(null);
 
   // Dynamic player data
   const [battingTeamPlayers, setBattingTeamPlayers] = useState([]);
   const [bowlingTeamPlayers, setBowlingTeamPlayers] = useState([]);
+
+  const catchTypes = ['Diving', 'Running', 'Overhead', 'One-handed', 'Standard'];
 
   useEffect(() => {
     console.log('Selected Match:', { matchId, phase });
@@ -187,140 +149,6 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
     setWicketOvers([]);
   }, [isChasing, selectedPlayersFromProps, teamA, teamB, navigate, tournamentId, matchId, phase]);
 
-  // Wagon Wheel Functions
-  const handleDirectionSelect = (direction) => {
-    setSelectedDirection(direction);
-    setAnimationDirection(direction);
-    setBallAnimation(true);
-    
-    setTimeout(() => {
-      setBallAnimation(false);
-      setShowWagonWheel(false);
-      setShowShotTypeModal(true);
-    }, 800);
-  };
-
-  const handleShotTypeSelect = (shotType) => {
-    setSelectedShotType(shotType);
-    setShowShotTypeModal(false);
-    setShowTrajectoryModal(true);
-  };
-
-  const handleTrajectorySelect = (trajectory) => {
-    setSelectedTrajectory(trajectory);
-    setShowTrajectoryModal(false);
-    
-    // Process the ball with all selected data
-    processBallWithWagonWheelData();
-  };
-
-  const processBallWithWagonWheelData = () => {
-    const isWicket = selectedRun === 'W';
-    
-    const ballData = {
-      inning: isChasing ? 2 : 1,
-      over: overNumber - 1,
-      ball: validBalls + 1,
-      runs: isWicket ? 0 : selectedRun,
-      shotDirection: selectedDirection?.label || '',
-      shotPosition: selectedDirection?.position || '',
-      shotType: selectedShotType?.name || '',
-      ballTrajectory: selectedTrajectory?.name || '',
-      wicketType: isWicket ? 'catch' : '',
-      timestamp: new Date().toISOString()
-    };
-
-    // Update score
-    if (!isWicket) {
-      setPlayerScore(prev => prev + selectedRun);
-      setTopPlays(prev => [...prev, selectedRun]);
-      setCurrentOverBalls(prev => [...prev, selectedRun]);
-      
-      if (striker) {
-        updateBatsmanScore(striker.index, selectedRun);
-        updateBatsmanStats(striker.index, selectedRun, selectedRun === 0);
-        updateBatsmanBalls(striker.index);
-      }
-    }
-
-    // Update bowler stats
-    if (selectedBowler) {
-      updateBowlerStats(selectedBowler.index, isWicket, true, isWicket ? 0 : selectedRun);
-    }
-
-    // Handle odd runs (striker change)
-    if (!isWicket && selectedRun % 2 !== 0) {
-      const temp = striker;
-      setStriker(nonStriker);
-      setNonStriker(temp);
-    }
-
-    // Reset wagon wheel selections
-    setSelectedDirection(null);
-    setSelectedShotType(null);
-    setSelectedTrajectory(null);
-    setSelectedRun(null);
-
-    // Update valid balls count
-    setValidBalls(prev => prev + 1);
-
-    // Save match data
-    saveMatchData();
-  };
-
-  const renderWagonWheel = () => {
-    return (
-      <div className="relative w-[350px] h-[350px] mx-auto my-4">
-        {/* Cricket field background */}
-        <div className="absolute inset-0 bg-green-800 rounded-full border-4 border-green-600 flex items-center justify-center overflow-hidden">
-          {/* Pitch */}
-          <div className="absolute w-12 h-4 bg-brown-800 transform rotate-90"></div>
-          
-          {/* Field markings */}
-          <div className="absolute w-full h-full rounded-full border-2 border-green-500 border-opacity-50"></div>
-          <div className="absolute w-3/4 h-3/4 rounded-full border-2 border-green-500 border-opacity-50"></div>
-          <div className="absolute w-1/2 h-1/2 rounded-full border-2 border-green-500 border-opacity-50"></div>
-          
-          {/* Current ball animation */}
-          {ballAnimation && (
-            <div 
-              className={`absolute z-20 w-6 h-6 bg-white rounded-full shadow-xl animate-ball-flight`}
-              style={{
-                '--direction-angle': `${animationDirection.angle}deg`,
-                '--distance': selectedRun === 6 ? '150px' : 
-                              selectedRun === 4 ? '120px' : 
-                              '80px'
-              }}
-            >
-              <div className="absolute -top-5 -left-5 w-10 text-center text-xs font-bold text-white bg-black bg-opacity-70 rounded-full p-1">
-                {selectedRun}
-              </div>
-            </div>
-          )}
-          
-          {/* Direction buttons */}
-          {SHOT_DIRECTIONS.map((dir) => (
-            <button
-              key={dir.label}
-              onClick={() => handleDirectionSelect(dir)}
-              className={`absolute transform -translate-x-1/2 -translate-y-1/2 
-                px-3 py-2 rounded-md text-white font-bold text-xs
-                transition-all duration-200 shadow hover:shadow-md
-                flex items-center justify-center min-w-[80px] hover:scale-105 z-10`}
-              style={{
-                top: `${50 - Math.sin(dir.angle * Math.PI / 180) * 40}%`,
-                left: `${50 + Math.cos(dir.angle * Math.PI / 180) * 40}%`,
-                backgroundColor: dir.color
-              }}
-            >
-              {dir.label}
-            </button>
-          ))}
-        </div>
-      </div>
-    );
-  };
-
   const displayModal = (title, message) => {
     setModalContent({ title, message });
     setShowModal(true);
@@ -334,6 +162,14 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
 
   const goBack = () => {
     if (gameFinished && showModal) {
+      return;
+    }
+
+    if (showCatchModal) {
+      setShowCatchModal(false);
+      setSelectedCatchType('');
+      setSelectedFielder(null);
+      setCatchRuns(null);
       return;
     }
 
@@ -431,9 +267,14 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
     });
   };
 
-  const recordWicket = (batsmanIndex) => {
+  const recordWicket = (batsmanIndex, catchType = null, fielder = null) => {
     const currentOver = `${overNumber - 1}.${validBalls + 1}`;
-    setWicketOvers(prev => [...prev, { batsmanIndex, over: currentOver }]);
+    setWicketOvers(prev => [...prev, { 
+      batsmanIndex, 
+      over: currentOver,
+      catchType,
+      fielder: fielder ? { name: fielder.name, index: fielder.index } : null
+    }]);
   };
 
   const playAnimation = (type) => {
@@ -472,7 +313,9 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
           fours: stats.fours || 0,
           sixes: stats.sixes || 0,
           milestone: stats.milestone || null,
-          wicketOver: wicket ? wicket.over : null
+          wicketOver: wicket ? wicket.over : null,
+          catchType: wicket?.catchType || null,
+          fielder: wicket?.fielder || null
         };
       });
 
@@ -566,7 +409,6 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
       setActiveNumber(value);
     }
 
-    // Handle pending actions first
     if (pendingWide && !isLabel && typeof value === 'number') {
       runsToAdd = value + 1;
       setPlayerScore(prev => prev + runsToAdd);
@@ -620,47 +462,12 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
       if (value !== 0 && value !== 1 && value !== 2) {
         return;
       }
+      setCatchRuns(value);
       playAnimation('out');
       setTimeout(() => {
-        runsToAdd = value;
-        setPlayerScore(prev => prev + runsToAdd);
-        setTopPlays(prev => [...prev, `O+${value}`]);
-        setCurrentOverBalls(prev => [...prev, `O+${value}`]);
-        if (striker) {
-          updateBatsmanScore(striker.index, value);
-          updateBatsmanStats(striker.index, value, value === 0);
-          updateBatsmanBalls(striker.index);
-          recordWicket(striker.index);
-        }
-        setValidBalls(prev => prev + 1);
-        isValidBall = true;
-        if (selectedBowler) updateBowlerStats(selectedBowler.index, true, true, runsToAdd);
-        setShowBatsmanDropdown(true);
-        saveMatchData();
-      }, 3000);
-      setPendingOut(false);
+        setShowCatchModal(true);
+      }, 3000); // Delay matches animation duration (3000ms)
       return;
-    }
-
-    // Handle regular runs with animations
-    if (!isLabel) {
-      setSelectedRun(value);
-      
-      if (value === 6) {
-        playAnimation('six');
-        setTimeout(() => {
-          setShowWagonWheel(true);
-        }, 3000);
-        return;
-      } else if (value === 4) {
-        playAnimation('four');
-        setTimeout(() => {
-          setShowWagonWheel(true);
-        }, 3000);
-        return;
-      } else {
-        setShowWagonWheel(true);
-      }
     }
 
     const extraBalls = ['No-ball', 'Wide', 'No ball'];
@@ -675,16 +482,34 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
 
       if (value === 'Six') {
         playAnimation('six');
-        setSelectedRun(6);
-        setTimeout(() => {
-          setShowWagonWheel(true);
-        }, 3000);
+        runsToAdd = 6;
+        setPlayerScore(prev => prev + runsToAdd);
+        setTopPlays(prev => [...prev, 6]);
+        setCurrentOverBalls(prev => [...prev, 6]);
+        if (striker) {
+          updateBatsmanScore(striker.index, 6);
+          updateBatsmanStats(striker.index, 6);
+          updateBatsmanBalls(striker.index);
+        }
+        setValidBalls(prev => prev + 1);
+        isValidBall = true;
+        if (selectedBowler) updateBowlerStats(selectedBowler.index, false, true, runsToAdd);
+        saveMatchData();
       } else if (value === 'Four') {
         playAnimation('four');
-        setSelectedRun(4);
-        setTimeout(() => {
-          setShowWagonWheel(true);
-        }, 3000);
+        runsToAdd = 4;
+        setPlayerScore(prev => prev + runsToAdd);
+        setTopPlays(prev => [...prev, 4]);
+        setCurrentOverBalls(prev => [...prev, 4]);
+        if (striker) {
+          updateBatsmanScore(striker.index, 4);
+          updateBatsmanStats(striker.index, 4);
+          updateBatsmanBalls(striker.index);
+        }
+        setValidBalls(prev => prev + 1);
+        isValidBall = true;
+        if (selectedBowler) updateBowlerStats(selectedBowler.index, false, true, runsToAdd);
+        saveMatchData();
       } else if (value === 'Wide') {
         setPendingWide(true);
         return;
@@ -706,7 +531,66 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
         }
         saveMatchData();
       }
+    } else {
+      setShowRunInfo(false);
+      runsToAdd = value;
+      setPlayerScore(prev => prev + runsToAdd);
+      setTopPlays(prev => [...prev, value]);
+      setCurrentOverBalls(prev => [...prev, value]);
+      setValidBalls(prev => prev + 1);
+      isValidBall = true;
+      if (striker) {
+        updateBatsmanScore(striker.index, value);
+        updateBatsmanStats(striker.index, value, value === 0);
+        updateBatsmanBalls(striker.index);
+      }
+      if (selectedBowler) updateBowlerStats(selectedBowler.index, false, true, runsToAdd);
+      if (value % 2 !== 0) {
+        const temp = striker;
+        setStriker(nonStriker);
+        setNonStriker(temp);
+      }
+      if (value === 6) {
+        playAnimation('six');
+      } else if (value === 4) {
+        playAnimation('four');
+      }
+
+      if (!pendingOut && !pendingWide && !pendingNoBall && !pendingLegBy && typeof value === 'number') {
+        setSelectedRun(value);
+        setShowMainWheel(true);
+      }
+
+      saveMatchData();
     }
+  };
+
+  const handleCatchModalSubmit = () => {
+    if (!selectedCatchType || !selectedFielder) {
+      return;
+    }
+
+    playAnimation('out');
+    setTimeout(() => {
+      setPlayerScore(prev => prev + catchRuns);
+      setTopPlays(prev => [...prev, `O+${catchRuns} (${selectedCatchType})`]);
+      setCurrentOverBalls(prev => [...prev, `O+${catchRuns} (${selectedCatchType})`]);
+      if (striker) {
+        updateBatsmanScore(striker.index, catchRuns);
+        updateBatsmanStats(striker.index, catchRuns, catchRuns === 0);
+        updateBatsmanBalls(striker.index);
+        recordWicket(striker.index, selectedCatchType, selectedFielder);
+      }
+      setValidBalls(prev => prev + 1);
+      if (selectedBowler) updateBowlerStats(selectedBowler.index, true, true, catchRuns);
+      setShowBatsmanDropdown(true);
+      setShowCatchModal(false);
+      setPendingOut(false);
+      setSelectedCatchType('');
+      setSelectedFielder(null);
+      setCatchRuns(null);
+      saveMatchData();
+    }, 1000);
   };
 
   useEffect(() => {
@@ -820,7 +704,9 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
             fours: stats.fours || 0,
             sixes: stats.sixes || 0,
             milestone: stats.milestone || null,
-            wicketOver: wicket ? wicket.over : null
+            wicketOver: wicket ? wicket.over : null,
+            catchType: wicket?.catchType || null,
+            fielder: wicket?.fielder || null
           };
         });
         const bowlerStatsArray = bowlingTeamPlayers.map(player => {
@@ -921,6 +807,10 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
     setActiveLabel(null);
     setActiveNumber(null);
     setShowRunInfo(false);
+    setShowCatchModal(false);
+    setSelectedCatchType('');
+    setSelectedFielder(null);
+    setCatchRuns(null);
   };
 
   const resetGame = () => {
@@ -1284,109 +1174,6 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
           </div>
         )}
 
-        {/* Wagon Wheel Modal */}
-        {showWagonWheel && (
-          <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4">
-            <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-6 rounded-3xl w-full max-w-2xl shadow-2xl border-4 border-gray-700">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-bold text-white drop-shadow-lg">
-                  {selectedRun !== null && `${selectedRun === 'W' ? 'Wicket' : `${selectedRun} Run${selectedRun !== 1 ? 's' : ''}`} - Select Shot Direction`}
-                </h3>
-                <button 
-                  onClick={() => setShowWagonWheel(false)}
-                  className="text-white hover:text-gray-300 text-2xl transition-transform hover:scale-110"
-                >
-                  ×
-                </button>
-              </div>
-              
-              {renderWagonWheel()}
-              
-              <div className="text-center text-gray-200 italic text-sm drop-shadow-md">
-                Click on the fielding position where the ball went
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Shot Type Modal */}
-        {showShotTypeModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4">
-            <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-6 rounded-3xl w-full max-w-md shadow-2xl border-4 border-gray-700">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-bold text-white drop-shadow-lg">
-                  {selectedRun === 'W' ? 'Wicket' : `${selectedRun} Run${selectedRun !== 1 ? 's' : ''}`} - {selectedDirection.label} - Select Shot Type
-                </h3>
-                <button 
-                  onClick={() => setShowShotTypeModal(false)}
-                  className="text-white hover:text-gray-300 text-2xl transition-transform hover:scale-110"
-                >
-                  ×
-                </button>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-3 mb-6">
-                {SHOT_TYPES.filter(shot => {
-                  // Filter shots based on direction
-                  if (selectedDirection.label.includes("Straight")) {
-                    return ["drive", "loft", "defense"].includes(shot.class);
-                  }
-                  if (selectedDirection.label.includes("Cover")) {
-                    return ["drive", "cut"].includes(shot.class);
-                  }
-                  if (selectedDirection.label.includes("Square")) {
-                    return ["cut", "pull"].includes(shot.class);
-                  }
-                  return true;
-                }).map((type) => (
-                  <button
-                    key={type.name}
-                    onClick={() => handleShotTypeSelect(type)}
-                    className="px-3 py-2 text-white rounded-lg font-medium text-sm 
-                      transition-all duration-200 shadow hover:shadow-lg hover:scale-105"
-                    style={{ backgroundColor: type.color }}
-                  >
-                    {type.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Trajectory Modal */}
-        {showTrajectoryModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4">
-            <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-6 rounded-3xl w-full max-w-md shadow-2xl border-4 border-gray-700">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-bold text-white drop-shadow-lg">
-                  {selectedRun === 'W' ? 'Wicket' : `${selectedRun} Run${selectedRun !== 1 ? 's' : ''}`} - {selectedDirection.label} - {selectedShotType.name} - Select Ball Trajectory
-                </h3>
-                <button 
-                  onClick={() => setShowTrajectoryModal(false)}
-                  className="text-white hover:text-gray-300 text-2xl transition-transform hover:scale-110"
-                >
-                  ×
-                </button>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-3 mb-6">
-                {TRAJECTORIES.map((trajectory) => (
-                  <button
-                    key={trajectory.name}
-                    onClick={() => handleTrajectorySelect(trajectory)}
-                    className="px-3 py-2 text-white rounded-lg font-medium text-sm 
-                      transition-all duration-200 shadow hover:shadow-lg hover:scale-105"
-                    style={{ backgroundColor: trajectory.color }}
-                  >
-                    {trajectory.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
         <button
           onClick={goBack}
           className="absolute left-4 top-24 md:left-10 md:top-32 z-10 w-10 h-10 flex items-center justify-center"
@@ -1430,6 +1217,66 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
                   className="w-40 h-12 bg-[#FF62A1] text-white font-bold text-lg rounded-lg border-2 border-white"
                 >
                   OK
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showCatchModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-[#4C0025] p-4 md:p-6 rounded-lg max-w-md w-full mx-4 relative">
+              <button
+                onClick={() => {
+                  setShowCatchModal(false);
+                  setSelectedCatchType('');
+                  setSelectedFielder(null);
+                  setCatchRuns(null);
+                  setPendingOut(false);
+                }}
+                className="absolute top-2 right-2 w-6 h-6 text-white font-bold flex items-center justify-center text-xl"
+              >
+                ×
+              </button>
+              <h3 className="text-white text-lg md:text-xl font-bold mb-4">Select Catch Details</h3>
+              <div className="mb-4">
+                <label className="text-white block mb-2">Catch Type</label>
+                <select
+                  value={selectedCatchType}
+                  onChange={(e) => setSelectedCatchType(e.target.value)}
+                  className="w-full p-2 rounded bg-gray-700 text-white"
+                >
+                  <option value="">Select Catch Type</option>
+                  {catchTypes.map(type => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="mb-4">
+                <label className="text-white block mb-2">Fielder</label>
+                <select
+                  value={selectedFielder?.index || ''}
+                  onChange={(e) => {
+                    const fielder = bowlingTeamPlayers.find(p => p.index === e.target.value);
+                    setSelectedFielder(fielder);
+                  }}
+                  className="w-full p-2 rounded bg-gray-700 text-white"
+                >
+                  <option value="">Select Fielder</option>
+                  {bowlingTeamPlayers.map(player => (
+                    <option key={player.index} value={player.index}>{player.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex justify-center gap-4">
+                <button
+                  onClick={handleCatchModalSubmit}
+                  disabled={!selectedCatchType || !selectedFielder}
+                  className={`w-40 h-12 text-white font-bold text-lg rounded-lg border-2 border-white ${
+                    selectedCatchType && selectedFielder ? 'bg-[#FF62A1] hover:bg-[#FF62A1]/80' : 'bg-gray-500 cursor-not-allowed'
+                  }`}
+                >
+                  Confirm
                 </button>
               </div>
             </div>
@@ -1676,7 +1523,6 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
                     {showPastOvers ? 'Hide Overs' : 'Show Overs'}
                   </button>
                 </div>
-
                 {showPastOvers && (
                   <div className="mt-2 md:mt-4 text-white w-full">
                     <h3 className="text-lg md:text-xl font-bold mb-2 md:mb-4 text-center">Overs History</h3>
@@ -1689,11 +1535,12 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
                               {over.map((ball, ballIndex) => {
                                 let displayBall = ball;
                                 if (typeof ball === 'string' && ball.includes('+')) {
-                                  const [type, runs] = ball.split('+');
-                                  if (type.toLowerCase() === 'wd') displayBall = `Wd+${runs}`;
-                                  else if (type.toLowerCase() === 'nb') displayBall = `Nb+${runs}`;
-                                  else if (type.toLowerCase() === 'w') displayBall = `W+${runs}`;
-                                  else displayBall = `${type}+${runs}`;
+                                  const [type, rest] = ball.split('+');
+                                  if (type.toLowerCase() === 'wd') displayBall = `Wd+${rest}`;
+                                  else if (type.toLowerCase() === 'nb') displayBall = `Nb+${rest}`;
+                                  else if (type.toLowerCase() === 'w') displayBall = `W+${rest}`;
+                                  else if (type.toLowerCase() === 'o') displayBall = `O+${rest}`;
+                                  else displayBall = `${type}+${rest}`;
                                 }
 
                                 const isWicket = typeof ball === 'string' && (ball.includes('W') || ball.includes('O'));
@@ -1858,31 +1705,27 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
             >
               Start Chase
             </button>
+            
+          </div>
+        )}
+
+        {showMainWheel && (
+          <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center">
+            <div className="relative bg-white p-6 rounded-lg w-[90%] max-w-3xl mx-auto">
+              <button
+                onClick={() => setShowMainWheel(false)}
+                className="absolute top-8 right-8 bg-black text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-gray-800 transition"
+              >
+                ✕
+              </button>
+              <MainWheel
+                run={selectedRun}
+                onClose={() => setShowMainWheel(false)}
+              />
+            </div>
           </div>
         )}
       </section>
-
-      {/* CSS for animations */}
-      <style jsx global>{`
-        @keyframes ballFlight {
-          0% {
-            transform: translate(0, 0);
-            opacity: 1;
-          }
-          100% {
-            transform: 
-              translate(
-                calc(cos(var(--direction-angle) * 1deg) * var(--distance)),
-                calc(sin(var(--direction-angle) * 1deg) * var(--distance) * -1)
-              );
-            opacity: 0;
-          }
-        }
-        
-        .animate-ball-flight {
-          animation: ballFlight 0.8s ease-out forwards;
-        }
-      `}</style>
     </ErrorBoundary>
   );
 }

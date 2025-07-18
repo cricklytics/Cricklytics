@@ -1563,6 +1563,7 @@ const Sidebar = ({ isOpen, closeMenu, userProfile }) => {
   const [showCommentsDropdown, setShowCommentsDropdown] = useState(false);
   const [selectedColor, setSelectedColor] = useState("#5DE0E6");
   const [accountType, setAccountType] = useState("public");
+  const [showTournamentDropdown, setShowTournamentDropdown] = useState(false); 
   const [accountSettingsBg, setAccountSettingsBg] = useState("rgb(93, 224, 230, 0.5)");
 
   const accountSettingsPanelRef = useRef(null);
@@ -1712,18 +1713,18 @@ const Sidebar = ({ isOpen, closeMenu, userProfile }) => {
 
           {/* Profile Section */}
          <div className="text-center py-4 px-4 mt-6 text-black">
-  <div className="relative w-16 h-16 md:w-20 md:h-20 mx-auto mb-4">
-    {userProfile?.profileImageUrl ? (
-      <img
-        src={userProfile.profileImageUrl}
-        alt="Profile"
-        className="w-full h-full rounded-full object-cover border-2 border-black"
-      />
-    ) : (
-      <div className="w-full h-full rounded-full bg-black text-white flex items-center justify-center text-2xl font-bold border-2 border-[#5DE0E6]">
-        {userProfile?.userName ? userProfile.userName.charAt(0).toUpperCase() : 'U'}
-      </div>
-    )}
+          <div className="relative w-16 h-16 md:w-20 md:h-20 mx-auto mb-4">
+            {userProfile?.profileImageUrl ? (
+              <img
+                src={userProfile.profileImageUrl}
+                alt="Profile"
+                className="w-full h-full rounded-full object-cover border-2 border-black"
+              />
+            ) : (
+              <div className="w-full h-full rounded-full bg-black text-white flex items-center justify-center text-2xl font-bold border-2 border-[#5DE0E6]">
+                {userProfile?.userName ? userProfile.userName.charAt(0).toUpperCase() : 'U'}
+              </div>
+            )}
 
     <label className="absolute bottom-0 right-0 bg-white p-1 rounded-full cursor-pointer shadow-md">
       <FaPlus className="text-black text-xs" />
@@ -1760,9 +1761,31 @@ const Sidebar = ({ isOpen, closeMenu, userProfile }) => {
             <li className="px-4 py-2 md:px-6 md:py-3 flex items-center gap-2 md:gap-3 cursor-pointer hover:bg-[rgba(0,0,0,0.1)] transition-all duration-300" onClick={() => navigate("/awards")}>
               <FaTrophy className="min-w-[20px]" /> CV Cricket Awards
             </li>
-            <li className="px-4 py-2 md:px-6 md:py-3 flex items-center gap-2 md:gap-3 cursor-pointer hover:bg-[rgba(0,0,0,0.1)] transition-all duration-300" onClick={() => navigate("/tournamentseries")}>
-              <FaTrophy className="min-w-[20px]" /> Tournament/Series
+            <li 
+              className="px-4 py-2 md:px-6 md:py-3 flex items-center justify-between cursor-pointer hover:bg-[rgba(0,0,0,0.1)] transition-all duration-300"
+              onClick={() => setShowTournamentDropdown(!showTournamentDropdown)}
+            >
+              <span className="flex items-center gap-2 md:gap-3">
+                <FaTrophy className="min-w-[16px] md:min-w-[20px]" /> Tournament/Series
+              </span>
+              {showTournamentDropdown ? <FaChevronUp /> : <FaChevronDown />}
             </li>
+            {showTournamentDropdown && (
+              <ul className="pl-6 md:pl-10 border-l-2 border-[#5DE0E6]">
+                <li 
+                  className="flex items-center px-2 md:px-4 py-1 md:py-2 text-sm cursor-pointer hover:bg-[rgb(68,172,199)] transition-all duration-200"
+                  onClick={() => navigate("/Selection2",{state:{information: "FromSidebar"}})} 
+                >
+                  🏏 Pending Tournament
+                </li>
+                <li 
+                  className="flex items-center px-2 md:px-4 py-1 md:py-2 text-sm cursor-pointer hover:bg-[rgb(68,172,199)] transition-all duration-200"
+                  onClick={() => navigate("/tournamentseries")} 
+                >
+                  ➕ Add Tournament
+                </li>
+              </ul>
+            )}
             <li className="px-4 py-2 md:px-6 md:py-3 flex items-center gap-2 md:gap-3 cursor-pointer hover:bg-[rgba(0,0,0,0.1)] transition-all duration-300"
               onClick={() => navigate('/match-start-sb', { state: { initialTab: 'Start Match', fromSidebar: true } })}>
               <FaUsers className="min-w-[20px]" /> Start a Match

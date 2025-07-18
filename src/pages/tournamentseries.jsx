@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import HeaderComponent from '../components/kumar/header';
 import { useNavigate } from 'react-router-dom';
+import { auth } from '../firebase'; // Import Firebase auth
 import upload from '../assets/kumar/image-regular.svg';
 import location from '../assets/kumar/loc.png';
 import ball1 from '../assets/kumar/cricket-ball.png';
@@ -66,7 +67,10 @@ function Tournamentseries() {
         }
       }
 
-      // Prepare the tournament data
+      // Get the current user's ID
+      const userId = auth.currentUser?.uid;
+
+      // Prepare the tournament data with userId
       const tournamentData = {
         name: tournamentName,
         location: selectedLocation,
@@ -84,7 +88,8 @@ function Tournamentseries() {
         homeAwayFormat: homeAwayFormat,
         lastBatterRule: lastBatterRule,
         createdAt: new Date().toISOString(),
-        imageUrl: imageUrl // Add image URL to the data
+        imageUrl: imageUrl,
+        userId: userId || null // Include userId in the data (null if no user is logged in)
       };
 
       try {
@@ -102,7 +107,7 @@ function Tournamentseries() {
         }
 
         // Navigate to the next page with the number of teams
-        navigate('/next', { state: { noOfTeams , tournamentName } });
+        navigate('/next', { state: { noOfTeams, tournamentName } });
       } catch (error) {
         console.error('Error saving tournament data:', error);
         setShowValidationError(true); // Optionally show an error to the user
