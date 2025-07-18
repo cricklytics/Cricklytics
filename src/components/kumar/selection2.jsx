@@ -6,7 +6,7 @@ import nav from '../../assets/kumar/right-chevron.png';
 
 const Selection2 = () => {
   const { state } = useLocation();
-  const { teams: teamNames = [], tournamentName = '', tournamentId: passedTournamentId = null, information = '' } = state || {};
+  const { teams: teamNames = [], tournamentName = '', tournamentId: passedTournamentId = null, information = '', startDate = '2025-03-07', endDate = '2025-03-21' } = state || {};
   const navigate = useNavigate();
   const [schedule, setSchedule] = useState([]);
   const [semiFinals, setSemiFinals] = useState([]);
@@ -14,7 +14,9 @@ const Selection2 = () => {
   const [tournamentId, setTournamentId] = useState(passedTournamentId || generateTournamentId());
   const [currentTournamentName, setCurrentTournamentName] = useState(tournamentName);
   const [showModal, setShowModal] = useState(false);
+  const [showTimetable, setShowTimetable] = useState(false);
   const [flowchartData, setFlowchartData] = useState([]);
+  const [matchSchedule, setMatchSchedule] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [teams, setTeams] = useState([]);
@@ -30,6 +32,50 @@ const Selection2 = () => {
     const random = Math.random().toString(36).substring(2, 8);
     return `tournament_${timestamp}_${random}`;
   }
+
+  // Generate match schedule with dates and times
+  const generateMatchSchedule = (groupStageMatches, startDate, endDate) => {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const totalDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+    const groupStageDays = totalDays - 2; // Reserve last 2 days for semi-finals and finals
+    const matches = groupStageMatches.flat();
+    const matchSchedule = [];
+    const times = ['10:00 AM', '1:00 PM', '3:00 PM', '6:00 PM'];
+
+    // Calculate matches per day
+    const matchesPerDay = Math.ceil(matches.length / groupStageDays);
+    let matchIndex = 0;
+
+    for (let day = 0; day < groupStageDays && matchIndex < matches.length; day++) {
+      const currentDate = new Date(start);
+      currentDate.setDate(start.getDate() + day);
+      const formattedDate = currentDate.toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: '2-digit',
+      });
+
+      // Assign matches to the current day
+      for (let i = 0; i < matchesPerDay && matchIndex < matches.length; i++) {
+        const match = matches[matchIndex];
+        if (match.team1 !== 'BYE' && match.team2 !== 'BYE') {
+          const time = times[i % times.length]; // Cycle through available times
+          matchSchedule.push({
+            date: formattedDate,
+            match: `${match.team1} vs ${match.team2}`,
+            time: time,
+            matchId: match.id,
+            played: match.played || false,
+            winner: match.winner || null,
+          });
+        }
+        matchIndex++;
+      }
+    }
+
+    return matchSchedule;
+  };
 
   // Fetch tournament data from Firebase or generate new schedule
   useEffect(() => {
@@ -74,6 +120,20 @@ const Selection2 = () => {
             const finalMatches = Object.values(tournamentData.finals || {});
             setFinals(finalMatches);
 
+            // Load match schedule if it exists
+            if (tournamentData.matchSchedule && tournamentData.scheduled) {
+              setMatchSchedule(tournamentData.matchSchedule);
+            } else if (roundRobin.length > 0) {
+              // Generate and store match schedule
+              const generatedMatchSchedule = generateMatchSchedule(roundRobin, startDate, endDate);
+              setMatchSchedule(generatedMatchSchedule);
+              await setDoc(doc(db, 'roundrobin', passedTournamentId), {
+                ...tournamentData,
+                matchSchedule: generatedMatchSchedule,
+                scheduled: true,
+              }, { merge: true });
+            }
+
             console.log(`Tournament data fetched for ID: ${passedTournamentId}`);
           } else {
             // If no data exists and teamNames is provided, generate new schedule
@@ -92,7 +152,7 @@ const Selection2 = () => {
           const q = query(
             tournamentsCollectionRef,
             where('tournamentWinner', '==', null),
-            where('userId', '==', currentUserId), // Add userId filter
+            where('userId', '==', currentUserId),
             orderBy('createdAt', 'desc'),
             limit(1)
           );
@@ -115,6 +175,20 @@ const Selection2 = () => {
 
             const finalMatches = Object.values(tournamentData.finals || {});
             setFinals(finalMatches);
+
+            // Load match schedule if it exists
+            if (tournamentData.matchSchedule && tournamentData.scheduled) {
+              setMatchSchedule(tournamentData.matchSchedule);
+            } else if (roundRobin.length > 0) {
+              // Generate and store match schedule
+              const generatedMatchSchedule = generateMatchSchedule(roundRobin, startDate, endDate);
+              setMatchSchedule(generatedMatchSchedule);
+              await setDoc(doc(db, 'roundrobin', tournamentData.tournamentId), {
+                ...tournamentData,
+                matchSchedule: generatedMatchSchedule,
+                scheduled: true,
+              }, { merge: true });
+            }
 
             console.log(`Recent tournament fetched with ID: ${tournamentData.tournamentId}`);
           } else {
@@ -178,6 +252,7 @@ const Selection2 = () => {
               team1: assignTeam1First ? team1Candidate.teamName : team2Candidate.teamName,
               team2: assignTeam1First ? team2Candidate.teamName : team1Candidate.teamName,
               winner: null,
+              played: false,
             };
             roundMatches.push(match);
           }
@@ -225,6 +300,9 @@ const Selection2 = () => {
         setSemiFinals(semiFinals);
         setFinals(finals);
 
+        const generatedMatchSchedule = generateMatchSchedule(generatedSchedule, startDate, endDate);
+        setMatchSchedule(generatedMatchSchedule);
+
         try {
           const roundRobinObject = generatedSchedule.reduce((acc, round, index) => {
             acc[`group_stage_${index + 1}`] = round;
@@ -248,6 +326,8 @@ const Selection2 = () => {
             roundRobin: roundRobinObject,
             semiFinals: semiFinalsObject,
             finals: finalsObject,
+            matchSchedule: generatedMatchSchedule,
+            scheduled: true,
             createdAt: new Date(),
             tournamentWinner: null,
             userId,
@@ -263,7 +343,7 @@ const Selection2 = () => {
     };
 
     fetchTournamentData();
-  }, [passedTournamentId, teamNames, tournamentId, tournamentName]);
+  }, [passedTournamentId, teamNames, tournamentId, tournamentName, startDate, endDate]);
 
   // Fetch tournament data for flowchart modal
   const fetchFlowchartData = async () => {
@@ -376,6 +456,19 @@ const Selection2 = () => {
     }
   };
 
+  // Check if a match date has passed and its status
+  const getRowColor = (matchDate, played, winner) => {
+    const today = new Date();
+    const matchDateObj = new Date(matchDate.split('-').reverse().join('-')); // Convert DD-MMM-YY to YYYY-MMM-DD
+    const isPast = matchDateObj < today;
+    if (isPast && (played || winner)) {
+      return 'bg-green-600'; // Played or has a winner
+    } else if (isPast && !played && !winner) {
+      return 'bg-red-600'; // Not played and date has passed
+    }
+    return 'bg-blue-900'; // Future match or no status
+  };
+
   return (
     <section className="bg-gradient-to-b from-[#0D171E] to-[#283F79] text-white p-4 md:px-8 md:pb-1 min-h-screen flex items-center w-full overflow-hidden z-0 relative">
       <div className="z-20 flex overflow-hidden justify-center w-full p-2 md:px-[5rem] md:pt-[1rem] relative">
@@ -385,6 +478,12 @@ const Selection2 = () => {
             className="text-sm cursor-pointer absolute top-4 left-4 md:top-10 md:left-10"
           >
             <img src={nav} className="w-8 h-8 md:w-10 md:h-10 -scale-x-100" alt="Back" />
+          </button>
+          <button
+            onClick={() => setShowTimetable(!showTimetable)}
+            className="text-sm cursor-pointer absolute top-4 right-4 md:top-10 md:right-10 bg-[linear-gradient(120deg,_#000000,_#001A80)] px-4 py-2 rounded hover:bg-green-700"
+          >
+            {showTimetable ? 'Hide Timetable' : 'Show Timetable'}
           </button>
           <h1 className="text-2xl md:text-5xl font-bold mb-4 md:mb-2 mt-4 md:-mt-8 text-center">Round Robin Tournament</h1>
 
@@ -410,8 +509,38 @@ const Selection2 = () => {
                 View Flowchart
               </button>
 
+              {/* Match Schedule Table */}
+              {showTimetable && matchSchedule.length > 0 && (
+                <div className="mt-8">
+                  <h2 className="text-xl md:text-2xl font-semibold mb-4">Match Schedule</h2>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm md:text-base">
+                      <thead>
+                        <tr className="bg-blue-800">
+                          <th className="p-2 text-left">Date</th>
+                          <th className="p-2 text-left">Match</th>
+                          <th className="p-2 text-left">Time</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {matchSchedule.map((match, index) => (
+                          <tr
+                            key={index}
+                            className={`${getRowColor(match.date, match.played, match.winner)} p-2 rounded-lg hover:shadow-[0px_0px_13px_0px_#253A6E]`}
+                          >
+                            <td className="p-2">{match.date}</td>
+                            <td className="p-2">{match.match}</td>
+                            <td className="p-2">{match.time}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
               {/* Round-Robin Phase */}
-              <h2 className="text-xl md:text-2xl font-semibold mb-4">Group Stage</h2>
+              <h2 className="text-xl md:text-2xl font-semibold mb-4 mt-8">Group Stage</h2>
               {schedule.map((round, index) => (
                 <div key={index} className="mb-6">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-5">
