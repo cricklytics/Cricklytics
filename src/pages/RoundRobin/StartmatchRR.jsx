@@ -481,7 +481,7 @@ const Startmatch = ({
           if (finalWinner) {
             setTournamentWinner(finalWinner);
             await updateDoc(doc(db, 'roundrobin', tournamentDoc.id), {
-              tournamentWinner: finalWinner,
+              winner: finalWinner,
             });
           }
         }
@@ -1046,7 +1046,7 @@ const Startmatch = ({
         </div>
       </motion.div>
 
-      <style >{`
+      <style jsx>{`
         .played-match {
           color: #9ca3af;
           background-color: #f3f4f6;
