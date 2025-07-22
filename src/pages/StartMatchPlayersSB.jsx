@@ -11,6 +11,7 @@ import sixAnimation from '../assets/Animation/six.json';
 import fourAnimation from '../assets/Animation/four.json';
 import outAnimation from '../assets/Animation/out.json';
 import { db, auth } from '../firebase';
+import MainWheel from "../components/yogesh/wagonwheel/mainwheel";
 import { getDoc, setDoc, doc, Timestamp, collection, query, where, getDocs, updateDoc, arrayUnion } from 'firebase/firestore';
 
 // Error Boundary Component
@@ -19,6 +20,10 @@ class ErrorBoundary extends Component {
 
   static getDerivedStateFromError(error) {
     return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error("Error caught by ErrorBoundary:", error, errorInfo);
   }
 
   render() {
@@ -37,61 +42,15 @@ class ErrorBoundary extends Component {
 function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
   const location = useLocation();
   const navigate = useNavigate();
+  const [viewHistory, setViewHistory] = useState(['toss']);
 
   // Extract all relevant data from location.state
   const originPage = location.state?.origin;
   const umpire = location.state?.scorer;
   const maxOvers = location.state?.overs;
-  const teamA = location.state?.teamA;
-  const teamB = location.state?.teamB;
+  const teamA = location.state?.teamA || initialTeamA;
+  const teamB = location.state?.teamB || initialTeamB;
   const selectedPlayersFromProps = location.state?.selectedPlayers || { left: [], right: [] };
-
-    // Wagon Wheel State
-    const [showWagonWheel, setShowWagonWheel] = useState(false);
-    const [showShotTypeModal, setShowShotTypeModal] = useState(false);
-    const [showTrajectoryModal, setShowTrajectoryModal] = useState(false);
-    const [selectedDirection, setSelectedDirection] = useState(null);
-    const [selectedShotType, setSelectedShotType] = useState(null);
-    const [selectedTrajectory, setSelectedTrajectory] = useState(null);
-    const [ballAnimation, setBallAnimation] = useState(false);
-    const [animationDirection, setAnimationDirection] = useState(null);
-    const [selectedRun, setSelectedRun] = useState(null);
-  
-    // Shot directions with angles and positions
-    const SHOT_DIRECTIONS = [
-      { label: "Straight", angle: 0, position: "long-on/long-off", color: "#2196F3" },
-      { label: "Cover", angle: 45, position: "extra cover", color: "#2196F3" },
-      { label: "Mid-Wicket", angle: 135, position: "mid-wicket", color: "#2196F3" },
-      { label: "Square Leg", angle: 180, position: "square leg", color: "#2196F3" },
-      { label: "Fine Leg", angle: 225, position: "fine leg", color: "#2196F3" },
-      { label: "Third Man", angle: 315, position: "third man", color: "#2196F3" },
-      { label: "Point", angle: 270, position: "point", color: "#2196F3" },
-      { label: "Long Off", angle: 90, position: "long-off", color: "#2196F3" }
-    ];
-  
-    // Detailed shot types
-    const SHOT_TYPES = [
-      { name: "Cover Drive", class: "drive", color: "#009688" },
-      { name: "Pull Shot", class: "pull", color: "#009688" },
-      { name: "Hook Shot", class: "hook", color: "#009688" },
-      { name: "Lofted Shot", class: "loft", color: "#009688" },
-      { name: "Straight Drive", class: "drive", color: "#009688" },
-      { name: "Square Cut", class: "cut", color: "#009688" },
-      { name: "Sweep Shot", class: "sweep", color: "#009688" },
-      { name: "Flick Shot", class: "flick", color: "#009688" },
-      { name: "Defensive", class: "defense", color: "#009688" },
-      { name: "Reverse Sweep", class: "sweep", color: "#009688" }
-    ];
-  
-    // Ball trajectories
-    const TRAJECTORIES = [
-      { name: "Flat", color: "#FF9800" },
-      { name: "Lofted", color: "#FF9800" },
-      { name: "Ground", color: "#FF9800" },
-      { name: "Skier", color: "#FF9800" },
-      { name: "Bouncer", color: "#FF9800" },
-      { name: "Full toss", color: "#FF9800" }
-    ];
 
   const [matchId] = useState(Date.now().toString());
   const [currentView, setCurrentView] = useState('toss');
@@ -140,10 +99,20 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
   const [fielderRole, setFielderRole] = useState(null);
   const [currentOverRuns, setCurrentOverRuns] = useState(0);
   const [maidenOvers, setMaidenOvers] = useState({});
+  const [showMainWheel, setShowMainWheel] = useState(false);
+  const [selectedRun, setSelectedRun] = useState(null);
+  const [showCatchModal, setShowCatchModal] = useState(false);
+  const [selectedCatchType, setSelectedCatchType] = useState('');
+  const [selectedFielder, setSelectedFielder] = useState(null);
+  const [catchRuns, setCatchRuns] = useState(null);
+  const [playedOvers, setPlayedOvers] = useState(0);
+  const [playedWickets, setPlayedWickets] = useState(0);
 
   // Dynamic player data
   const [battingTeamPlayers, setBattingTeamPlayers] = useState([]);
   const [bowlingTeamPlayers, setBowlingTeamPlayers] = useState([]);
+  const catchTypes = ['Diving', 'Running', 'Overhead', 'One-handed', 'Standard'];
+  const extraBalls = ['Wide', 'No-ball', 'Leg By', 'OUT', 'lbw'];
 
   // Generate team flag or fallback (first letter of team name)
   const getTeamFlag = (team) => {
@@ -165,7 +134,10 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
           src={player.image}
           alt={player.name}
           className={`${sizeClass} rounded-full object-cover aspect-square border-[5px] border-[#F0167C]`}
-          onError={(e) => (e.target.src = '')}
+          onError={(e) => {
+            e.target.onerror = null;
+            e.target.src = '';
+          }}
         />
       );
     }
@@ -229,141 +201,6 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
     setCurrentOverRuns(0);
   }, [isChasing, selectedPlayersFromProps, teamA, teamB, navigate]);
 
-   // Wagon Wheel Functions
-  const handleDirectionSelect = (direction) => {
-    setSelectedDirection(direction);
-    setAnimationDirection(direction);
-    setBallAnimation(true);
-    
-    setTimeout(() => {
-      setBallAnimation(false);
-      setShowWagonWheel(false);
-      setShowShotTypeModal(true);
-    }, 800);
-  };
-
-   const handleShotTypeSelect = (shotType) => {
-    setSelectedShotType(shotType);
-    setShowShotTypeModal(false);
-    setShowTrajectoryModal(true);
-  };
-
-  const handleTrajectorySelect = (trajectory) => {
-    setSelectedTrajectory(trajectory);
-    setShowTrajectoryModal(false);
-    
-    // Process the ball with all selected data
-    processBallWithWagonWheelData();
-  };
-
-const processBallWithWagonWheelData = () => {
-  const isWicket = selectedRun === 'W';
-  
-  const ballData = {
-    inning: isChasing ? 2 : 1,
-    over: overNumber - 1,
-    ball: validBalls + 1,
-    runs: isWicket ? 0 : selectedRun,
-    shotDirection: selectedDirection?.label || '',
-    shotPosition: selectedDirection?.position || '',
-    shotType: selectedShotType?.name || '',
-    ballTrajectory: selectedTrajectory?.name || '',
-    wicketType: isWicket ? 'catch' : '',
-    timestamp: new Date().toISOString()
-  };
-
-  // Update score
-  if (!isWicket) {
-    setPlayerScore(prev => prev + selectedRun);
-    setCurrentOverRuns(prev => prev + selectedRun);
-    setTopPlays(prev => [...prev, selectedRun]);
-    setCurrentOverBalls(prev => [...prev, selectedRun]);
-    
-    if (striker) {
-      updateBatsmanScore(striker.index, selectedRun);
-      updateBatsmanStats(striker.index, selectedRun, selectedRun === 0);
-      updateBatsmanBalls(striker.index);
-    }
-  }
-
-  // Update bowler stats
-  if (selectedBowler) {
-    updateBowlerStats(selectedBowler.index, isWicket, true, isWicket ? 0 : selectedRun);
-  }
-
-  // Handle odd runs (striker change)
-  if (!isWicket && selectedRun % 2 !== 0) {
-    const temp = striker;
-    setStriker(nonStriker);
-    setNonStriker(temp);
-  }
-
-  // Reset wagon wheel selections
-  setSelectedDirection(null);
-  setSelectedShotType(null);
-  setSelectedTrajectory(null);
-  setSelectedRun(null);
-
-  // Update valid balls count
-  setValidBalls(prev => prev + 1);
-
-  // Save match data
-  saveMatchData();
-};
-
-  const renderWagonWheel = () => {
-    return (
-      <div className="relative w-[350px] h-[350px] mx-auto my-4">
-        {/* Cricket field background */}
-        <div className="absolute inset-0 bg-green-800 rounded-full border-4 border-green-600 flex items-center justify-center overflow-hidden">
-          {/* Pitch */}
-          <div className="absolute w-12 h-4 bg-brown-800 transform rotate-90"></div>
-          
-          {/* Field markings */}
-          <div className="absolute w-full h-full rounded-full border-2 border-green-500 border-opacity-50"></div>
-          <div className="absolute w-3/4 h-3/4 rounded-full border-2 border-green-500 border-opacity-50"></div>
-          <div className="absolute w-1/2 h-1/2 rounded-full border-2 border-green-500 border-opacity-50"></div>
-          
-          {/* Current ball animation */}
-          {ballAnimation && (
-            <div 
-              className={`absolute z-20 w-6 h-6 bg-white rounded-full shadow-xl animate-ball-flight`}
-              style={{
-                '--direction-angle': `${animationDirection.angle}deg`,
-                '--distance': selectedRun === 6 ? '150px' : 
-                              selectedRun === 4 ? '120px' : 
-                              '80px'
-              }}
-            >
-              <div className="absolute -top-5 -left-5 w-10 text-center text-xs font-bold text-white bg-black bg-opacity-70 rounded-full p-1">
-                {selectedRun}
-              </div>
-            </div>
-          )}
-          
-          {/* Direction buttons */}
-          {SHOT_DIRECTIONS.map((dir) => (
-            <button
-              key={dir.label}
-              onClick={() => handleDirectionSelect(dir)}
-              className={`absolute transform -translate-x-1/2 -translate-y-1/2 
-                px-3 py-2 rounded-md text-white font-bold text-xs
-                transition-all duration-200 shadow hover:shadow-md
-                flex items-center justify-center min-w-[80px] hover:scale-105 z-10`}
-              style={{
-                top: `${50 - Math.sin(dir.angle * Math.PI / 180) * 40}%`,
-                left: `${50 + Math.cos(dir.angle * Math.PI / 180) * 40}%`,
-                backgroundColor: dir.color
-              }}
-            >
-              {dir.label}
-            </button>
-          ))}
-        </div>
-      </div>
-    );
-  };
-
   const displayModal = (title, message) => {
     setModalContent({ title, message });
     setShowModal(true);
@@ -372,6 +209,7 @@ const processBallWithWagonWheelData = () => {
   const handleButtonClick = (view) => {
     setCurrentView(view);
     setShowThirdButtonOnly(view === 'start');
+    setViewHistory(prev => [...prev, view]);
   };
 
   const goBack = () => {
@@ -390,6 +228,29 @@ const processBallWithWagonWheelData = () => {
         cancelStriker();
       } else if (nonStriker) {
         cancelNonStriker();
+      }
+    } else if (showCatchModal) {
+      setShowCatchModal(false);
+      setSelectedCatchType('');
+      setSelectedFielder(null);
+      setCatchRuns(null);
+      return;
+    } else if (showBowlerDropdown) {
+      setShowBowlerDropdown(false);
+      return;
+    } else if (showBatsmanDropdown) {
+      cancelBatsmanDropdown();
+      return;
+    } else if (viewHistory.length > 1) {
+      const newHistory = [...viewHistory];
+      newHistory.pop();
+      const previousView = newHistory[newHistory.length - 1];
+      setViewHistory(newHistory);
+      setCurrentView(previousView);
+      setShowThirdButtonOnly(previousView === 'start');
+      if (previousView === 'toss') {
+        setBowlerVisible(false);
+        setSelectedBowler(null);
       }
     } else {
       navigate(-1, { state: { ...location.state, matchId } });
@@ -410,22 +271,35 @@ const processBallWithWagonWheelData = () => {
     }));
   };
 
-  const updateBatsmanStats = (batsmanIndex, runs) => {
+  const updateBatsmanStats = (batsmanIndex, runs, isDotBall = false) => {
     setBatsmenStats(prev => {
-      const currentRuns = (prev[batsmanIndex]?.runs || 0) + runs;
-      const milestone = currentRuns >= 100 ? 'Century' : currentRuns >= 50 ? 'Half-Century' : null;
+      const currentStats = prev[batsmanIndex] || {
+        runs: 0,
+        balls: 0,
+        dotBalls: 0,
+        ones: 0,
+        twos: 0,
+        threes: 0,
+        fours: 0,
+        sixes: 0,
+        milestone: null
+      };
+      const newRuns = currentStats.runs + runs;
+      let milestone = currentStats.milestone;
+      if (newRuns >= 100 && currentStats.runs < 100) milestone = 100;
+      else if (newRuns >= 50 && currentStats.runs < 50) milestone = 50;
       return {
         ...prev,
         [batsmanIndex]: {
-          ...prev[batsmanIndex],
-          runs: currentRuns,
-          balls: (prev[batsmanIndex]?.balls || 0) + 1,
-          dotBalls: runs === 0 ? (prev[batsmanIndex]?.dotBalls || 0) + 1 : prev[batsmanIndex]?.dotBalls || 0,
-          ones: runs === 1 ? (prev[batsmanIndex]?.ones || 0) + 1 : prev[batsmanIndex]?.ones || 0,
-          twos: runs === 2 ? (prev[batsmanIndex]?.twos || 0) + 1 : prev[batsmanIndex]?.twos || 0,
-          threes: runs === 3 ? (prev[batsmanIndex]?.threes || 0) + 1 : prev[batsmanIndex]?.threes || 0,
-          fours: runs === 4 ? (prev[batsmanIndex]?.fours || 0) + 1 : prev[batsmanIndex]?.fours || 0,
-          sixes: runs === 6 ? (prev[batsmanIndex]?.sixes || 0) + 1 : prev[batsmanIndex]?.sixes || 0,
+          ...currentStats,
+          runs: newRuns,
+          balls: currentStats.balls + (isDotBall || runs > 0 ? 1 : 0),
+          dotBalls: isDotBall ? currentStats.dotBalls + 1 : currentStats.dotBalls,
+          ones: runs === 1 ? currentStats.ones + 1 : currentStats.ones,
+          twos: runs === 2 ? currentStats.twos + 1 : currentStats.twos,
+          threes: runs === 3 ? currentStats.threes + 1 : currentStats.threes,
+          fours: runs === 4 ? currentStats.fours + 1 : currentStats.fours,
+          sixes: runs === 6 ? currentStats.sixes + 1 : currentStats.sixes,
           milestone
         }
       };
@@ -470,7 +344,7 @@ const processBallWithWagonWheelData = () => {
     }));
   };
 
-  const recordWicketOver = (batsmanIndex, type, bowlerIndex, fielderIndex = null, fielderRole = null) => {
+  const recordWicketOver = (batsmanIndex, type, bowlerIndex, fielderIndex = null, fielderRole = null, catchType = null) => {
     const currentOver = `${overNumber - 1}.${validBalls}`;
     setWicketOvers(prev => [...prev, { 
       batsmanIndex, 
@@ -478,7 +352,18 @@ const processBallWithWagonWheelData = () => {
       type,
       bowlerIndex,
       fielderIndex,
-      fielderRole
+      fielderRole,
+      catchType
+    }]);
+  };
+
+  const recordWicket = (batsmanIndex, catchType = null, fielder = null) => {
+    const currentOver = `${overNumber - 1}.${validBalls + 1}`;
+    setWicketOvers(prev => [...prev, { 
+      batsmanIndex, 
+      over: currentOver,
+      catchType,
+      fielder: fielder ? { name: fielder.name, index: fielder.index } : null
     }]);
   };
 
@@ -491,571 +376,604 @@ const processBallWithWagonWheelData = () => {
   };
 
   const saveMatchData = async (isFinal = false) => {
-  try {
-    if (!auth.currentUser) {
-      console.error('No authenticated user found.');
-      return;
-    }
+    try {
+      if (!auth.currentUser) {
+        console.error('No authenticated user found.');
+        return;
+      }
 
-    const overs = `${overNumber - 1}.${validBalls}`;
-    const battingTeam = isChasing ? teamB : teamA;
-    const bowlingTeam = isChasing ? teamA : teamB;
+      const overs = `${overNumber - 1}.${validBalls}`;
+      const battingTeam = isChasing ? teamB : teamA;
+      const bowlingTeam = isChasing ? teamA : teamB;
 
-    // Prepare player stats (unchanged from original)
-    const playerStats = battingTeamPlayers.map(player => {
-      const stats = batsmenStats[player.index] || {};
-      const wicket = wicketOvers.find(w => w.batsmanIndex === player.index);
-      return {
-        index: player.index || '',
-        name: player.name || 'Unknown',
-        photoUrl: player.image || '',
-        role: player.role || '',
-        user: player.user || 'No',
-        playerId: player.playerId || '',
-        runs: stats.runs || 0,
-        balls: stats.balls || 0,
-        dotBalls: stats.dotBalls || 0,
-        ones: stats.ones || 0,
-        twos: stats.twos || 0,
-        threes: stats.threes || 0,
-        fours: stats.fours || 0,
-        sixes: stats.sixes || 0,
-        milestone: stats.milestone || null,
-        wicketOver: wicket ? wicket.over : null,
-        dismissalType: wicket ? wicket.type : null,
-        bowlerIndex: wicket ? wicket.bowlerIndex : null,
-        fielderIndex: wicket ? wicket.fielderIndex : null,
-        fielderRole: wicket ? wicket.fielderRole : null
+      // Prepare player stats
+      const playerStats = battingTeamPlayers.map(player => {
+        const stats = batsmenStats[player.index] || {};
+        const wicket = wicketOvers.find(w => w.batsmanIndex === player.index);
+        return {
+          index: player.index || '',
+          name: player.name || 'Unknown',
+          photoUrl: player.image || '',
+          role: player.role || '',
+          user: player.user || 'No',
+          playerId: player.playerId || '',
+          runs: stats.runs || 0,
+          balls: stats.balls || 0,
+          dotBalls: stats.dotBalls || 0,
+          ones: stats.ones || 0,
+          twos: stats.twos || 0,
+          threes: stats.threes || 0,
+          fours: stats.fours || 0,
+          sixes: stats.sixes || 0,
+          milestone: stats.milestone || null,
+          wicketOver: wicket ? wicket.over : null,
+          dismissalType: wicket ? wicket.type : null,
+          bowlerIndex: wicket ? wicket.bowlerIndex : null,
+          fielderIndex: wicket ? wicket.fielderIndex : null,
+          fielderRole: wicket ? wicket.fielderRole : null,
+          catchType: wicket?.catchType || null,
+          fielder: wicket?.fielder || null
+        };
+      });
+
+      // Prepare bowler stats
+      const bowlerStatsArray = bowlingTeamPlayers.map(player => {
+        const stats = bowlerStats[player.index] || {};
+        return {
+          index: player.index || '',
+          name: player.name || 'Unknown',
+          photoUrl: player.image || '',
+          role: player.role || '',
+          user: player.user || 'No',
+          playerId: player.playerId || '',
+          wickets: stats.wickets || 0,
+          oversBowled: stats.oversBowled || '0.0',
+          runsConceded: stats.runsConceded || 0,
+          maidens: stats.maidens || 0,
+          noBalls: stats.noBalls || 0,
+          wides: stats.wides || 0,
+          dotBalls: stats.dotBalls || 0
+        };
+      });
+
+      // Prepare fielding stats
+      const fieldingStats = bowlingTeamPlayers.map(player => {
+        const catches = wicketOvers.filter(w => 
+          w.fielderIndex === player.index && w.type === 'catch'
+        ).length;
+        const stumpings = wicketOvers.filter(w => 
+          w.fielderIndex === player.index && w.type === 'stumping' && w.fielderRole === 'wicketKeeper'
+        ).length;
+        const runOuts = wicketOvers.filter(w => 
+          w.fielderIndex === player.index && w.type === 'runout' && w.fielderRole === 'fielder'
+        ).length;
+        
+        return {
+          index: player.index || '',
+          name: player.name || 'Unknown',
+          photoUrl: player.image || '',
+          role: player.role || '',
+          user: player.user || 'No',
+          playerId: player.playerId || '',
+          catches,
+          stumpings,
+          runOuts
+        };
+      });
+
+      // Prepare match data
+      const matchData = {
+        matchId,
+        userId: auth.currentUser.uid,
+        createdAt: Timestamp.fromDate(new Date()),
+        Format: maxOvers,
+        umpire: umpire,
+        teamA: {
+          name: teamA?.teamName || 'Team A',
+          flagUrl: teamA?.flagUrl || '',
+          players: selectedPlayersFromProps.left.map(p => ({
+            name: p.name || 'Unknown',
+            index: p.name + selectedPlayersFromProps.left.findIndex(pl => pl.name === p.name),
+            photoUrl: p.image || '',
+            role: p.role || '',
+            user: p.user || 'No',
+            playerId: p.playerId || '',
+          })),
+          totalScore: isChasing ? (firstInningsData?.totalScore || 0) : playerScore,
+          wickets: isChasing ? (firstInningsData?.wickets || 0) : outCount,
+          overs: isChasing ? (firstInningsData?.overs || '0.0') : overs,
+          result: isFinal ? (playerScore < targetScore - 1 ? 'Win' : playerScore === targetScore - 1 ? 'Tie' : 'Loss') : null
+        },
+        teamB: {
+          name: teamB?.teamName || 'Team B',
+          flagUrl: teamB?.flagUrl || '',
+          players: selectedPlayersFromProps.right.map(p => ({
+            name: p.name || 'Unknown',
+            index: p.name + selectedPlayersFromProps.right.findIndex(pl => pl.name === p.name),
+            photoUrl: p.image || '',
+            role: p.role || '',
+            user: p.user || 'No',
+            playerId: p.playerId || '',
+          })),
+          totalScore: isChasing ? playerScore : (firstInningsData?.totalScore || 0),
+          wickets: isChasing ? outCount : (firstInningsData?.wickets || 0),
+          overs: isChasing ? overs : (firstInningsData?.overs || '0.0'),
+          result: isFinal ? (playerScore < targetScore - 1 ? 'Loss' : playerScore === targetScore - 1 ? 'Tie' : 'Win') : null
+        },
+        firstInnings: firstInningsData || {
+          teamName: teamA?.teamName || 'Team A',
+          totalScore: playerScore,
+          wickets: outCount,
+          overs,
+          playerStats,
+          bowlerStats: bowlerStatsArray,
+          fieldingStats
+        },
+        secondInnings: isChasing ? {
+          teamName: teamB?.teamName || 'Team B',
+          totalScore: playerScore,
+          wickets: outCount,
+          overs,
+          playerStats,
+          bowlerStats: bowlerStatsArray,
+          fieldingStats
+        } : null,
+        matchResult: isFinal ? (playerScore < targetScore - 1 ? teamA?.teamName || 'Team A' : playerScore === targetScore - 1 ? 'Tie' : teamB?.teamName || 'Team B') : null
       };
-    });
 
-    // Prepare bowler stats (unchanged from original)
-    const bowlerStatsArray = bowlingTeamPlayers.map(player => {
-      const stats = bowlerStats[player.index] || {};
-      return {
-        index: player.index || '',
-        name: player.name || 'Unknown',
-        photoUrl: player.image || '',
-        role: player.role || '',
-        user: player.user || 'No',
-        playerId: player.playerId || '',
-        wickets: stats.wickets || 0,
-        oversBowled: stats.oversBowled || '0.0',
-        runsConceded: stats.runsConceded || 0,
-        maidens: stats.maidens || 0,
-        noBalls: stats.noBalls || 0,
-        wides: stats.wides || 0,
-        dotBalls: stats.dotBalls || 0
-      };
-    });
+      // Save to scoringpage collection
+      await setDoc(doc(db, 'scoringpage', matchId), matchData);
+      console.log('Match data updated successfully in scoringpage:', matchData);
 
-    // Prepare fielding stats (unchanged from original)
-    const fieldingStats = bowlingTeamPlayers.map(player => {
-      const catches = wicketOvers.filter(w => 
-        w.fielderIndex === player.index && w.type === 'catch'
-      ).length;
-      const stumpings = wicketOvers.filter(w => 
-        w.fielderIndex === player.index && w.type === 'stumping' && w.fielderRole === 'wicketKeeper'
-      ).length;
-      const runOuts = wicketOvers.filter(w => 
-        w.fielderIndex === player.index && w.type === 'runout' && w.fielderRole === 'fielder'
-      ).length;
-      
-      return {
-        index: player.index || '',
-        name: player.name || 'Unknown',
-        photoUrl: player.image || '',
-        role: player.role || '',
-        user: player.user || 'No',
-        playerId: player.playerId || '',
-        catches,
-        stumpings,
-        runOuts
-      };
-    });
-
-    // Prepare match data (unchanged from original)
-    const matchData = {
-      matchId,
-      userId: auth.currentUser.uid,
-      createdAt: Timestamp.fromDate(new Date()),
-      Format: maxOvers,
-      umpire: umpire,
-      teamA: {
-        name: teamA?.teamName || 'Team A',
-        flagUrl: teamA?.flagUrl || '',
-        players: selectedPlayersFromProps.left.map(p => ({
-          name: p.name || 'Unknown',
-          index: p.name + selectedPlayersFromProps.left.findIndex(pl => pl.name === p.name),
-          photoUrl: p.image || '',
-          role: p.role || '',
-          user: p.user || 'No',
-          playerId: p.playerId || '',
-        })),
-        totalScore: isChasing ? (firstInningsData?.totalScore || 0) : playerScore,
-        wickets: isChasing ? (firstInningsData?.wickets || 0) : outCount,
-        overs: isChasing ? (firstInningsData?.overs || '0.0') : overs,
-        result: isFinal ? (playerScore < targetScore - 1 ? 'Win' : playerScore === targetScore - 1 ? 'Tie' : 'Loss') : null
-      },
-      teamB: {
-        name: teamB?.teamName || 'Team B',
-        flagUrl: teamB?.flagUrl || '',
-        players: selectedPlayersFromProps.right.map(p => ({
-          name: p.name || 'Unknown',
-          index: p.name + selectedPlayersFromProps.right.findIndex(pl => pl.name === p.name),
-          photoUrl: p.image || '',
-          role: p.role || '',
-          user: p.user || 'No',
-          playerId: p.playerId || '',
-        })),
-        totalScore: isChasing ? playerScore : (firstInningsData?.totalScore || 0),
-        wickets: isChasing ? outCount : (firstInningsData?.wickets || 0),
-        overs: isChasing ? overs : (firstInningsData?.overs || '0.0'),
-        result: isFinal ? (playerScore < targetScore - 1 ? 'Loss' : playerScore === targetScore - 1 ? 'Tie' : 'Win') : null
-      },
-      firstInnings: firstInningsData || {
-        teamName: teamA?.teamName || 'Team A',
-        totalScore: playerScore,
-        wickets: outCount,
-        overs,
-        playerStats,
-        bowlerStats: bowlerStatsArray,
-        fieldingStats
-      },
-      secondInnings: isChasing ? {
-        teamName: teamB?.teamName || 'Team B',
-        totalScore: playerScore,
-        wickets: outCount,
-        overs,
-        playerStats,
-        bowlerStats: bowlerStatsArray,
-        fieldingStats
-      } : null,
-      matchResult: isFinal ? (playerScore < targetScore - 1 ? teamA?.teamName || 'Team A' : playerScore === targetScore - 1 ? 'Tie' : teamB?.teamName || 'Team B') : null
-    };
-
-    // Save to scoringpage collection (unchanged from original)
-    await setDoc(doc(db, 'scoringpage', matchId), matchData);
-    console.log('Match data updated successfully in scoringpage:', matchData);
-
-    // Update clubTeams collection when match is finished
-    if (isFinal) {
-      // Function to update player stats in any team
-      const updatePlayerStats = async (teamDocRef, playerId, newStats) => {
-        const teamDoc = await getDoc(teamDocRef);
-        if (teamDoc.exists()) {
-          const teamData = teamDoc.data();
-          const players = teamData.players || [];
-          
-          const playerIndex = players.findIndex(p => p.playerId === playerId);
-          if (playerIndex !== -1) {
-            const player = players[playerIndex];
+      // Update clubTeams collection when match is finished
+      if (isFinal) {
+        // Function to update player stats in any team
+        const updatePlayerStats = async (teamDocRef, playerId, newStats) => {
+          const teamDoc = await getDoc(teamDocRef);
+          if (teamDoc.exists()) {
+            const teamData = teamDoc.data();
+            const players = teamData.players || [];
             
-            // Initialize careerStats if undefined
-            const careerStats = player.careerStats || {
-              batting: {
-                matches: 0,
-                innings: 0,
-                notOuts: 0,
-                runs: 0,
-                balls: 0,
-                highest: 0,
-                fours: 0,
-                sixes: 0,
-                centuries: 0,
-                fifties: 0,
-                average: 0,
-                strikeRate: 0
-              },
-              bowling: {
-                innings: 0,
-                wickets: 0,
-                runsConceded: 0,
-                overs: 0,
-                maidens: 0,
-                noBalls: 0,
-                wides: 0,
-                dotBalls: 0,
-                bestBowling: '0/0',
-                average: 0,
-                economy: 0,
-                strikeRate: 0
-              },
-              fielding: {
-                catches: 0,
-                stumpings: 0,
-                runOuts: 0
-              }
-            };
-
-            // Determine best bowling figure
-            const currentBest = careerStats.bowling.bestBowling || '0/0';
-            const [currentWickets, currentRuns] = currentBest.split('/').map(Number);
-            let newBestBowling = currentBest;
-            if (newStats.wickets > currentWickets || 
-                (newStats.wickets === currentWickets && newStats.runsConceded < currentRuns)) {
-              newBestBowling = `${newStats.wickets}/${newStats.runsConceded}`;
-            }
-
-            // Calculate centuries and fifties
-            const centuries = newStats.milestone === 'Century' ? 1 : 0;
-            const fifties = newStats.milestone === 'Half-Century' ? 1 : 0;
-
-            // Update player stats
-            players[playerIndex] = {
-              ...player,
-              matches: (player.matches || 0) + 1,
-              runs: (player.runs || 0) + newStats.runs,
-              wickets: (player.wickets || 0) + newStats.wickets,
-              careerStats: {
-                ...careerStats,
+            const playerIndex = players.findIndex(p => p.playerId === playerId);
+            if (playerIndex !== -1) {
+              const player = players[playerIndex];
+              
+              // Initialize careerStats if undefined
+              const careerStats = player.careerStats || {
                 batting: {
-                  ...careerStats.batting,
-                  matches: (careerStats.batting.matches || 0) + 1,
-                  innings: (careerStats.batting.innings || 0) + (newStats.runs > 0 || newStats.balls > 0 ? 1 : 0),
-                  notOuts: (careerStats.batting.notOuts || 0) + (newStats.wicketOver ? 0 : newStats.balls > 0 ? 1 : 0),
-                  runs: (careerStats.batting.runs || 0) + newStats.runs,
-                  balls: (careerStats.batting.balls || 0) + newStats.balls,
-                  highest: Math.max(careerStats.batting.highest || 0, newStats.runs),
-                  fours: (careerStats.batting.fours || 0) + newStats.fours,
-                  sixes: (careerStats.batting.sixes || 0) + newStats.sixes,
-                  centuries: (careerStats.batting.centuries || 0) + centuries,
-                  fifties: (careerStats.batting.fifties || 0) + fifties,
+                  matches: 0,
+                  innings: 0,
+                  notOuts: 0,
+                  runs: 0,
+                  balls: 0,
+                  highest: 0,
+                  fours: 0,
+                  sixes: 0,
+                  centuries: 0,
+                  fifties: 0,
                   average: 0,
                   strikeRate: 0
                 },
                 bowling: {
-                  ...careerStats.bowling,
-                  innings: (careerStats.bowling.innings || 0) + (newStats.oversBowled > 0 ? 1 : 0),
-                  wickets: (careerStats.bowling.wickets || 0) + newStats.wickets,
-                  runsConceded: (careerStats.bowling.runsConceded || 0) + newStats.runsConceded,
-                  overs: (careerStats.bowling.overs || 0) + parseFloat(newStats.oversBowled),
-                  maidens: (careerStats.bowling.maidens || 0) + newStats.maidens,
-                  noBalls: (careerStats.bowling.noBalls || 0) + newStats.noBalls,
-                  wides: (careerStats.bowling.wides || 0) + newStats.wides,
-                  dotBalls: (careerStats.bowling.dotBalls || 0) + newStats.dotBalls,
-                  bestBowling: newBestBowling,
+                  innings: 0,
+                  wickets: 0,
+                  runsConceded: 0,
+                  overs: 0,
+                  maidens: 0,
+                  noBalls: 0,
+                  wides: 0,
+                  dotBalls: 0,
+                  bestBowling: '0/0',
                   average: 0,
                   economy: 0,
                   strikeRate: 0
                 },
                 fielding: {
-                  catches: (careerStats.fielding.catches || 0) + newStats.catches,
-                  stumpings: (careerStats.fielding.stumpings || 0) + newStats.stumpings,
-                  runOuts: (careerStats.fielding.runOuts || 0) + newStats.runOuts
+                  catches: 0,
+                  stumpings: 0,
+                  runOuts: 0
                 }
-              }
-            };
+              };
 
-            await updateDoc(teamDocRef, {
-              players: players
+              // Determine best bowling figure
+              const currentBest = careerStats.bowling.bestBowling || '0/0';
+              const [currentWickets, currentRuns] = currentBest.split('/').map(Number);
+              let newBestBowling = currentBest;
+              if (newStats.wickets > currentWickets || 
+                  (newStats.wickets === currentWickets && newStats.runsConceded < currentRuns)) {
+                newBestBowling = `${newStats.wickets}/${newStats.runsConceded}`;
+              }
+
+              // Calculate centuries and fifties
+              const centuries = newStats.milestone === 'Century' ? 1 : 0;
+              const fifties = newStats.milestone === 'Half-Century' ? 1 : 0;
+
+              // Update player stats
+              players[playerIndex] = {
+                ...player,
+                matches: (player.matches || 0) + 1,
+                runs: (player.runs || 0) + newStats.runs,
+                wickets: (player.wickets || 0) + newStats.wickets,
+                careerStats: {
+                  ...careerStats,
+                  batting: {
+                    ...careerStats.batting,
+                    matches: (careerStats.batting.matches || 0) + 1,
+                    innings: (careerStats.batting.innings || 0) + (newStats.runs > 0 || newStats.balls > 0 ? 1 : 0),
+                    notOuts: (careerStats.batting.notOuts || 0) + (newStats.wicketOver ? 0 : newStats.balls > 0 ? 1 : 0),
+                    runs: (careerStats.batting.runs || 0) + newStats.runs,
+                    balls: (careerStats.batting.balls || 0) + newStats.balls,
+                    highest: Math.max(careerStats.batting.highest || 0, newStats.runs),
+                    fours: (careerStats.batting.fours || 0) + newStats.fours,
+                    sixes: (careerStats.batting.sixes || 0) + newStats.sixes,
+                    centuries: (careerStats.batting.centuries || 0) + centuries,
+                    fifties: (careerStats.batting.fifties || 0) + fifties,
+                    average: 0,
+                    strikeRate: 0
+                  },
+                  bowling: {
+                    ...careerStats.bowling,
+                    innings: (careerStats.bowling.innings || 0) + (newStats.oversBowled > 0 ? 1 : 0),
+                    wickets: (careerStats.bowling.wickets || 0) + newStats.wickets,
+                    runsConceded: (careerStats.bowling.runsConceded || 0) + newStats.runsConceded,
+                    overs: (careerStats.bowling.overs || 0) + parseFloat(newStats.oversBowled),
+                    maidens: (careerStats.bowling.maidens || 0) + newStats.maidens,
+                    noBalls: (careerStats.bowling.noBalls || 0) + newStats.noBalls,
+                    wides: (careerStats.bowling.wides || 0) + newStats.wides,
+                    dotBalls: (careerStats.bowling.dotBalls || 0) + newStats.dotBalls,
+                    bestBowling: newBestBowling,
+                    average: 0,
+                    economy: 0,
+                    strikeRate: 0
+                  },
+                  fielding: {
+                    catches: (careerStats.fielding.catches || 0) + newStats.catches,
+                    stumpings: (careerStats.fielding.stumpings || 0) + newStats.stumpings,
+                    runOuts: (careerStats.fielding.runOuts || 0) + newStats.runOuts
+                  }
+                }
+              };
+
+              await updateDoc(teamDocRef, {
+                players: players
+              });
+            }
+          }
+        };
+
+        // Function to find team documents by name
+        const findTeamsByName = async (teamName) => {
+          const teamsRef = collection(db, 'clubTeams');
+          const q = query(teamsRef, where("teamName", "==", teamName));
+          const querySnapshot = await getDocs(q);
+          return querySnapshot.docs;
+        };
+
+        // Combine all player stats from both innings
+        const allPlayerStats = [...(firstInningsData?.playerStats || []), ...playerStats];
+        const allBowlerStats = [...(firstInningsData?.bowlerStats || []), ...bowlerStatsArray];
+        const allFieldingStats = [...(firstInningsData?.fieldingStats || []), ...fieldingStats];
+
+        // Create a map of all players with their combined stats
+        const allPlayersMap = new Map();
+
+        // Add batting stats
+        allPlayerStats.forEach(stat => {
+          if (!allPlayersMap.has(stat.playerId)) {
+            allPlayersMap.set(stat.playerId, {
+              ...stat,
+              wickets: 0,
+              oversBowled: '0.0',
+              runsConceded: 0,
+              maidens: 0,
+              noBalls: 0,
+              wides: 0,
+              dotBalls: 0,
+              catches: 0,
+              stumpings: 0,
+              runOuts: 0
+            });
+          } else {
+            const existing = allPlayersMap.get(stat.playerId);
+            allPlayersMap.set(stat.playerId, {
+              ...existing,
+              ...stat
             });
           }
-        }
-      };
-
-      // Function to find team documents by name (NEW - finds all teams with matching name)
-      const findTeamsByName = async (teamName) => {
-        const teamsRef = collection(db, 'clubTeams');
-        const q = query(teamsRef, where("teamName", "==", teamName));
-        const querySnapshot = await getDocs(q);
-        return querySnapshot.docs;
-      };
-
-      // Combine all player stats from both innings (unchanged from original)
-      const allPlayerStats = [...(firstInningsData?.playerStats || []), ...playerStats];
-      const allBowlerStats = [...(firstInningsData?.bowlerStats || []), ...bowlerStatsArray];
-      const allFieldingStats = [...(firstInningsData?.fieldingStats || []), ...fieldingStats];
-
-      // Create a map of all players with their combined stats (unchanged from original)
-      const allPlayersMap = new Map();
-
-      // Add batting stats
-      allPlayerStats.forEach(stat => {
-        if (!allPlayersMap.has(stat.playerId)) {
-          allPlayersMap.set(stat.playerId, {
-            ...stat,
-            wickets: 0,
-            oversBowled: '0.0',
-            runsConceded: 0,
-            maidens: 0,
-            noBalls: 0,
-            wides: 0,
-            dotBalls: 0,
-            catches: 0,
-            stumpings: 0,
-            runOuts: 0
-          });
-        } else {
-          const existing = allPlayersMap.get(stat.playerId);
-          allPlayersMap.set(stat.playerId, {
-            ...existing,
-            ...stat
-          });
-        }
-      });
-
-      // Add bowling stats
-      allBowlerStats.forEach(stat => {
-        if (!allPlayersMap.has(stat.playerId)) {
-          allPlayersMap.set(stat.playerId, {
-            playerId: stat.playerId,
-            runs: 0,
-            balls: 0,
-            fours: 0,
-            sixes: 0,
-            ...stat,
-            catches: 0,
-            stumpings: 0,
-            runOuts: 0
-          });
-        } else {
-          const existing = allPlayersMap.get(stat.playerId);
-          allPlayersMap.set(stat.playerId, {
-            ...existing,
-            wickets: stat.wickets,
-            oversBowled: stat.oversBowled,
-            runsConceded: stat.runsConceded,
-            maidens: stat.maidens,
-            noBalls: stat.noBalls,
-            wides: stat.wides,
-            dotBalls: stat.dotBalls
-          });
-        }
-      });
-
-      // Add fielding stats
-      allFieldingStats.forEach(stat => {
-        if (!allPlayersMap.has(stat.playerId)) {
-          allPlayersMap.set(stat.playerId, {
-            playerId: stat.playerId,
-            runs: 0,
-            balls: 0,
-            fours: 0,
-            sixes: 0,
-            wickets: 0,
-            oversBowled: '0.0',
-            runsConceded: 0,
-            maidens: 0,
-            noBalls: 0,
-            wides: 0,
-            dotBalls: 0,
-            catches: stat.catches,
-            stumpings: stat.stumpings,
-            runOuts: stat.runOuts
-          });
-        } else {
-          const existing = allPlayersMap.get(stat.playerId);
-          allPlayersMap.set(stat.playerId, {
-            ...existing,
-            catches: stat.catches,
-            stumpings: stat.stumpings,
-            runOuts: stat.runOuts
-          });
-        }
-      });
-
-      // Find all team documents for both teams (NEW)
-      const teamADocs = await findTeamsByName(teamA.teamName);
-      const teamBDocs = await findTeamsByName(teamB.teamName);
-
-      // Update all players in all Team A documents (NEW)
-      for (const teamDoc of teamADocs) {
-        for (const player of selectedPlayersFromProps.left) {
-          const playerStats = allPlayersMap.get(player.playerId);
-          if (playerStats) {
-            await updatePlayerStats(teamDoc.ref, player.playerId, playerStats);
-          }
-        }
-
-        // Update team stats for Team A
-        const isWinner = matchData.matchResult === teamA.teamName;
-        await updateDoc(teamDoc.ref, {
-          matches: (teamDoc.data().matches || 0) + 1,
-          wins: isWinner ? (teamDoc.data().wins || 0) + 1 : (teamDoc.data().wins || 0),
-          points: isWinner ? (teamDoc.data().points || 0) + 2 : 
-                 matchData.matchResult === 'Tie' ? (teamDoc.data().points || 0) + 1 : 
-                 (teamDoc.data().points || 0),
-          losses: !isWinner && matchData.matchResult !== 'Tie' ? 
-                 (teamDoc.data().losses || 0) + 1 : (teamDoc.data().losses || 0),
-          lastMatch: matchData.matchResult || ''
         });
-      }
 
-      // Update all players in all Team B documents (NEW)
-      for (const teamDoc of teamBDocs) {
-        for (const player of selectedPlayersFromProps.right) {
-          const playerStats = allPlayersMap.get(player.playerId);
-          if (playerStats) {
-            await updatePlayerStats(teamDoc.ref, player.playerId, playerStats);
+        // Add bowling stats
+        allBowlerStats.forEach(stat => {
+          if (!allPlayersMap.has(stat.playerId)) {
+            allPlayersMap.set(stat.playerId, {
+              playerId: stat.playerId,
+              runs: 0,
+              balls: 0,
+              fours: 0,
+              sixes: 0,
+              ...stat,
+              catches: 0,
+              stumpings: 0,
+              runOuts: 0
+            });
+          } else {
+            const existing = allPlayersMap.get(stat.playerId);
+            allPlayersMap.set(stat.playerId, {
+              ...existing,
+              wickets: stat.wickets,
+              oversBowled: stat.oversBowled,
+              runsConceded: stat.runsConceded,
+              maidens: stat.maidens,
+              noBalls: stat.noBalls,
+              wides: stat.wides,
+              dotBalls: stat.dotBalls
+            });
           }
+        });
+
+        // Add fielding stats
+        allFieldingStats.forEach(stat => {
+          if (!allPlayersMap.has(stat.playerId)) {
+            allPlayersMap.set(stat.playerId, {
+              playerId: stat.playerId,
+              runs: 0,
+              balls: 0,
+              fours: 0,
+              sixes: 0,
+              wickets: 0,
+              oversBowled: '0.0',
+              runsConceded: 0,
+              maidens: 0,
+              noBalls: 0,
+              wides: 0,
+              dotBalls: 0,
+              catches: stat.catches,
+              stumpings: stat.stumpings,
+              runOuts: stat.runOuts
+            });
+          } else {
+            const existing = allPlayersMap.get(stat.playerId);
+            allPlayersMap.set(stat.playerId, {
+              ...existing,
+              catches: stat.catches,
+              stumpings: stat.stumpings,
+              runOuts: stat.runOuts
+            });
+          }
+        });
+
+        // Find all team documents for both teams
+        const teamADocs = await findTeamsByName(teamA.teamName);
+        const teamBDocs = await findTeamsByName(teamB.teamName);
+
+        // Update all players in all Team A documents
+        for (const teamDoc of teamADocs) {
+          for (const player of selectedPlayersFromProps.left) {
+            const playerStats = allPlayersMap.get(player.playerId);
+            if (playerStats) {
+              await updatePlayerStats(teamDoc.ref, player.playerId, playerStats);
+            }
+          }
+
+          // Update team stats for Team A
+          const isWinner = matchData.matchResult === teamA.teamName;
+          await updateDoc(teamDoc.ref, {
+            matches: (teamDoc.data().matches || 0) + 1,
+            wins: isWinner ? (teamDoc.data().wins || 0) + 1 : (teamDoc.data().wins || 0),
+            points: isWinner ? (teamDoc.data().points || 0) + 2 : 
+                   matchData.matchResult === 'Tie' ? (teamDoc.data().points || 0) + 1 : 
+                   (teamDoc.data().points || 0),
+            losses: !isWinner && matchData.matchResult !== 'Tie' ? 
+                   (teamDoc.data().losses || 0) + 1 : (teamDoc.data().losses || 0),
+            lastMatch: matchData.matchResult || ''
+          });
         }
 
-        // Update team stats for Team B
-        const isWinner = matchData.matchResult === teamB.teamName;
-        await updateDoc(teamDoc.ref, {
-          matches: (teamDoc.data().matches || 0) + 1,
-          wins: isWinner ? (teamDoc.data().wins || 0) + 1 : (teamDoc.data().wins || 0),
-          points: isWinner ? (teamDoc.data().points || 0) + 2 : 
-                 matchData.matchResult === 'Tie' ? (teamDoc.data().points || 0) + 1 : 
-                 (teamDoc.data().points || 0),
-          losses: !isWinner && matchData.matchResult !== 'Tie' ? 
-                 (teamDoc.data().losses || 0) + 1 : (teamDoc.data().losses || 0),
-          lastMatch: matchData.matchResult || ''
-        });
+        // Update all players in all Team B documents
+        for (const teamDoc of teamBDocs) {
+          for (const player of selectedPlayersFromProps.right) {
+            const playerStats = allPlayersMap.get(player.playerId);
+            if (playerStats) {
+              await updatePlayerStats(teamDoc.ref, player.playerId, playerStats);
+            }
+          }
+
+          // Update team stats for Team B
+          const isWinner = matchData.matchResult === teamB.teamName;
+          await updateDoc(teamDoc.ref, {
+            matches: (teamDoc.data().matches || 0) + 1,
+            wins: isWinner ? (teamDoc.data().wins || 0) + 1 : (teamDoc.data().wins || 0),
+            points: isWinner ? (teamDoc.data().points || 0) + 2 : 
+                   matchData.matchResult === 'Tie' ? (teamDoc.data().points || 0) + 1 : 
+                   (teamDoc.data().points || 0),
+            losses: !isWinner && matchData.matchResult !== 'Tie' ? 
+                   (teamDoc.data().losses || 0) + 1 : (teamDoc.data().losses || 0),
+            lastMatch: matchData.matchResult || ''
+          });
+        }
       }
+    } catch (error) {
+      console.error('Error saving match data:', error);
     }
-  } catch (error) {
-    console.error('Error saving match data:', error);
-  }
-};
+  };
 
   const handleScoreButtonClick = (value, isLabel) => {
-  if (gameFinished) return;
+    if (gameFinished) return;
 
-  let runsToAdd = 0;
-  let isValidBall = false;
-  let isDotBall = false;
+    let runsToAdd = 0;
+    let isValidBall = false;
+    let isDotBall = false;
+    let isWide = false;
+    let isNoBall = false;
 
-  if (isLabel) {
-    setActiveNumber(null);
-    setActiveLabel(value);
-  } else {
-    setActiveLabel(null);
-    setActiveNumber(value);
-    isDotBall = value === 0;
-  }
-
-  // Handle pending wide
-  if (pendingWide && !isLabel && typeof value === 'number') {
-    setShowRunInfo(false);
-    runsToAdd = 1 + value;
-    setPlayerScore(prev => prev + runsToAdd);
-    setCurrentOverRuns(prev => prev + runsToAdd);
-    setTopPlays(prev => [...prev, `W+${value}`]);
-    setCurrentOverBalls(prev => [...prev, `W+${value}`]);
-    if (selectedBowler) updateBowlerStats(selectedBowler.index, false, false, runsToAdd, false, true);
-    if (value % 2 !== 0) {
-      const temp = striker;
-      setStriker(nonStriker);
-      setNonStriker(temp);
+    if (isLabel) {
+      setActiveNumber(null);
+      setActiveLabel(value);
+    } else {
+      setActiveLabel(null);
+      setActiveNumber(value);
+      isDotBall = value === 0;
     }
-    setPendingWide(false);
-    saveMatchData();
-    return;
-  }
 
-  // Handle pending no-ball
-  if (pendingNoBall && !isLabel && typeof value === 'number') {
-    setShowRunInfo(false);
-    runsToAdd = 1 + value;
-    setPlayerScore(prev => prev + runsToAdd);
-    setCurrentOverRuns(prev => prev + runsToAdd);
-    setTopPlays(prev => [...prev, `NB+${value}`]);
-    setCurrentOverBalls(prev => [...prev, `NB+${value}`]);
-    if (striker) {
-      updateBatsmanScore(striker.index, value);
-      updateBatsmanStats(striker.index, value);
-      updateBatsmanBalls(striker.index);
-    }
-    if (selectedBowler) updateBowlerStats(selectedBowler.index, false, false, runsToAdd, true);
-    if (value % 2 !== 0) {
-      const temp = striker;
-      setStriker(nonStriker);
-      setNonStriker(temp);
-    }
-    setPendingNoBall(false);
-    saveMatchData();
-    return;
-  }
-
-  // Handle pending leg-bye
-  if (pendingLegBy && !isLabel && typeof value === 'number') {
-    setShowRunInfo(false);
-    runsToAdd = value;
-    setPlayerScore(prev => prev + runsToAdd);
-    setCurrentOverRuns(prev => prev + runsToAdd);
-    setTopPlays(prev => [...prev, `L+${value}`]);
-    setCurrentOverBalls(prev => [...prev, `L+${value}`]);
-    setValidBalls(prev => prev + 1);
-    isValidBall = true;
-    if (striker) updateBatsmanBalls(striker.index);
-    if (value % 2 !== 0) {
-      const temp = striker;
-      setStriker(nonStriker);
-      setNonStriker(temp);
-    }
-    setPendingLegBy(false);
-    saveMatchData();
-    return;
-  }
-
-  // Handle pending out
-  if (pendingOut && !isLabel && typeof value === 'number') {
-    playAnimation('out');
-    setTimeout(() => {
-      runsToAdd = value;
+    // Handle pending wide
+    if (pendingWide && !isLabel && typeof value === 'number') {
+      setShowRunInfo(false);
+      runsToAdd = 1 + value;
       setPlayerScore(prev => prev + runsToAdd);
       setCurrentOverRuns(prev => prev + runsToAdd);
-      setTopPlays(prev => [...prev, `O+${value}`]);
-      setCurrentOverBalls(prev => [...prev, `O+${value}`]);
+      setTopPlays(prev => [...prev, `W+${value}`]);
+      setCurrentOverBalls(prev => [...prev, `W+${value}`]);
+      if (selectedBowler) updateBowlerStats(selectedBowler.index, false, false, runsToAdd, false, true);
+      if (value % 2 !== 0) {
+        const temp = striker;
+        setStriker(nonStriker);
+        setNonStriker(temp);
+      }
+      if (striker) {
+        updateBatsmanScore(striker.index, value + 1);
+        updateBatsmanStats(striker.index, value + 1);
+      }
+      setPendingWide(false);
+      saveMatchData();
+      return;
+    }
+
+    // Handle pending no-ball
+    if (pendingNoBall && !isLabel && typeof value === 'number') {
+      setShowRunInfo(false);
+      runsToAdd = 1 + value;
+      setPlayerScore(prev => prev + runsToAdd);
+      setCurrentOverRuns(prev => prev + runsToAdd);
+      setTopPlays(prev => [...prev, `NB+${value}`]);
+      setCurrentOverBalls(prev => [...prev, `NB+${value}`]);
       if (striker) {
         updateBatsmanScore(striker.index, value);
         updateBatsmanStats(striker.index, value);
         updateBatsmanBalls(striker.index);
       }
+      if (selectedBowler) updateBowlerStats(selectedBowler.index, false, false, runsToAdd, true);
+      if (value % 2 !== 0) {
+        const temp = striker;
+        setStriker(nonStriker);
+        setNonStriker(temp);
+      }
+      setPendingNoBall(false);
+      saveMatchData();
+      return;
+    }
+
+    // Handle pending leg-bye
+    if (pendingLegBy && !isLabel && typeof value === 'number') {
+      setShowRunInfo(false);
+      runsToAdd = value;
+      setPlayerScore(prev => prev + runsToAdd);
+      setCurrentOverRuns(prev => prev + runsToAdd);
+      setTopPlays(prev => [...prev, `L+${value}`]);
+      setCurrentOverBalls(prev => [...prev, `L+${value}`]);
       setValidBalls(prev => prev + 1);
       isValidBall = true;
-      setShowOutTypeModal(true);
+      if (striker) updateBatsmanBalls(striker.index);
+      if (selectedBowler) updateBowlerStats(selectedBowler.index, false, true, runsToAdd);
+      if (value % 2 !== 0) {
+        const temp = striker;
+        setStriker(nonStriker);
+        setNonStriker(temp);
+      }
+      setPendingLegBy(false);
       saveMatchData();
-    }, 5000);
-    setPendingOut(false);
-    return;
-  }
+      return;
+    }
 
-  if (isLabel) {
-    if (value === 'Wide' || value === 'No-ball' || value === 'Leg By') {
-      setShowRunInfo(true);
+    // Handle pending out
+    if (pendingOut && !isLabel && typeof value === 'number') {
+      if (value !== 0 && value !== 1 && value !== 2) {
+        return;
+      }
+
+      setCatchRuns(value);
+      playAnimation('out');
+      setTimeout(() => {
+        runsToAdd = value;
+        setPlayerScore(prev => prev + runsToAdd);
+        setCurrentOverRuns(prev => prev + runsToAdd);
+        setTopPlays(prev => [...prev, `O+${value}`]);
+        setCurrentOverBalls(prev => [...prev, `O+${value}`]);
+        if (striker) {
+          updateBatsmanScore(striker.index, value);
+          updateBatsmanStats(striker.index, value);
+          updateBatsmanBalls(striker.index);
+        }
+        setValidBalls(prev => prev + 1);
+        isValidBall = true;
+        setShowOutTypeModal(true);
+        saveMatchData();
+      }, 5000);
+      setPendingOut(false);
+      return;
+    }
+
+    if (isLabel) {
+      if (value === 'Wide' || value === 'No-ball' || value === 'Leg By' || value === 'OUT') {
+        setShowRunInfo(true);
+      } else {
+        setShowRunInfo(false);
+      }
+
+      if (value === 'Wide') {
+        setPendingWide(true);
+        isWide = true;
+        return;
+      } else if (value === 'No-ball') {
+        setPendingNoBall(true);
+        isNoBall = true;
+        return;
+      } else if (value === 'Leg By') {
+        setPendingLegBy(true);
+        return;
+      } else if (value === 'OUT' || value === 'lbw') {
+        setPendingOut(true);
+        return;
+      }
+      if (!extraBalls.includes(value)) {
+        setValidBalls(prev => prev + 1);
+        if (striker && value !== 'Wide' && value !== 'No-ball') {
+          updateBatsmanBalls(striker.index);
+        }
+        saveMatchData();
+      }
     } else {
       setShowRunInfo(false);
+      runsToAdd = value;
+      setPlayerScore(prev => prev + runsToAdd);
+      setCurrentOverRuns(prev => prev + runsToAdd);
+      setTopPlays(prev => [...prev, value]);
+      setCurrentOverBalls(prev => [...prev, value]);
+      setValidBalls(prev => prev + 1);
+      isValidBall = true;
+      if (striker) {
+        updateBatsmanScore(striker.index, value);
+        updateBatsmanStats(striker.index, value, value === 0);
+        updateBatsmanBalls(striker.index);
+      }
+      if (selectedBowler) updateBowlerStats(selectedBowler.index, false, true, runsToAdd, isNoBall, isWide, value === 0);
+      if (value % 2 !== 0) {
+        const temp = striker;
+        setStriker(nonStriker);
+        setNonStriker(temp);
+      }
+      if (value === 6) {
+        playAnimation('six');
+      } else if (value === 4) {
+        playAnimation('four');
+      }
+    }
+    if (!pendingOut && !pendingWide && !pendingNoBall && !pendingLegBy && typeof value === 'number') {
+      setSelectedRun(value);
+      setShowMainWheel(true);
     }
 
-    if (value === 'Wide') {
-      setPendingWide(true);
-      return;
-    } else if (value === 'No-ball') {
-      setPendingNoBall(true);
-      return;
-    } else if (value === 'Leg By') {
-      setPendingLegBy(true);
-      return;
-    } else if (value === 'OUT' || value === 'lbw') {
-      setPendingOut(true);
-      return;
-    }
-  } else {
-    setShowRunInfo(false);
-    setSelectedRun(value);
-    
-    if (value === 6) {
-      playAnimation('six');
-      setTimeout(() => {
-        setShowWagonWheel(true);
-      }, 3000);
-      return;
-    } else if (value === 4) {
-      playAnimation('four');
-      setTimeout(() => {
-        setShowWagonWheel(true);
-      }, 3000);
-      return;
-    } else {
-      setShowWagonWheel(true);
-    }
-  }
-
-  saveMatchData();
-};
+    saveMatchData();
+  };
 
   const handleOutTypeSelect = (type) => {
     setOutType(type);
@@ -1103,6 +1021,49 @@ const processBallWithWagonWheelData = () => {
     }
     setOutCount(prev => prev + 1);
     setShowBatsmanDropdown(true);
+  };
+
+  const handleCatchModalSubmit = () => {
+    if (!selectedCatchType || !selectedFielder) {
+      return;
+    }
+    recordWicketOver(
+      striker.index, 
+      'catch', 
+      selectedBowler.index, 
+      selectedFielder.index, 
+      'fielder',
+      selectedCatchType
+    );
+    if (selectedBowler) {
+      updateBowlerStats(selectedBowler.index, true, true);
+    }
+    setOutCount(prev => prev + 1);
+    setShowCatchModal(false);
+    setShowBatsmanDropdown(true);
+  
+    playAnimation('out');
+    setTimeout(() => {
+      setPlayerScore(prev => prev + catchRuns);
+      setTopPlays(prev => [...prev, `O+${catchRuns} (${selectedCatchType})`]);
+      setCurrentOverBalls(prev => [...prev, `O+${catchRuns} (${selectedCatchType})`]);
+      if (striker) {
+        updateBatsmanScore(striker.index, catchRuns);
+        updateBatsmanStats(striker.index, catchRuns, catchRuns === 0);
+        updateBatsmanBalls(striker.index);
+        recordWicket(striker.index, selectedCatchType, selectedFielder);
+      }
+
+      setValidBalls(prev => prev + 1);
+      if (selectedBowler) updateBowlerStats(selectedBowler.index, true, true, catchRuns);
+      setShowBatsmanDropdown(true);
+      setShowCatchModal(false);
+      setPendingOut(false);
+      setSelectedCatchType('');
+      setSelectedFielder(null);
+      setCatchRuns(null);
+      saveMatchData();
+    }, 1000);
   };
 
   useEffect(() => {
@@ -1223,7 +1184,9 @@ const processBallWithWagonWheelData = () => {
             dismissalType: wicket ? wicket.type : null,
             bowlerIndex: wicket ? wicket.bowlerIndex : null,
             fielderIndex: wicket ? wicket.fielderIndex : null,
-            fielderRole: wicket ? wicket.fielderRole : null
+            fielderRole: wicket ? wicket.fielderRole : null,
+            catchType: wicket?.catchType || null,
+            fielder: wicket?.fielder || null
           };
         });
         const bowlerStatsArray = bowlingTeamPlayers.map(player => {
@@ -1308,7 +1271,7 @@ const processBallWithWagonWheelData = () => {
       return;
     }
 
-   if (validBalls === 6) {
+    if (validBalls === 6) {
       // Check for maiden over (all balls are dot balls with 0 runs)
       const isMaidenOver = currentOverBalls.every(ball => {
         if (typeof ball === 'number') return ball === 0;
@@ -1339,7 +1302,7 @@ const processBallWithWagonWheelData = () => {
         setShowBowlerDropdown(true);
       }, 1000);
     }
-  }, [validBalls, outCount, overNumber, isChasing, targetScore, playerScore, gameFinished, maxOvers, teamA, teamB, currentOverRuns]);
+  }, [validBalls, currentOverBalls, nonStriker, overNumber, isChasing, targetScore, playerScore, gameFinished, outCount, maxOvers, teamA, teamB, playedOvers, playedWickets]);
 
   const resetInnings = () => {
     setCurrentOverBalls([]);
@@ -1374,6 +1337,10 @@ const processBallWithWagonWheelData = () => {
     setCatcher(null);
     setFielder(null);
     setFielderRole(null);
+    setShowCatchModal(false);
+    setSelectedCatchType('');
+    setSelectedFielder(null);
+    setCatchRuns(null);
   };
 
   const resetGame = () => {
@@ -1624,109 +1591,6 @@ const processBallWithWagonWheelData = () => {
           </button>
         )}
 
-         {/* Wagon Wheel Modal */}
-        {showWagonWheel && (
-          <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4">
-            <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-6 rounded-3xl w-full max-w-2xl shadow-2xl border-4 border-gray-700">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-bold text-white drop-shadow-lg">
-                  {selectedRun !== null && `${selectedRun === 'W' ? 'Wicket' : `${selectedRun} Run${selectedRun !== 1 ? 's' : ''}`} - Select Shot Direction`}
-                </h3>
-                <button 
-                  onClick={() => setShowWagonWheel(false)}
-                  className="text-white hover:text-gray-300 text-2xl transition-transform hover:scale-110"
-                >
-                  ×
-                </button>
-              </div>
-              
-              {renderWagonWheel()}
-              
-              <div className="text-center text-gray-200 italic text-sm drop-shadow-md">
-                Click on the fielding position where the ball went
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Shot Type Modal */}
-        {showShotTypeModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4">
-            <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-6 rounded-3xl w-full max-w-md shadow-2xl border-4 border-gray-700">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-bold text-white drop-shadow-lg">
-                  {selectedRun === 'W' ? 'Wicket' : `${selectedRun} Run${selectedRun !== 1 ? 's' : ''}`} - {selectedDirection.label} - Select Shot Type
-                </h3>
-                <button 
-                  onClick={() => setShowShotTypeModal(false)}
-                  className="text-white hover:text-gray-300 text-2xl transition-transform hover:scale-110"
-                >
-                  ×
-                </button>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-3 mb-6">
-                {SHOT_TYPES.filter(shot => {
-                  // Filter shots based on direction
-                  if (selectedDirection.label.includes("Straight")) {
-                    return ["drive", "loft", "defense"].includes(shot.class);
-                  }
-                  if (selectedDirection.label.includes("Cover")) {
-                    return ["drive", "cut"].includes(shot.class);
-                  }
-                  if (selectedDirection.label.includes("Square")) {
-                    return ["cut", "pull"].includes(shot.class);
-                  }
-                  return true;
-                }).map((type) => (
-                  <button
-                    key={type.name}
-                    onClick={() => handleShotTypeSelect(type)}
-                    className="px-3 py-2 text-white rounded-lg font-medium text-sm 
-                      transition-all duration-200 shadow hover:shadow-lg hover:scale-105"
-                    style={{ backgroundColor: type.color }}
-                  >
-                    {type.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Trajectory Modal */}
-        {showTrajectoryModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4">
-            <div className="bg-gradient-to-br from-gray-800 to-gray-900 p-6 rounded-3xl w-full max-w-md shadow-2xl border-4 border-gray-700">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-bold text-white drop-shadow-lg">
-                  {selectedRun === 'W' ? 'Wicket' : `${selectedRun} Run${selectedRun !== 1 ? 's' : ''}`} - {selectedDirection.label} - {selectedShotType.name} - Select Ball Trajectory
-                </h3>
-                <button 
-                  onClick={() => setShowTrajectoryModal(false)}
-                  className="text-white hover:text-gray-300 text-2xl transition-transform hover:scale-110"
-                >
-                  ×
-                </button>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-3 mb-6">
-                {TRAJECTORIES.map((trajectory) => (
-                  <button
-                    key={trajectory.name}
-                    onClick={() => handleTrajectorySelect(trajectory)}
-                    className="px-3 py-2 text-white rounded-lg font-medium text-sm 
-                      transition-all duration-200 shadow hover:shadow-lg hover:scale-105"
-                    style={{ backgroundColor: trajectory.color }}
-                  >
-                    {trajectory.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
         {showModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-[#4C0025] p-6 rounded-lg max-w-md w-full">
@@ -1810,6 +1674,66 @@ const processBallWithWagonWheelData = () => {
           </div>
         )}
 
+        {showCatchModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-[#4C0025] p-4 md:p-6 rounded-lg max-w-md w-full mx-4 relative">
+              <button
+                onClick={() => {
+                  setShowCatchModal(false);
+                  setSelectedCatchType('');
+                  setSelectedFielder(null);
+                  setCatchRuns(null);
+                  setPendingOut(false);
+                }}
+                className="absolute top-2 right-2 w-6 h-6 text-white font-bold flex items-center justify-center text-xl"
+              >
+                ×
+              </button>
+              <h3 className="text-white text-lg md:text-xl font-bold mb-4">Select Catch Details</h3>
+              <div className="mb-4">
+                <label className="text-white block mb-2">Catch Type</label>
+                <select
+                  value={selectedCatchType}
+                  onChange={(e) => setSelectedCatchType(e.target.value)}
+                  className="w-full p-2 rounded bg-gray-700 text-white"
+                >
+                  <option value="">Select Catch Type</option>
+                  {catchTypes.map(type => (
+                    <option key={type} value={type}>{type}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="mb-4">
+                <label className="text-white block mb-2">Fielder</label>
+                <select
+                  value={selectedFielder?.index || ''}
+                  onChange={(e) => {
+                    const fielder = bowlingTeamPlayers.find(p => p.index === e.target.value);
+                    setSelectedFielder(fielder);
+                  }}
+                  className="w-full p-2 rounded bg-gray-700 text-white"
+                >
+                  <option value="">Select Fielder</option>
+                  {bowlingTeamPlayers.map(player => (
+                    <option key={player.index} value={player.index}>{player.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex justify-center gap-4">
+                <button
+                  onClick={handleCatchModalSubmit}
+                  disabled={!selectedCatchType || !selectedFielder}
+                  className={`w-40 h-12 text-white font-bold text-lg rounded-lg border-2 border-white ${
+                    selectedCatchType && selectedFielder ? 'bg-[#FF62A1] hover:bg-[#FF62A1]/80' : 'bg-gray-500 cursor-not-allowed'
+                  }`}
+                >
+                  Confirm
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Catcher Selection Modal */}
         {showCatcherModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -1820,7 +1744,7 @@ const processBallWithWagonWheelData = () => {
                   <div
                     key={player.index}
                     onClick={() => handleCatcherSelect(player)}
-                    className="cursor-pointer flex flex-col items-center text-white text-center p-2 hover:bg-[#FF62A1] rounded-lg"
+                    className="cursor-pointer flex flex-col items-center text-white text-center  p-2 hover:bg-[#FF62A1] rounded-lg"
                   >
                     {getPlayerImage(player, 'w-12 h-12 md:w-16 md:h-16')}
                     <span className="text-xs md:text-sm">{player.name}</span>
@@ -2291,6 +2215,22 @@ const processBallWithWagonWheelData = () => {
             </button>
           </div>
         )}
+        {showMainWheel && (
+          <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center">
+            <div className="relative bg-white p-6 rounded-lg w-[90%] max-w-3xl mx-auto">
+              <button
+                onClick={() => setShowMainWheel(false)}
+                className="absolute top-8 right-8 bg-black text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-gray-800 transition"
+              >
+                ✕
+              </button>
+              <MainWheel
+                run={selectedRun}
+                onClose={() => setShowMainWheel(false)}
+              />
+            </div>
+          </div>
+        )}
       </section>
       <style jsx>{`
         .scrollbar-hidden::-webkit-scrollbar {
@@ -2300,27 +2240,9 @@ const processBallWithWagonWheelData = () => {
           -ms-overflow-style: none;
           scrollbar-width: none;
         }
-           @keyframes ballFlight {
-          0% {
-            transform: translate(0, 0);
-            opacity: 1;
-          }
-          100% {
-            transform: 
-              translate(
-                calc(cos(var(--direction-angle) * 1deg) * var(--distance)),
-                calc(sin(var(--direction-angle) * 1deg) * var(--distance) * -1)
-              );
-            opacity: 0;
-          }
-        }
-        
-        .animate-ball-flight {
-          animation: ballFlight 0.8s ease-out forwards;
-        }
       `}</style>
     </ErrorBoundary>
   );
 }
 
-export default StartMatchPlayers; 
+export default StartMatchPlayers;
