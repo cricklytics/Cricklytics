@@ -196,21 +196,21 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
 
   const updateBatsmanStats = (batsmanIndex, runs) => {
     setBatsmenStats(prev => {
-      const currentRuns = (prev[batsmanIndex]?.runs || 0) + runs;
+      const currentRuns = (prev[batsmanIndex].runs || 0) + runs;
       const milestone = currentRuns >= 100 ? 'Century' : currentRuns >= 50 ? 'Half-Century' : null;
       return {
         ...prev,
         [batsmanIndex]: {
           ...prev[batsmanIndex],
           runs: currentRuns,
-          balls: (prev[batsmanIndex]?.balls || 0) + 1,
-          dotBalls: runs === 0 ? (prev[batsmanIndex]?.dotBalls || 0) + 1 : prev[batsmanIndex]?.dotBalls || 0,
-          ones: runs === 1 ? (prev[batsmanIndex]?.ones || 0) + 1 : prev[batsmanIndex]?.ones || 0,
-          twos: runs === 2 ? (prev[batsmanIndex]?.twos || 0) + 1 : prev[batsmanIndex]?.twos || 0,
-          threes: runs === 3 ? (prev[batsmanIndex]?.threes || 0) + 1 : prev[batsmanIndex]?.threes || 0,
-          fours: runs === 4 ? (prev[batsmanIndex]?.fours || 0) + 1 : prev[batsmanIndex]?.fours || 0,
-          sixes: runs === 6 ? (prev[batsmanIndex]?.sixes || 0) + 1 : prev[batsmanIndex]?.sixes || 0,
-          milestone
+          balls: (prev[batsmanIndex].balls || 0) + 1,
+          dotBalls: runs === 0 ? (prev[batsmanIndex].dotBalls || 0) + 1 : (prev[batsmanIndex].dotBalls || 0),
+          ones: runs === 1 ? (prev[batsmanIndex].ones || 0) + 1 : (prev[batsmanIndex].ones || 0),
+          twos: runs === 2 ? (prev[batsmanIndex].twos || 0) + 1 : (prev[batsmanIndex].twos || 0),
+          threes: runs === 3 ? (prev[batsmanIndex].threes || 0) + 1 : (prev[batsmanIndex].threes || 0),
+          fours: runs === 4 ? (prev[batsmanIndex].fours || 0) + 1 : (prev[batsmanIndex].fours || 0),
+          sixes: runs === 6 ? (prev[batsmanIndex].sixes || 0) + 1 : (prev[batsmanIndex].sixes || 0),
+          milestone: milestone
         }
       };
     });
@@ -253,42 +253,120 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
         return;
       }
 
-      const overs = `${overNumber - 1}.${validBalls}`;
+      // Define battingTeam and bowlingTeam at the top to ensure they are always defined
       const battingTeam = isChasing ? teamB : teamA;
       const bowlingTeam = isChasing ? teamA : teamB;
+
+      const overs = `${overNumber - 1}.${validBalls}`;
 
       const playerStats = battingTeamPlayers.map(player => {
         const stats = batsmenStats[player.index] || {};
         const wicket = wicketOvers.find(w => w.batsmanIndex === player.index);
         return {
-          index: player.index || '',
-          name: player.name || 'Unknown',
-          photoUrl: player.photoUrl || '',
-          role: player.role || '',
+          age: player.age || 0,
+          audioUrl: "",
+          average: 0,
+          battingStyle: player.battingStyle || "Right Handed Bat",
+          bestBowling: "0",
+          bio: player.bio || "Right hands batman",
+          bowlingStyle: player.bowlingStyle || "Right Arm Off Spin",
+          careerStats: {
+            batting: {
+              average: 0,
+              centuries: stats.milestone === 'Century' ? 1 : 0,
+              fifties: stats.milestone === 'Half-Century' ? 1 : 0,
+              fours: stats.fours || 0,
+              highest: stats.runs || 0,
+              innings: stats.balls > 0 ? 1 : 0,
+              matches: 1,
+              notOuts: wicket ? 0 : 1,
+              runs: stats.runs || 0,
+              sixes: stats.sixes || 0,
+              strikeRate: getStrikeRate(player.index)
+            },
+            bowling: {
+              average: 0,
+              best: "0",
+              economy: 0,
+              innings: 0,
+              strikeRate: 0,
+              wickets: 0
+            },
+            fielding: {
+              catches: wicket?.catchDetails ? 1 : 0,
+              runOuts: 0,
+              stumpings: 0
+            }
+          },
+          centuries: stats.milestone === 'Century' ? 1 : 0,
+          fifties: stats.milestone === 'Half-Century' ? 1 : 0,
+          highestScore: stats.runs || 0,
+          image: player.photoUrl || "",
+          matches: 1,
+          name: player.name || "Unknown",
+          playerId: player.index || "",
+          recentMatches: [],
+          role: player.role || "player",
           runs: stats.runs || 0,
-          balls: stats.balls || 0,
-          dotBalls: stats.dotBalls || 0,
-          ones: stats.ones || 0,
-          twos: stats.twos || 0,
-          threes: stats.threes || 0,
-          fours: stats.fours || 0,
-          sixes: stats.sixes || 0,
-          milestone: stats.milestone || null,
-          wicketOver: wicket ? wicket.over : null,
-          catchDetails: wicket?.catchDetails || null
+          strikeRate: getStrikeRate(player.index),
+          teamName: battingTeam?.name || "Unknown",
+          user: "yes",
+          userId: auth.currentUser.uid
         };
       });
 
       const bowlerStatsArray = bowlingTeamPlayers.map(player => {
         const stats = bowlerStats[player.index] || {};
         return {
-          index: player.index || '',
-          name: player.name || 'Unknown',
-          photoUrl: player.photoUrl || '',
-          role: player.role || '',
-          wickets: stats.wickets || 0,
-          oversBowled: stats.oversBowled || '0.0',
-          runsConceded: stats.runsConceded || 0
+          age: player.age || 0,
+          audioUrl: "",
+          average: 0,
+          battingStyle: player.battingStyle || "Right Handed Bat",
+          bestBowling: stats.wickets > 0 ? `${stats.wickets}/${stats.runsConceded}` : "0",
+          bio: player.bio || "Right hands batman",
+          bowlingStyle: player.bowlingStyle || "Right Arm Off Spin",
+          careerStats: {
+            batting: {
+              average: 0,
+              centuries: 0,
+              fifties: 0,
+              fours: 0,
+              highest: 0,
+              innings: 0,
+              matches: 1,
+              notOuts: 0,
+              runs: 0,
+              sixes: 0,
+              strikeRate: 0
+            },
+            bowling: {
+              average: stats.runsConceded && stats.wickets ? (stats.runsConceded / stats.wickets).toFixed(2) : 0,
+              best: stats.wickets > 0 ? `${stats.wickets}/${stats.runsConceded}` : "0",
+              economy: stats.ballsBowled ? ((stats.runsConceded / stats.ballsBowled) * 6).toFixed(2) : 0,
+              innings: stats.ballsBowled > 0 ? 1 : 0,
+              strikeRate: stats.wickets && stats.ballsBowled ? (stats.ballsBowled / stats.wickets).toFixed(2) : 0,
+              wickets: stats.wickets || 0
+            },
+            fielding: {
+              catches: wicketOvers.some(w => w.catchDetails?.fielder === player.name) ? 1 : 0,
+              runOuts: 0,
+              stumpings: 0
+            }
+          },
+          centuries: 0,
+          fifties: 0,
+          highestScore: 0,
+          image: player.photoUrl || "",
+          matches: 1,
+          name: player.name || "Unknown",
+          playerId: player.index || "",
+          recentMatches: [],
+          role: player.role || "player",
+          runs: 0,
+          strikeRate: 0,
+          teamName: bowlingTeam?.name || "Unknown",
+          user: "yes",
+          userId: auth.currentUser.uid
         };
       });
 
@@ -463,10 +541,10 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
 
     if (pendingOut && !isLabel && typeof value === 'number') {
       if (value !== 0 && value !== 1 && value !== 2) return;
-      playAnimation('out'); // Play the out animation first
+      playAnimation('out');
       setTimeout(() => {
-        setShowCatchModal(true); // Show the catch modal after the animation
-      }, 3000); // Adjust the delay to match the animation duration (3000ms = 3 seconds)
+        setShowCatchModal(true);
+      }, 3000);
       return;
     }
 
@@ -650,37 +728,115 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
     if (outCount >= 10 || (validBalls === 6 && overNumber > maxOvers - 1)) {
       if (!isChasing) {
         const overs = `${overNumber - 1}.${validBalls}`;
+        const battingTeam = teamA;
+        const bowlingTeam = teamB;
         const playerStats = battingTeamPlayers.map(player => {
           const stats = batsmenStats[player.index] || {};
           const wicket = wicketOvers.find(w => w.batsmanIndex === player.index);
           return {
-            index: player.index || '',
-            name: player.name || 'Unknown',
-            photoUrl: player.photoUrl || '',
-            role: player.role || '',
+            age: player.age || 0,
+            audioUrl: "",
+            average: 0,
+            battingStyle: player.battingStyle || "Right Handed Bat",
+            bestBowling: "0",
+            bio: player.bio || "Right hands batman",
+            bowlingStyle: player.bowlingStyle || "Right Arm Off Spin",
+            careerStats: {
+              batting: {
+                average: 0,
+                centuries: stats.milestone === 'Century' ? 1 : 0,
+                fifties: stats.milestone === 'Half-Century' ? 1 : 0,
+                fours: stats.fours || 0,
+                highest: stats.runs || 0,
+                innings: stats.balls > 0 ? 1 : 0,
+                matches: 1,
+                notOuts: wicket ? 0 : 1,
+                runs: stats.runs || 0,
+                sixes: stats.sixes || 0,
+                strikeRate: getStrikeRate(player.index)
+              },
+              bowling: {
+                average: 0,
+                best: "0",
+                economy: 0,
+                innings: 0,
+                strikeRate: 0,
+                wickets: 0
+              },
+              fielding: {
+                catches: wicket?.catchDetails ? 1 : 0,
+                runOuts: 0,
+                stumpings: 0
+              }
+            },
+            centuries: stats.milestone === 'Century' ? 1 : 0,
+            fifties: stats.milestone === 'Half-Century' ? 1 : 0,
+            highestScore: stats.runs || 0,
+            image: player.photoUrl || "",
+            matches: 1,
+            name: player.name || "Unknown",
+            playerId: player.index || "",
+            recentMatches: [],
+            role: player.role || "player",
             runs: stats.runs || 0,
-            balls: stats.balls || 0,
-            dotBalls: stats.dotBalls || 0,
-            ones: stats.ones || 0,
-            twos: stats.twos || 0,
-            threes: stats.threes || 0,
-            fours: stats.fours || 0,
-            sixes: stats.sixes || 0,
-            milestone: stats.milestone || null,
-            wicketOver: wicket ? wicket.over : null,
-            catchDetails: wicket?.catchDetails || null
+            strikeRate: getStrikeRate(player.index),
+            teamName: battingTeam?.name || "Unknown",
+            user: "yes",
+            userId: auth.currentUser.uid
           };
         });
         const bowlerStatsArray = bowlingTeamPlayers.map(player => {
           const stats = bowlerStats[player.index] || {};
           return {
-            index: player.index || '',
-            name: player.name || 'Unknown',
-            photoUrl: player.photoUrl || '',
-            role: player.role || '',
-            wickets: stats.wickets || 0,
-            oversBowled: stats.oversBowled || '0.0',
-            runsConceded: stats.runsConceded || 0
+            age: player.age || 0,
+            audioUrl: "",
+            average: 0,
+            battingStyle: player.battingStyle || "Right Handed Bat",
+            bestBowling: stats.wickets > 0 ? `${stats.wickets}/${stats.runsConceded}` : "0",
+            bio: player.bio || "Right hands batman",
+            bowlingStyle: player.bowlingStyle || "Right Arm Off Spin",
+            careerStats: {
+              batting: {
+                average: 0,
+                centuries: 0,
+                fifties: 0,
+                fours: 0,
+                highest: 0,
+                innings: 0,
+                matches: 1,
+                notOuts: 0,
+                runs: 0,
+                sixes: 0,
+                strikeRate: 0
+              },
+              bowling: {
+                average: stats.runsConceded && stats.wickets ? (stats.runsConceded / stats.wickets).toFixed(2) : 0,
+                best: stats.wickets > 0 ? `${stats.wickets}/${stats.runsConceded}` : "0",
+                economy: stats.ballsBowled ? ((stats.runsConceded / stats.ballsBowled) * 6).toFixed(2) : 0,
+                innings: stats.ballsBowled > 0 ? 1 : 0,
+                strikeRate: stats.wickets && stats.ballsBowled ? (stats.ballsBowled / stats.wickets).toFixed(2) : 0,
+                wickets: stats.wickets || 0
+              },
+              fielding: {
+                catches: wicketOvers.some(w => w.catchDetails?.fielder === player.name) ? 1 : 0,
+                runOuts: 0,
+                stumpings: 0
+              }
+            },
+            centuries: 0,
+            fifties: 0,
+            highestScore: 0,
+            image: player.photoUrl || "",
+            matches: 1,
+            name: player.name || "Unknown",
+            playerId: player.index || "",
+            recentMatches: [],
+            role: player.role || "player",
+            runs: 0,
+            strikeRate: 0,
+            teamName: bowlingTeam?.name || "Unknown",
+            user: "yes",
+            userId: auth.currentUser.uid
           };
         });
         setFirstInningsData({
