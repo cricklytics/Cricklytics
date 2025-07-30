@@ -6,7 +6,7 @@ import nav from '../../assets/kumar/right-chevron.png';
 
 const Selection2 = () => {
   const { state } = useLocation();
-  const { teams: teamNames = [], tournamentName = '', tournamentId: passedTournamentId = null, information = '', startDate = '2025-03-07', endDate = '2025-03-21' } = state || {};
+  const { teams: teamNames = [], tournamentName = '', tournamentId: passedTournamentId = null, information = '' } = state || {};
   const navigate = useNavigate();
   const [schedule, setSchedule] = useState([]);
   const [semiFinals, setSemiFinals] = useState([]);
@@ -20,6 +20,10 @@ const Selection2 = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [teams, setTeams] = useState([]);
+  const [currentStartDate, setCurrentStartDate] = useState(null); // No default
+  const [currentEndDate, setCurrentEndDate] = useState(null); // No default
+  const [editingIndex, setEditingIndex] = useState(null); // Track editing row
+  const [editForm, setEditForm] = useState({ date: '', time: '' }); // Temp state for editing
   const hasStoredSchedule = useRef(false);
   const hasFetchedData = useRef(false);
 
@@ -33,8 +37,29 @@ const Selection2 = () => {
     return `tournament_${timestamp}_${random}`;
   }
 
+  // Helper: Convert 12-hour time with AM/PM to 24-hour 'HH:MM'
+  const to24Hour = (timeStr) => {
+    const [time, period] = timeStr.split(' ');
+    let [hours, minutes] = time.split(':').map(Number);
+    if (period === 'PM' && hours !== 12) hours += 12;
+    if (period === 'AM' && hours === 12) hours = 0;
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+  };
+
+  // Helper: Convert 24-hour 'HH:MM' to 12-hour with AM/PM
+  const to12Hour = (timeStr) => {
+    let [hours, minutes] = timeStr.split(':').map(Number);
+    const period = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12 || 12; // Convert 0 to 12 for midnight
+    return `${hours}:${minutes.toString().padStart(2, '0')} ${period}`;
+  };
+
   // Generate match schedule with dates and times
   const generateMatchSchedule = (groupStageMatches, startDate, endDate) => {
+    if (!startDate || !endDate) {
+      console.error('Cannot generate match schedule without start and end dates.');
+      return [];
+    }
     const start = new Date(startDate);
     const end = new Date(endDate);
     const totalDays = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
@@ -86,6 +111,8 @@ const Selection2 = () => {
       setLoading(true);
       try {
         const currentUserId = auth.currentUser?.uid;
+        let fetchedStartDate = null;
+        let fetchedEndDate = null;
 
         // Case 1: Fetch by passedTournamentId
         if (passedTournamentId) {
@@ -111,6 +138,25 @@ const Selection2 = () => {
             setTeams(fetchedTeams);
             setCurrentTournamentName(tournamentData.tournamentName || tournamentName);
 
+            // Fetch startDate and endDate from 'tournaments' collection
+            const tournamentsQuery = query(
+              collection(db, 'tournaments'),
+              where('name', '==', tournamentData.tournamentName || tournamentName)
+            );
+            const tournamentsSnapshot = await getDocs(tournamentsQuery);
+
+            if (!tournamentsSnapshot.empty) {
+              const docData = tournamentsSnapshot.docs[0].data(); // Use first matching document
+              fetchedStartDate = docData.startDate;
+              fetchedEndDate = docData.endDate;
+              setCurrentStartDate(fetchedStartDate);
+              setCurrentEndDate(fetchedEndDate);
+            } else {
+              setError('No matching tournament found in "tournaments" collection. Cannot generate schedule without dates.');
+              setLoading(false);
+              return;
+            }
+
             const roundRobin = Object.values(tournamentData.roundRobin || {}).filter(round => round.length > 0);
             setSchedule(roundRobin);
 
@@ -124,8 +170,13 @@ const Selection2 = () => {
             if (tournamentData.matchSchedule && tournamentData.scheduled) {
               setMatchSchedule(tournamentData.matchSchedule);
             } else if (roundRobin.length > 0) {
-              // Generate and store match schedule
-              const generatedMatchSchedule = generateMatchSchedule(roundRobin, startDate, endDate);
+              // Generate and store match schedule using fetched dates
+              const generatedMatchSchedule = generateMatchSchedule(roundRobin, fetchedStartDate, fetchedEndDate);
+              if (generatedMatchSchedule.length === 0) {
+                setError('Failed to generate match schedule due to missing dates.');
+                setLoading(false);
+                return;
+              }
               setMatchSchedule(generatedMatchSchedule);
               await setDoc(doc(db, 'roundrobin', passedTournamentId), {
                 ...tournamentData,
@@ -140,7 +191,27 @@ const Selection2 = () => {
             if (Array.isArray(teamNames) && teamNames.length > 0) {
               const newTeams = teamNames.map(teamName => ({ teamName, points: 0 }));
               setTeams(newTeams);
-              await generateAndStoreSchedule(newTeams);
+
+              // Fetch dates before generating
+              const tournamentsQuery = query(
+                collection(db, 'tournaments'),
+                where('name', '==', tournamentName)
+              );
+              const tournamentsSnapshot = await getDocs(tournamentsQuery);
+
+              if (!tournamentsSnapshot.empty) {
+                const docData = tournamentsSnapshot.docs[0].data();
+                fetchedStartDate = docData.startDate;
+                fetchedEndDate = docData.endDate;
+                setCurrentStartDate(fetchedStartDate);
+                setCurrentEndDate(fetchedEndDate);
+              } else {
+                setError('No matching tournament found in "tournaments" collection. Cannot generate schedule without dates.');
+                setLoading(false);
+                return;
+              }
+
+              await generateAndStoreSchedule(newTeams, fetchedStartDate, fetchedEndDate);
             } else {
               setError('No tournament data found and no teams provided.');
             }
@@ -167,6 +238,25 @@ const Selection2 = () => {
             setCurrentTournamentName(tournamentData.tournamentName || '');
             setTeams(tournamentData.teams.map(team => ({ teamName: team.teamName, points: team.points || 0 })));
 
+            // Fetch startDate and endDate from 'tournaments' collection
+            const tournamentsQuery = query(
+              collection(db, 'tournaments'),
+              where('name', '==', tournamentData.tournamentName || '')
+            );
+            const tournamentsSnapshot = await getDocs(tournamentsQuery);
+
+            if (!tournamentsSnapshot.empty) {
+              const docData = tournamentsSnapshot.docs[0].data(); // Use first matching document
+              fetchedStartDate = docData.startDate;
+              fetchedEndDate = docData.endDate;
+              setCurrentStartDate(fetchedStartDate);
+              setCurrentEndDate(fetchedEndDate);
+            } else {
+              setError('No matching tournament found in "tournaments" collection. Cannot generate schedule without dates.');
+              setLoading(false);
+              return;
+            }
+
             const roundRobin = Object.values(tournamentData.roundRobin || {}).filter(round => round.length > 0);
             setSchedule(roundRobin);
 
@@ -180,8 +270,13 @@ const Selection2 = () => {
             if (tournamentData.matchSchedule && tournamentData.scheduled) {
               setMatchSchedule(tournamentData.matchSchedule);
             } else if (roundRobin.length > 0) {
-              // Generate and store match schedule
-              const generatedMatchSchedule = generateMatchSchedule(roundRobin, startDate, endDate);
+              // Generate and store match schedule using fetched dates
+              const generatedMatchSchedule = generateMatchSchedule(roundRobin, fetchedStartDate, fetchedEndDate);
+              if (generatedMatchSchedule.length === 0) {
+                setError('Failed to generate match schedule due to missing dates.');
+                setLoading(false);
+                return;
+              }
               setMatchSchedule(generatedMatchSchedule);
               await setDoc(doc(db, 'roundrobin', tournamentData.tournamentId), {
                 ...tournamentData,
@@ -199,151 +294,259 @@ const Selection2 = () => {
         else if (Array.isArray(teamNames) && teamNames.length > 0) {
           const newTeams = teamNames.map(teamName => ({ teamName, points: 0 }));
           setTeams(newTeams);
-          await generateAndStoreSchedule(newTeams);
+
+          // Fetch startDate and endDate before generating schedule
+          const tournamentsQuery = query(
+            collection(db, 'tournaments'),
+            where('name', '==', tournamentName)
+          );
+          const tournamentsSnapshot = await getDocs(tournamentsQuery);
+
+          if (!tournamentsSnapshot.empty) {
+            const docData = tournamentsSnapshot.docs[0].data(); // Use first matching document
+            fetchedStartDate = docData.startDate;
+            fetchedEndDate = docData.endDate;
+            setCurrentStartDate(fetchedStartDate);
+            setCurrentEndDate(fetchedEndDate);
+          } else {
+            setError('No matching tournament found in "tournaments" collection. Cannot generate schedule without dates.');
+            setLoading(false);
+            return;
+          }
+
+          await generateAndStoreSchedule(newTeams, fetchedStartDate, fetchedEndDate);
         }
       } catch (err) {
         console.error('Error fetching tournament data:', err);
         setError('Failed to load tournament data.');
-        // Fallback to generating a new schedule if teamNames is provided
+        // Fallback to generating a new schedule if teamNames is provided (but only if dates can be fetched)
         if (Array.isArray(teamNames) && teamNames.length > 0) {
           const newTeams = teamNames.map(teamName => ({ teamName, points: 0 }));
           setTeams(newTeams);
-          await generateAndStoreSchedule(newTeams);
+          // Attempt to fetch dates again for fallback
+          let fallbackStartDate = null;
+          let fallbackEndDate = null;
+          const tournamentsQuery = query(
+            collection(db, 'tournaments'),
+            where('name', '==', tournamentName)
+          );
+          const tournamentsSnapshot = await getDocs(tournamentsQuery);
+          if (!tournamentsSnapshot.empty) {
+            const docData = tournamentsSnapshot.docs[0].data();
+            fallbackStartDate = docData.startDate;
+            fallbackEndDate = docData.endDate;
+            setCurrentStartDate(fallbackStartDate);
+            setCurrentEndDate(fallbackEndDate);
+            await generateAndStoreSchedule(newTeams, fallbackStartDate, fallbackEndDate);
+          } else {
+            setError('Failed to fetch dates in fallback. Cannot generate schedule.');
+          }
         }
       } finally {
         setLoading(false);
       }
     };
 
-    const generateRoundRobin = (teams) => {
-      const shuffleArray = (array) => {
-        const newArray = [...array];
-        for (let i = newArray.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
-        }
-        return newArray;
-      };
-
-      const n = teams.length;
-      const rounds = [];
-      let teamList = [...teams];
-
-      if (n % 2 !== 0) {
-        teamList.push({ teamName: 'BYE', points: 0 });
-      }
-
-      teamList = shuffleArray(teamList);
-
-      const numTeams = teamList.length;
-      const numRounds = numTeams - 1;
-      const matchesPerRound = numTeams / 2;
-
-      for (let round = 0; round < numRounds; round++) {
-        const roundMatches = [];
-        for (let i = 0; i < matchesPerRound; i++) {
-          const team1Candidate = teamList[i];
-          const team2Candidate = teamList[numTeams - 1 - i];
-          if (team1Candidate.teamName !== 'BYE' && team2Candidate.teamName !== 'BYE') {
-            const assignTeam1First = Math.random() < 0.5;
-            const match = {
-              id: `group_${round + 1}_${i + 1}`,
-              phase: `Group Stage ${round + 1}`,
-              team1: assignTeam1First ? team1Candidate.teamName : team2Candidate.teamName,
-              team2: assignTeam1First ? team2Candidate.teamName : team1Candidate.teamName,
-              winner: null,
-              played: false,
-            };
-            roundMatches.push(match);
-          }
-        }
-        rounds.push(roundMatches);
-
-        teamList = [
-          teamList[0],
-          teamList[numTeams - 1],
-          ...teamList.slice(1, numTeams - 1),
-        ];
-      }
-
-      return rounds;
-    };
-
-    const initializePlayoffs = (numTeams) => {
-      let semiFinalMatches = [];
-      let finalMatch = [];
-
-      if (numTeams >= 4) {
-        semiFinalMatches = [
-          { id: 'semi_1', phase: 'Semi-Final 1', team1: 'TBD', team2: 'TBD', winner: null },
-          { id: 'semi_2', phase: 'Semi-Final 2', team1: 'TBD', team2: 'TBD', winner: null },
-        ];
-        finalMatch = [{ id: 'final_1', phase: 'Final', team1: 'TBD', team2: 'TBD', winner: null }];
-      } else if (numTeams === 3) {
-        semiFinalMatches = [{ id: 'semi_1', phase: 'Semi-Final 1', team1: 'TBD', team2: 'TBD', winner: null }];
-        finalMatch = [{ id: 'final_1', phase: 'Final', team1: 'TBD', team2: 'TBD', winner: null }];
-      } else if (numTeams === 2) {
-        finalMatch = [{ id: 'final_1', phase: 'Final', team1: 'TBD', team2: 'TBD', winner: null }];
-      }
-
-      return { semiFinals: semiFinalMatches, finals: finalMatch };
-    };
-
-    const generateAndStoreSchedule = async (teamsToUse) => {
-      if (teamsToUse.length > 0 && !hasStoredSchedule.current) {
-        hasStoredSchedule.current = true;
-
-        const generatedSchedule = generateRoundRobin(teamsToUse);
-        setSchedule(generatedSchedule);
-
-        const { semiFinals, finals } = initializePlayoffs(teamsToUse.length);
-        setSemiFinals(semiFinals);
-        setFinals(finals);
-
-        const generatedMatchSchedule = generateMatchSchedule(generatedSchedule, startDate, endDate);
-        setMatchSchedule(generatedMatchSchedule);
-
-        try {
-          const roundRobinObject = generatedSchedule.reduce((acc, round, index) => {
-            acc[`group_stage_${index + 1}`] = round;
-            return acc;
-          }, {});
-          const semiFinalsObject = semiFinals.reduce((acc, match, index) => {
-            acc[`match_${index + 1}`] = match;
-            return acc;
-          }, {});
-          const finalsObject = finals.reduce((acc, match, index) => {
-            acc[`match_${index + 1}`] = match;
-            return acc;
-          }, {});
-
-          const userId = auth.currentUser ? auth.currentUser.uid : null;
-
-          await setDoc(doc(db, 'roundrobin', tournamentId), {
-            tournamentId,
-            tournamentName: currentTournamentName || tournamentName,
-            teams: teamsToUse,
-            roundRobin: roundRobinObject,
-            semiFinals: semiFinalsObject,
-            finals: finalsObject,
-            matchSchedule: generatedMatchSchedule,
-            scheduled: true,
-            createdAt: new Date(),
-            tournamentWinner: null,
-            userId,
-          });
-
-          console.log(`Tournament stored with ID: ${tournamentId}`);
-        } catch (err) {
-          console.error('Error storing schedule:', err);
-          setError('Failed to save schedule. Please try again.');
-          hasStoredSchedule.current = false;
-        }
-      }
-    };
-
     fetchTournamentData();
-  }, [passedTournamentId, teamNames, tournamentId, tournamentName, startDate, endDate]);
+  }, [passedTournamentId, teamNames, tournamentId, tournamentName]);
+
+  // Handle edit start
+  const handleEdit = (index, match) => {
+    // Convert formatted date (DD-MMM-YY) back to YYYY-MM-DD for input
+    const [day, month, year] = match.date.split('-');
+    const monthMap = { Jan: '01', Feb: '02', Mar: '03', Apr: '04', May: '05', Jun: '06', Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11', Dec: '12' };
+    const convertedDate = `20${year}-${monthMap[month]}-${day}`;
+
+    // Convert time to 24-hour for input
+    const convertedTime = to24Hour(match.time);
+
+    setEditingIndex(index);
+    setEditForm({ date: convertedDate, time: convertedTime });
+  };
+
+  // Handle edit save
+  const handleSaveEdit = async (index) => {
+    // Convert edited date back to DD-MMM-YY format
+    const newDateObj = new Date(editForm.date);
+    if (newDateObj < new Date(currentStartDate) || newDateObj > new Date(currentEndDate)) {
+      setError('Edited date must be within tournament start and end dates.');
+      return;
+    }
+    const formattedNewDate = newDateObj.toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: '2-digit',
+    });
+
+    // Convert edited time back to 12-hour with AM/PM
+    const formattedNewTime = to12Hour(editForm.time);
+
+    const newSchedule = [...matchSchedule];
+    newSchedule[index] = { ...newSchedule[index], date: formattedNewDate, time: formattedNewTime };
+
+    setMatchSchedule(newSchedule);
+    setEditingIndex(null);
+
+    // Persist to Firebase
+    try {
+      const tournamentRef = doc(db, 'roundrobin', tournamentId);
+      await setDoc(tournamentRef, { matchSchedule: newSchedule }, { merge: true });
+    } catch (err) {
+      console.error('Error updating match schedule:', err);
+      setError('Failed to update match schedule.');
+    }
+  };
+
+  // Handle delete
+  const handleDelete = async (index) => {
+    if (!window.confirm('Are you sure you want to delete this match?')) return;
+
+    const newSchedule = matchSchedule.filter((_, i) => i !== index);
+    setMatchSchedule(newSchedule);
+
+    // Persist to Firebase
+    try {
+      const tournamentRef = doc(db, 'roundrobin', tournamentId);
+      await setDoc(tournamentRef, { matchSchedule: newSchedule }, { merge: true });
+    } catch (err) {
+      console.error('Error deleting match:', err);
+      setError('Failed to delete match.');
+    }
+  };
+
+  const generateRoundRobin = (teams) => {
+    const shuffleArray = (array) => {
+      const newArray = [...array];
+      for (let i = newArray.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+      }
+      return newArray;
+    };
+
+    const n = teams.length;
+    const rounds = [];
+    let teamList = [...teams];
+
+    if (n % 2 !== 0) {
+      teamList.push({ teamName: 'BYE', points: 0 });
+    }
+
+    teamList = shuffleArray(teamList);
+
+    const numTeams = teamList.length;
+    const numRounds = numTeams - 1;
+    const matchesPerRound = numTeams / 2;
+
+    for (let round = 0; round < numRounds; round++) {
+      const roundMatches = [];
+      for (let i = 0; i < matchesPerRound; i++) {
+        const team1Candidate = teamList[i];
+        const team2Candidate = teamList[numTeams - 1 - i];
+        if (team1Candidate.teamName !== 'BYE' && team2Candidate.teamName !== 'BYE') {
+          const assignTeam1First = Math.random() < 0.5;
+          const match = {
+            id: `group_${round + 1}_${i + 1}`,
+            phase: `Group Stage ${round + 1}`,
+            team1: assignTeam1First ? team1Candidate.teamName : team2Candidate.teamName,
+            team2: assignTeam1First ? team2Candidate.teamName : team1Candidate.teamName,
+            winner: null,
+            played: false,
+          };
+          roundMatches.push(match);
+        }
+      }
+      rounds.push(roundMatches);
+
+      teamList = [
+        teamList[0],
+        teamList[numTeams - 1],
+        ...teamList.slice(1, numTeams - 1),
+      ];
+    }
+
+    return rounds;
+  };
+
+  const initializePlayoffs = (numTeams) => {
+    let semiFinalMatches = [];
+    let finalMatch = [];
+
+    if (numTeams >= 4) {
+      semiFinalMatches = [
+        { id: 'semi_1', phase: 'Semi-Final 1', team1: 'TBD', team2: 'TBD', winner: null },
+        { id: 'semi_2', phase: 'Semi-Final 2', team1: 'TBD', team2: 'TBD', winner: null },
+      ];
+      finalMatch = [{ id: 'final_1', phase: 'Final', team1: 'TBD', team2: 'TBD', winner: null }];
+    } else if (numTeams === 3) {
+      semiFinalMatches = [{ id: 'semi_1', phase: 'Semi-Final 1', team1: 'TBD', team2: 'TBD', winner: null }];
+      finalMatch = [{ id: 'final_1', phase: 'Final', team1: 'TBD', team2: 'TBD', winner: null }];
+    } else if (numTeams === 2) {
+      finalMatch = [{ id: 'final_1', phase: 'Final', team1: 'TBD', team2: 'TBD', winner: null }];
+    }
+
+    return { semiFinals: semiFinalMatches, finals: finalMatch };
+  };
+
+  const generateAndStoreSchedule = async (teamsToUse, startDate, endDate) => {
+    if (teamsToUse.length > 0 && !hasStoredSchedule.current && startDate && endDate) {
+      hasStoredSchedule.current = true;
+
+      const generatedSchedule = generateRoundRobin(teamsToUse);
+      setSchedule(generatedSchedule);
+
+      const { semiFinals, finals } = initializePlayoffs(teamsToUse.length);
+      setSemiFinals(semiFinals);
+      setFinals(finals);
+
+      const generatedMatchSchedule = generateMatchSchedule(generatedSchedule, startDate, endDate);
+      if (generatedMatchSchedule.length === 0) {
+        setError('Failed to generate match schedule due to invalid dates.');
+        hasStoredSchedule.current = false;
+        return;
+      }
+      setMatchSchedule(generatedMatchSchedule);
+
+      try {
+        const roundRobinObject = generatedSchedule.reduce((acc, round, index) => {
+          acc[`group_stage_${index + 1}`] = round;
+          return acc;
+        }, {});
+        const semiFinalsObject = semiFinals.reduce((acc, match, index) => {
+          acc[`match_${index + 1}`] = match;
+          return acc;
+        }, {});
+        const finalsObject = finals.reduce((acc, match, index) => {
+          acc[`match_${index + 1}`] = match;
+          return acc;
+        }, {});
+
+        const userId = auth.currentUser ? auth.currentUser.uid : null;
+
+        await setDoc(doc(db, 'roundrobin', tournamentId), {
+          tournamentId,
+          tournamentName: currentTournamentName || tournamentName,
+          teams: teamsToUse,
+          roundRobin: roundRobinObject,
+          semiFinals: semiFinalsObject,
+          finals: finalsObject,
+          matchSchedule: generatedMatchSchedule,
+          scheduled: true,
+          createdAt: new Date(),
+          tournamentWinner: null,
+          userId,
+        });
+
+        console.log(`Tournament stored with ID: ${tournamentId}`);
+      } catch (err) {
+        console.error('Error storing schedule:', err);
+        setError('Failed to save schedule. Please try again.');
+        hasStoredSchedule.current = false;
+      }
+    } else if (!startDate || !endDate) {
+      setError('Cannot generate schedule without fetched start and end dates.');
+    }
+  };
 
   // Fetch tournament data for flowchart modal
   const fetchFlowchartData = async () => {
@@ -502,6 +705,11 @@ const Selection2 = () => {
                 {teams.length} teams selected. Total matches: {Math.floor((teams.length * (teams.length - 1)) / 2) + semiFinals.length + finals.length}
               </p>
               <p className="text-sm md:text-base mb-4">Tournament ID: {tournamentId}</p>
+              {currentStartDate && currentEndDate && (
+                <p className="text-sm md:text-base mb-4">
+                  Start Date: {currentStartDate} | End Date: {currentEndDate}
+                </p>
+              )}
               <button
                 onClick={handleOpenModal}
                 className="mb-6 bg-[linear-gradient(120deg,_#000000,_#001A80)] px-4 py-2 rounded hover:bg-green-700 cursor-pointer text-sm md:text-base"
@@ -520,6 +728,7 @@ const Selection2 = () => {
                           <th className="p-2 text-left">Date</th>
                           <th className="p-2 text-left">Match</th>
                           <th className="p-2 text-left">Time</th>
+                          <th className="p-2 text-left">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -528,9 +737,54 @@ const Selection2 = () => {
                             key={index}
                             className={`${getRowColor(match.date, match.played, match.winner)} p-2 rounded-lg hover:shadow-[0px_0px_13px_0px_#253A6E]`}
                           >
-                            <td className="p-2">{match.date}</td>
+                            <td className="p-2">
+                              {editingIndex === index ? (
+                                <input
+                                  type="date"
+                                  value={editForm.date}
+                                  onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
+                                  className="text-black p-1 rounded"
+                                />
+                              ) : (
+                                match.date
+                              )}
+                            </td>
                             <td className="p-2">{match.match}</td>
-                            <td className="p-2">{match.time}</td>
+                            <td className="p-2">
+                              {editingIndex === index ? (
+                                <input
+                                  type="time"
+                                  value={editForm.time}
+                                  onChange={(e) => setEditForm({ ...editForm, time: e.target.value })}
+                                  className="text-black p-1 rounded"
+                                />
+                              ) : (
+                                match.time // This will now always include AM/PM
+                              )}
+                            </td>
+                            <td className="p-2">
+                              {editingIndex === index ? (
+                                <button
+                                  onClick={() => handleSaveEdit(index)}
+                                  className="bg-green-600 px-2 py-1 rounded text-xs mr-2"
+                                >
+                                  Save
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => handleEdit(index, match)}
+                                  className="bg-yellow-600 px-2 py-1 rounded text-xs mr-2"
+                                >
+                                  Edit
+                                </button>
+                              )}
+                              <button
+                                onClick={() => handleDelete(index)}
+                                className="bg-red-600 px-2 py-1 rounded text-xs"
+                              >
+                                Delete
+                              </button>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -609,7 +863,7 @@ const Selection2 = () => {
             <button
               type="button"
               className="rounded-xl w-32 md:w-44 bg-gradient-to-l from-[#5DE0E6] to-[#004AAD] h-8 md:h-9 text-white cursor-pointer hover:shadow-[0px_0px_13px_0px_#5DE0E6] text-sm md:text-base"
-              onClick={() => navigate('/match-start-rr', { state: { activeTab: 'Start Match', selectedTeams: teams, schedule, semiFinals, finals, tournamentId, tournamentName: currentTournamentName || tournamentName } })}
+              onClick={() => navigate('/match-start-rr', { state: { activeTab: 'Start Match', selectedTeams: teams, schedule, semiFinals, finals, tournamentId, tournamentName: currentTournamentName || tournamentName, information } })}
             >
               Proceed
             </button>

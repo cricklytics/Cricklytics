@@ -22,6 +22,7 @@ const PlayerSelector = ({
   matchId,
   tournamentName,
   tournamentImageUrl,
+  information,
   onBack, // Add new prop for handling back
 }) => {
   const [leftSearch, setLeftSearch] = useState('');
@@ -91,6 +92,7 @@ const PlayerSelector = ({
         matchId,
         tournamentName,
         tournamentImageUrl,
+        information,
       },
     });
   };
@@ -290,6 +292,7 @@ const Startmatch = ({
   onTeamsSelectedForLiveScore,
   setActiveTab,
   tournamentName,
+  information,
 }) => {
   console.group('Startmatch Props');
   console.log('Initial Team A:', initialTeamA);
@@ -303,6 +306,7 @@ const Startmatch = ({
   console.log('onTeamsSelectedForLiveScore:', typeof onTeamsSelectedForLiveScore);
   console.log('setActiveTab:', typeof setActiveTab);
   console.log('TournamentName:', tournamentName);
+  console.log('information:', information);
   console.groupEnd();
 
   const [allTeams, setAllTeams] = useState([]);
@@ -733,6 +737,7 @@ const Startmatch = ({
         tournamentName={tournamentName}
         tournamentImageUrl={tournamentImageUrl}
         onBack={handleBackFromPlayerSelector} // Pass the back handler
+        information = {information}
       />
     );
   }

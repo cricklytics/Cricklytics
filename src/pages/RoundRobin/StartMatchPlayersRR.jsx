@@ -46,6 +46,8 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
   const phase = location.state?.phase;
   const selectedPlayersFromProps = location.state?.selectedPlayers || { left: [], right: [] };
   const tournamentName = location.state?.tournamentName;
+  const information =  location.state?.information;
+  console.log(information);
 
   const [playedOvers, setPlayedOvers] = useState(0);
   const [playedWickets, setPlayedWickets] = useState(0);
@@ -1083,6 +1085,7 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
             winningDifference: winningDifference,
             tournamentId: tournamentId,
             tournamentName: tournamentName,
+            information: information,
             teamA: {
               name: teamA.name,
               flagUrl: teamA.flagUrl,

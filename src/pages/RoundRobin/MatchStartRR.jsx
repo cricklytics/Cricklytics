@@ -457,6 +457,8 @@ const FixtureGenerator = () => {
   const location = useLocation();
   const { tournamentName } = location.state || {};
   const { tournamentId } = location.state || {};
+  const {information} = location.state || {};
+  console.log(information);
   console.log(tournamentName);
 
   // Fetch match data from Firestore
@@ -614,7 +616,7 @@ const FixtureGenerator = () => {
   const handleBack = () => {
     switch (activeTab) {
       case 'Start Match':
-        navigate('/Selection2', { state: { tournamentName, tournamentId } });
+        navigate('/Selection2', { state: { tournamentName, tournamentId, information } });
         break;
       case 'Live Score':
         setActiveTab('Start Match');
@@ -701,6 +703,7 @@ const FixtureGenerator = () => {
           onTeamsSelectedForLiveScore={handleTeamsSelected}
           setActiveTab={setActiveTab}
           tournamentName={tournamentName}
+          information = {information}
         />
       ) : (
         <main className="w-full max-w-7xl px-4 sm:px-8 py-8 mx-auto">
