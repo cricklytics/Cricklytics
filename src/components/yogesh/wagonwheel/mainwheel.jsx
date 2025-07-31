@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import WagonWheelModal from './WagonWheelModal.jsx';
 import ShotTypeModal from './ShotTypeModal.jsx';
-import CatchTypeModal from './CatchTypeModal.jsx';
 import WagonWheelResult from './WagonWheelResult.jsx';
 
-export default function App() {
+export default function App({setShowMainWheel}) {
   const [showWheel, setShowWheel] = useState(true); // Start open by default
   const [showShotType, setShowShotType] = useState(false);
   const [showCatchType, setShowCatchType] = useState(false);
@@ -19,7 +18,7 @@ export default function App() {
   }, [showWheel]);
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col items-center py-10">
+    <div className="mt-5 h-[80vh] bg-gray-100 flex flex-col items-center">
 
       <WagonWheelModal
         isOpen={showWheel}
@@ -27,7 +26,9 @@ export default function App() {
         onDirectionSelect={(dir) => {
           setFinalData((prev) => ({ ...prev, shotDirection: dir }));
           setShowShotType(true);
+          
         }}
+        setShowMainWheel={setShowMainWheel}
       />
 
       <ShotTypeModal

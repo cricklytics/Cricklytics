@@ -1713,21 +1713,28 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
         )}
 
         {showMainWheel && (
-          <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex items-center justify-center">
-            <div className="relative bg-white p-6 rounded-lg w-[90%] max-w-3xl mx-auto">
-              <button
-                onClick={() => setShowMainWheel(false)}
-                className="absolute top-8 right-8 bg-black text-white rounded-full w-10 h-10 flex items-center justify-center hover:bg-gray-800 transition"
-              >
-                ✕
-              </button>
-              <MainWheel
-                run={selectedRun}
-                onClose={() => setShowMainWheel(false)}
-              />
-            </div>
-          </div>
-        )}
+<div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex justify-center overflow-y-auto">
+  <div className="my-2 bg-white rounded-xl w-[95%] max-w-4xl mx-auto flex flex-col items-center shadow-lg h-[95vh]">
+    {/* MainWheel */}
+    <MainWheel
+      run={selectedRun}
+      setShowMainWheel={setShowMainWheel}
+    />
+
+    {/* Continue Button */}
+    <button
+      onClick={() => setShowMainWheel(false)}
+      className="mt-6 bg-black text-white px-6 py-2 rounded-lg hover:bg-gray-800 transition"
+    >
+      Continue
+    </button>
+  </div>
+</div>
+
+
+)}
+
+
       </section>
     </ErrorBoundary>
   );

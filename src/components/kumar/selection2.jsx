@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { db, auth } from '../../firebase';
-import { doc, setDoc, getDoc, collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
+import { doc, setDoc, getDoc, collection, query, where, orderBy, limit, getDocs, updateDoc  } from 'firebase/firestore';
 import nav from '../../assets/kumar/right-chevron.png';
 
 const Selection2 = () => {
@@ -27,6 +27,9 @@ const Selection2 = () => {
   const hasStoredSchedule = useRef(false);
   const hasFetchedData = useRef(false);
 
+  const numberOfMatches = matchSchedule.length;
+
+
   console.log('Current tournamentName:', currentTournamentName);
   console.log('Received information:', information);
 
@@ -36,6 +39,30 @@ const Selection2 = () => {
     const random = Math.random().toString(36).substring(2, 8);
     return `tournament_${timestamp}_${random}`;
   }
+
+
+const updateCurrentStageAndMatches = async (tName, numMatches) => {
+  if (!tName) return;
+  try {
+    const tournamentsQuery = query(
+      collection(db, 'tournaments'),
+      where('name', '==', tName)
+    );
+    const snapshots = await getDocs(tournamentsQuery);
+    if (!snapshots.empty) {
+      const docRef = snapshots.docs[0].ref;
+      await updateDoc(docRef, {
+        "Current Stage": "RoundRobin",
+        matches: numMatches,
+      });
+      // Optionally: console.log("Current Stage and matches updated");
+    }
+  } catch (err) {
+    console.error("Failed to update Current Stage and matches:", err);
+  }
+};
+
+
 
   // Helper: Convert 12-hour time with AM/PM to 24-hour 'HH:MM'
   const to24Hour = (timeStr) => {
@@ -224,6 +251,7 @@ const Selection2 = () => {
             tournamentsCollectionRef,
             where('tournamentWinner', '==', null),
             where('userId', '==', currentUserId),
+            where('tournamentName', '==' , tournamentName),
             orderBy('createdAt', 'desc'),
             limit(1)
           );
@@ -653,7 +681,7 @@ const Selection2 = () => {
 
   const handleBack = () => {
     if (information === 'FromSidebar') {
-      navigate('/landingpage');
+      navigate('/pendingTournament');
     } else {
       navigate('/TournamentPage', { state: { tournamentName: currentTournamentName || tournamentName, tournamentId } });
     }
@@ -671,6 +699,12 @@ const Selection2 = () => {
     }
     return 'bg-blue-900'; // Future match or no status
   };
+  useEffect(() => {
+  if (currentTournamentName && matchSchedule.length > 0) {
+    updateCurrentStageAndMatches(currentTournamentName, matchSchedule.length);
+  }
+}, [currentTournamentName, matchSchedule]);
+
 
   return (
     <section className="bg-gradient-to-b from-[#0D171E] to-[#283F79] text-white p-4 md:px-8 md:pb-1 min-h-screen flex items-center w-full overflow-hidden z-0 relative">

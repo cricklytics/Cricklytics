@@ -18,7 +18,7 @@ export default function WagonWheelResult({ data }) {
   const coord = regionCoordinates[shotDirection];
 
   return (
-    <div className="mt-12 flex flex-col items-center">
+    <div className="mt-5 flex flex-col items-center">
       <h2 className="text-3xl font-bold mb-6 text-green-700">Wagon Wheel Result</h2>
 
       <div className="relative w-[400px] h-[400px]">

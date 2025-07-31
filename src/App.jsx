@@ -71,6 +71,8 @@ import Insights from './components/yogesh/LandingPage/Insights';
 import Subscription from './components/pawan/Subscription';
 import SubscriptionSuccess from './components/pawan/SubscriptionSuccess';
 
+
+import PendingTournaments from './components/kumar/pendingTournament';
 import TournamentSeries from './pages/tournamentseries';
 import share from './components/kumar/share';
 import TournamentPage from './components/kumar/share';
@@ -247,7 +249,10 @@ function App() {
           <Route path="/subscription" element={<Subscription/>} />
           <Route path="/subscription/success" element={<SubscriptionSuccess/>} />
 
+
+
           <Route path="/tournamentseries" element={<TournamentSeries />} />
+          <Route path='/pendingTournament' element={<PendingTournaments />} />
            {/* Newly Added Routes */}
            <Route path="/next" element={<Tournament_nextpg />} />
           <Route path="/TeamProfile" element={<TeamProfile />} />

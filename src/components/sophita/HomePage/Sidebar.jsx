@@ -1774,7 +1774,7 @@ const Sidebar = ({ isOpen, closeMenu, userProfile }) => {
               <ul className="pl-6 md:pl-10 border-l-2 border-[#5DE0E6]">
                 <li 
                   className="flex items-center px-2 md:px-4 py-1 md:py-2 text-sm cursor-pointer hover:bg-[rgb(68,172,199)] transition-all duration-200"
-                  onClick={() => navigate("/Selection2",{state:{information: "FromSidebar"}})} 
+                  onClick={() => navigate("/pendingTournament",{state:{information: "FromSidebar"}})} 
                 >
                   🏏 Pending Tournament
                 </li>
