@@ -2124,21 +2124,21 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
             </div>
 
             {!bowlerVisible && (striker === null || nonStriker === null) && (
-              <div id="batsman-selection" className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-4">
-                {getAvailableBatsmen().map((player) => (
-                  <div
-                    key={player.index}
-                    onClick={() => handlePlayerSelect(player)}
-                    className={`cursor-pointer flex flex-col items-center text-white text-center ${selectedBatsmenIndices.includes(player.index) ? 'opacity-50' : ''}`}
-                  >
-                    <div className="w-20 h-20 md:w-15 md:h-15 lg:w-15 lg:h-15 rounded-full overflow-hidden flex items-center justify-center aspect-square">
-                      {getPlayerImage(player)}
-                    </div>
-                    <span className="mt-2 font-bold text-lg">{player.name}</span>
-                    <h2 className="text-sm font-light">{player.role}</h2>
-                  </div>
-                ))}
-              </div>
+             <div id="batsman-selection" className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-4">
+  {getAvailableBatsmen().map((player) => (
+    <div
+      key={player.index}
+      onClick={() => handlePlayerSelect(player)}
+      className={`cursor-pointer flex flex-col items-center text-white text-center ${selectedBatsmenIndices.includes(player.index) ? 'opacity-50' : ''}`}
+    >
+      <div className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 rounded-full border-[5px] border-[#F0167C] overflow-hidden flex items-center justify-center">
+        {getPlayerImage(player)}
+      </div>
+      <span className="mt-2 font-bold text-sm sm:text-base md:text-lg">{player.name}</span>
+      <h2 className="text-xs sm:text-sm font-light">{player.role}</h2>
+    </div>
+  ))}
+</div>
             )}
 
             {striker && nonStriker && !bowlerVisible && (
@@ -2167,20 +2167,20 @@ function StartMatchPlayers({ initialTeamA, initialTeamB, origin, onMatchEnd }) {
             {bowlerVisible && (
               <>
                 <div id="bowler-selection" className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-4">
-                  {bowlingTeamPlayers.map((player) => (
-                    <div
-                      key={player.index}
-                      onClick={() => handleBowlerSelect(player)}
-                      className={`cursor-pointer flex flex-col items-center text-white text-center ${selectedBowler?.index === player.index ? 'opacity-50' : ''}`}
-                    >
-                      <div className="w-20 h-20 md:w-15 md:h-15 lg:w-15 lg:h-15 rounded-full overflow-hidden flex items-center justify-center aspect-square">
-                        {getPlayerImage(player)}
-                      </div>
-                      <span className="mt-2 font-bold text-lg">{player.name}</span>
-                      <h2 className="text-sm font-light">{player.role}</h2>
-                    </div>
-                  ))}
-                </div>
+  {bowlingTeamPlayers.map((player) => (
+    <div
+      key={player.index}
+      onClick={() => handleBowlerSelect(player)}
+      className={`cursor-pointer flex flex-col items-center text-white text-center ${selectedBowler?.index === player.index ? 'opacity-50' : ''}`}
+    >
+      <div className="w-16 h-16 sm:w-18 sm:h-18 md:w-20 md:h-20 rounded-full border-[5px] border-[#12BFA5] overflow-hidden flex items-center justify-center">
+        {getPlayerImage(player)}
+      </div>
+      <span className="mt-2 font-bold text-sm sm:text-base md:text-lg">{player.name}</span>
+      <h2 className="text-xs sm:text-sm font-light">{player.role}</h2>
+    </div>
+  ))}
+</div>
 
                 {selectedBowler && (
                   <button

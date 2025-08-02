@@ -1585,11 +1585,11 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
                     onClick={() => handlePlayerSelect(player)}
                     className={`cursor-pointer flex flex-col items-center text-white text-center ${selectedBatsmenIndices.includes(player.index) ? 'opacity-50' : ''}`}
                   >
-                    <div className="w-20 h-20 md:w-15 md:h-15 lg:w-15 lg:h-15 rounded-full border-[5px] border-[#F0167C] overflow-hidden flex items-center justify-center aspect-square">
+                    <div className="w-20 h-20 rounded-full border-[5px] border-[#F0167C] overflow-hidden flex items-center justify-center">
                       <img
                         src={player.photoUrl}
                         alt="Player"
-                        className="w-full h-full object-cover aspect-square"
+                        className="w-full h-full object-cover"
                         onError={(e) => (e.target.src = '')}
                       />
                     </div>
