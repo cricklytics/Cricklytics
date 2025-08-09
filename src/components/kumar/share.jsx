@@ -150,8 +150,8 @@ const TournamentPage = () => {
 
   return (
     <section className="bg-gradient-to-b from-[#0D171E] to-[#283F79] text-white p-4 md:px-8 md:pb-1 min-h-screen flex items-center w-full overflow-hidden z-0 relative">
-      <div className="z-20 flex overflow-hidden justify-center w-full p-2 md:px-[5rem] md:pt-[1rem] relative">
-        <form className="z-30 gap-5 md:gap-10 bg-[#1A2B4C] rounded-xl md:rounded-[2rem] shadow-[8px_-5px_0px_2px_#253A6E] md:shadow-[22px_-14px_0px_5px_#253A6E] flex flex-col items-center justify-around w-full max-w-[70rem] m-2 md:m-4 p-4 md:pl-[5rem] md:pr-[5rem] md:pt-[5rem] md:pb-[1rem] text-start">
+      <div className="z-20 flex overflow-hidden justify-center align-center w-full p-2 md:px-[3rem] md:pt-[1rem] relative">
+        <form className=" relative z-30 gap-5  md:gap-10 bg-[#1A2B4C] min-h-[30rem] lg:min-h-fit lg:max-h-fit lg:p-[5rem] rounded-xl md:rounded-[2rem] shadow-[8px_-5px_0px_2px_#253A6E] md:shadow-[22px_-14px_0px_5px_#253A6E] flex flex-col items-center justify-around w-full max-w-[70rem] m-2 md:m-4 p-4 md:pl-[5rem] md:pr-[5rem] md:pt-[5rem] md:pb-[1rem] text-start">
           <h1 className="text-2xl md:text-5xl font-bold mb-4 md:mb-2 mt-4 md:-mt-8 text-center">Tournament Setup</h1>
 
           {noOfTeams > 0 && (
@@ -179,7 +179,7 @@ const TournamentPage = () => {
           )}
 
           {step === 'menu' && (
-            <div className="flex flex-row md:flex-col gap-4 md:gap-10 w-[50%] justify-center">
+            <div className="flex flex-col md:flex-col  gap-4 md:gap-10 w-[50%] justify-center">
               <button
                 onClick={() => navigate('/next', { state: { noOfTeams, tournamentName } })}
                 className="text-sm cursor-pointer absolute top-4 left-4 md:top-10 md:left-10"
@@ -415,18 +415,18 @@ const TournamentPage = () => {
 
               {showModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                  <div className="bg-[#1A2B4C] rounded-xl p-6 w-full max-w-md">
+                  <div className="bg-[#1A2B4C] block items-center justify-center min-h-[15rem] w-[70%] lg:max-w-md lg:min-h-fit lg:max-h-fit lg:p-[5rem] rounded-xl p-6 ">
                     <h2 className="text-xl md:text-2xl font-semibold mb-4 text-center">Select Tournament Format</h2>
-                    <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-4 mt-[8rem] lg:mt-5">
                       <button
                         onClick={() => handleFormatSelect('Round Robin')}
-                        className="bg-[linear-gradient(120deg,_#000000,_#001A80)] px-4 py-2 rounded hover:bg-green-700 cursor-pointer text-sm md:text-base"
+                        className="bg-[linear-gradient(120deg,_#000000,_#001A80)] px-4 py-5  lg:py-2 rounded hover:bg-green-700 cursor-pointer text-sm md:text-base"
                       >
                         Round Robin
                       </button>
                       <button
                         onClick={() => handleFormatSelect('Knockout')}
-                        className="bg-[linear-gradient(120deg,_#000000,_#001A80)] px-4 py-2 rounded hover:bg-blue-700 cursor-pointer text-sm md:text-base"
+                        className="bg-[linear-gradient(120deg,_#000000,_#001A80)] px-4 py-2 py-5 lg:py-2 rounded hover:bg-blue-700 cursor-pointer text-sm md:text-base"
                       >
                         Knockout
                       </button>

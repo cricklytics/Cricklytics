@@ -10,6 +10,7 @@ import sixAnimation from '../../assets/Animation/six.json';
 import fourAnimation from '../../assets/Animation/four.json';
 import outAnimation from '../../assets/Animation/out.json';
 import MainWheel from "../../components/yogesh/wagonwheel/mainwheel"
+import AIMatchCompanionModal from '../../components/yogesh/LandingPage/AIMatchCompanion';
 
 // Error Boundary Component
 class ErrorBoundary extends Component {
@@ -102,6 +103,34 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
   // Dynamic player data
   const [battingTeamPlayers, setBattingTeamPlayers] = useState([]);
   const [bowlingTeamPlayers, setBowlingTeamPlayers] = useState([]);
+
+ const [isAICompanionOpen, setIsAICompanionOpen] = useState(true);
+ const [predictionData, setPredictionData] = useState(null);
+ useEffect(() => {
+    const isOverCompleted = validBalls === 0 && overNumber > 0;
+    const shouldTriggerPrediction =
+      playerScore >= 10 || outCount > 0 || isOverCompleted;
+
+    if (shouldTriggerPrediction) {
+      const winA = Math.max(0, 100 - (playerScore + outCount * 5));
+      const winB = 100 - winA;
+
+      const generatedPrediction = {
+   battingTeam: isChasing ? teamB.name : teamA.name, // chasing = batting second
+  bowlingTeam: isChasing ? teamA.name : teamB.name,
+  battingScore: playerScore,
+  bowlingScore: targetScore,
+  winA,
+  winB,
+  overNumber,
+  nextOverProjection: `Predicted 8 runs with 1 boundary in Over ${overNumber}`,
+  alternateOutcome: `If ${striker?.name || "the striker"} hits a 6 next ball, win probability increases by 5%.`,
+};
+
+
+      setPredictionData(generatedPrediction);
+    }
+  }, [playerScore, outCount, overNumber]);
 
   const catchTypes = ['Diving', 'Running', 'Overhead', 'One-handed', 'Standard'];
 
@@ -1613,6 +1642,19 @@ function StartMatchPlayersRoundRobin({ initialTeamA, initialTeamB, origin }) {
                 )
               })}
             </div>
+            {/* <div className="mt-6 w-full md:w-[50%] bg-[#4C0025] p-4 md:p-6 rounded-lg shadow-lg">
+              <h3 className="text-white text-lg md:text-xl font-bold mb-4 text-center">Pitch Analysis</h3>
+              
+            </div> */}
+       <div>
+       {isAICompanionOpen && (
+        <AIMatchCompanionModal
+          isOpen={isAICompanionOpen}
+          predictionData={predictionData}
+        />
+      )}
+    </div>
+
             {showRunInfo && (
               <p className="text-yellow-400 text-sm mt-2 text-center font-medium">
                 {pendingOut ? 'Please select 0, 1, or 2 for runs on out' : 'Please select run, if not select 0'}

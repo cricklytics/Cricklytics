@@ -5,6 +5,7 @@ import { db } from '../../firebase'; // Adjust path to your Firebase config
 import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 import logo from '../../assets/pawan/PlayerProfile/picture-312.png';
 import bgImg from '../../assets/sophita/HomePage/advertisement5.jpeg';
+import PitchAnalyzer from '../../components/sophita/HomePage/PitchAnalyzer';
 
 const PlayerSelector = ({ teamA, teamB, overs, origin, matchId, currentPhase, tournamentId }) => {
   const [leftSearch, setLeftSearch] = useState('');
@@ -42,7 +43,6 @@ const PlayerSelector = ({ teamA, teamB, overs, origin, matchId, currentPhase, to
       return;
     }
 
-    // console.log("Starting match with players:", selectedPlayers);
     console.log('Origin being passed to StartMatchPlayers:', origin);
     navigate('/StartMatchPlayersKO', {
       state: {
@@ -234,7 +234,7 @@ const PlayerSelector = ({ teamA, teamB, overs, origin, matchId, currentPhase, to
     </div>
   );
 };
-// Remove `origin` from props since we'll get it from `state`
+
 const Startmatch = ({ initialTeamA = '', initialTeamB = '' }) => {
   const { state } = useLocation();
   const navigate = useNavigate();
@@ -250,6 +250,8 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '' }) => {
   const [showPlayerSelector, setShowPlayerSelector] = useState(false);
   const [loadingMatch, setLoadingMatch] = useState(false);
   const [matchError, setMatchError] = useState(null);
+  const [isPitchAnalyzerOpen, setIsPitchAnalyzerOpen] = useState(false);
+  const [isPitchAnalyzed, setIsPitchAnalyzed] = useState(false);
 
   const scorers = ['John Doe', 'Jane Smith', 'Mike Johnson'];
 
@@ -336,6 +338,11 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '' }) => {
   }, [selectedTeamA, selectedTeamB]);
 
   const handleNext = () => {
+    if (!isPitchAnalyzed) {
+      alert('Please analyze the pitch conditions before proceeding.');
+      return;
+    }
+    
     if (!selectedTeamA || !selectedTeamB || !overs) {
       alert('Please select both teams and enter overs.');
       return;
@@ -366,6 +373,10 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '' }) => {
     }
 
     setShowPlayerSelector(true);
+  };
+
+  const openPitchAnalyzer = () => {
+    setIsPitchAnalyzerOpen(true);
   };
 
   if (showPlayerSelector) {
@@ -412,17 +423,18 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '' }) => {
   }
 
   return (
-    <div
-      className="w-full relative"
-      style={{
-        backgroundImage: `url(${bgImg})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-        backgroundAttachment: 'fixed',
-        height: '100vh',
-      }}
-    >
+   <div
+  className="w-full relative"
+  style={{
+    backgroundImage: `url(${bgImg})`,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    backgroundRepeat: 'no-repeat',
+    backgroundAttachment: 'fixed',
+    minHeight: '100vh',  // Changed from height to minHeight
+    overflow: 'auto',    // Added to enable scrolling
+  }}
+>
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -576,6 +588,15 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '' }) => {
               </motion.div>
             </motion.div>
           </div>
+
+          <div className="mt-8 flex flex-col items-center">
+            <PitchAnalyzer 
+              isOpen={isPitchAnalyzerOpen}
+              onClose={() => setIsPitchAnalyzerOpen(false)}
+              teamA={selectedTeamA}
+              teamB={selectedTeamB}
+              onAnalyzeComplete={() => setIsPitchAnalyzed(true)}
+            />
           </div>
 
           <motion.div
@@ -585,15 +606,19 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '' }) => {
             transition={{ duration: 0.5, delay: 0.4 }}
           >
             <motion.button
-              className="px-10 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl shadow-lg hover:shadow-xl text-xl transition-all duration-300"
+              className={`px-6 py-3 mt-8 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all duration-300 w-full max-w-md ${
+                !isPitchAnalyzed ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+              whileHover={isPitchAnalyzed ? { scale: 1.02 } : {}}
+              whileTap={isPitchAnalyzed ? { scale: 0.98 } : {}}
               onClick={handleNext}
-              whileHover={{ scale: 1.03, boxShadow: "0 10px 25px -5px rgba(59, 130, 246, 0.4)" }}
-              whileTap={{ scale: 0.98 }}
+              disabled={!isPitchAnalyzed}
             >
               Next
             </motion.button>
           </motion.div>
-        </motion.div>
+        </div>
+      </motion.div>
     </div>
   );
 };

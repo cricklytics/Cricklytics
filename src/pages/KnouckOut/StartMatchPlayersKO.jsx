@@ -10,6 +10,7 @@ import sixAnimation from '../../assets/Animation/six.json';
 import fourAnimation from '../../assets/Animation/four.json';
 import outAnimation from '../../assets/Animation/out.json';
 import MainWheel from "../../components/yogesh/wagonwheel/mainwheel"
+import AIMatchCompanionModal from '../../components/yogesh/LandingPage/AIMatchCompanion';
 
 // Error Boundary Component
 class ErrorBoundary extends Component {
@@ -1837,6 +1838,41 @@ function StartMatchPlayersKnockout({ initialTeamA, initialTeamB, origin, onMatch
                 );
               })}
             </div>
+            
+            <div  className="mt-12">
+                  <motion.button
+                    className="px-6 py-3 bg-gradient-to-r from-green-600 to-teal-600 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all duration-300 w-full max-w-md flex items-center justify-center gap-2 mx-auto"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setIsPitchAnalyzerOpen(true)}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.5 }}
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                    </svg>
+                    AI Match Companion
+                  </motion.button>
+            
+                  <AnimatePresence>
+                    {isPitchAnalyzerOpen && (
+                      <PitchAnalyzer 
+                        onClose={() => setIsPitchAnalyzerOpen(false)} 
+                      />
+                    )}
+                  </AnimatePresence>
+                </div>
+                    
+            <div>
+                   {isAICompanionOpen && (
+                    <AIMatchCompanionModal
+                      isOpen={isAICompanionOpen}
+                      predictionData={predictionData}
+                    />
+                  )}
+                </div>
+
             {showRunInfo && (
               <p className="text-yellow-300 text-sm mt-2 text-center font-medium">
                 Please select run, if not select 0

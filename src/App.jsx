@@ -24,6 +24,7 @@ import StreamersPage from './pages/Community/StreamersPage';
 import TrophyVendorsPage from './pages/Community/TrophyVendorsPage';
 import TshirtVendorsPage from './pages/Community/TshirtVendorsPage';
 import UmpiresPage from './pages/Community/UmpiresPage';
+import LiveMatchDetails from './components/yogesh/LandingPage/LiveMatchDetails';
 
 import Landingpage from './pages/Landingpage';
 import Sidebar from './components/sophita/HomePage/Sidebar';
@@ -220,6 +221,7 @@ function App() {
           <Route path="/trophy-vendors" element={<TrophyVendorsPage/>} />
           <Route path="/tshirt-vendors" element={<TshirtVendorsPage/>} />
           <Route path="/umpires" element={<UmpiresPage/>} />
+          <Route path="match-details" element = {<LiveMatchDetails/>}/>
 
           <Route path="/fielding" element={<FieldingStatsPage/>} />
           <Route path="/table-toppers" element={<Tabletoppers/>} />

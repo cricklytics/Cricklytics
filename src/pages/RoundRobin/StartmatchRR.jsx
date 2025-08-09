@@ -7,6 +7,7 @@ import logo from '../../assets/pawan/PlayerProfile/picture-312.png';
 import bgImg from '../../assets/sophita/HomePage/advertisement5.jpeg';
 import nav from '../../assets/kumar/right-chevron.png';
 import { IoChevronBack } from "react-icons/io5";
+import PitchAnalyzer from '../../components/sophita/HomePage/PitchAnalyzer';
 
 const PlayerSelector = ({
   teamA,
@@ -103,16 +104,16 @@ const PlayerSelector = ({
 
   return (
     <div
-      className="w-full relative py-8"
-      style={{
-        backgroundImage: `url(${bgImg})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-        backgroundAttachment: 'fixed',
-        minHeight: 'calc(100vh - H - N)',
-      }}
-    >
+  className="w-full relative py-8"
+  style={{
+    backgroundImage: `url(${bgImg})`,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    backgroundRepeat: 'no-repeat',
+    backgroundAttachment: 'fixed',
+    height: '100vh',
+  }}
+>
       <div className="w-full px-4 md:px-8 pb-8 mx-auto max-w-7xl">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -332,6 +333,9 @@ const Startmatch = ({
   const [flowchartLoading, setFlowchartLoading] = useState(false);
   const [flowchartError, setFlowchartError] = useState(null);
   const [tournamentImageUrl, setTournamentImageUrl] = useState('');
+  const [isPitchAnalyzerOpen, setIsPitchAnalyzerOpen] = useState(false);
+  const [isPitchAnalyzed, setIsPitchAnalyzed] = useState(false);
+  
 
   const scorers = ['John Doe', 'Jane Smith', 'Mike Johnson'];
   const navigate = useNavigate();
@@ -565,6 +569,8 @@ const Startmatch = ({
     }
   }, [selectedTeamA, selectedTeamB]);
 
+ 
+
   const fetchFlowchartData = async () => {
     if (!tournamentId) {
       setFlowchartError('No tournament ID provided.');
@@ -647,10 +653,15 @@ const Startmatch = ({
   };
 
   const handleNext = () => {
-    if (!selectedMatchId) {
-      alert('Please select a match.');
-      return;
-    }
+  if (!isPitchAnalyzed) {
+    alert('Please analyze the pitch conditions before proceeding.');
+    return;
+  }
+
+  if (!selectedMatchId) {
+    alert('Please select a match.');
+    return;
+  }
 
     const selectedMatch = allMatches.find(match => match.id === selectedMatchId);
     if (selectedMatch && selectedMatch.winner !== null) {
@@ -718,6 +729,10 @@ const Startmatch = ({
     );
   }
 
+   const openPitchAnalyzer = () => {
+    setIsPitchAnalyzerOpen(true);
+  };
+
   if (showPlayerSelector) {
     const teamAObject = allTeams.find(team => team.name === selectedTeamA);
     const teamBObject = allTeams.find(team => team.name === selectedTeamB);
@@ -744,16 +759,17 @@ const Startmatch = ({
 
   return (
     <div
-      className="w-full relative"
-      style={{
-        backgroundImage: `url(${bgImg})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-        backgroundAttachment: 'fixed',
-        minHeight: 'calc(100vh - H - N)',
-      }}
-    >
+  className="w-full relative"
+  style={{
+    backgroundImage: `url(${bgImg})`,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    backgroundRepeat: 'no-repeat',
+    backgroundAttachment: 'fixed',
+    minHeight: '100vh',  // Changed from height to minHeight
+    overflow: 'auto',    // Added to enable scrolling
+  }}
+>
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -984,23 +1000,35 @@ const Startmatch = ({
             </motion.div>
           </div>
 
-          <motion.div
-            className="mt-8 text-center w-full"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.4 }}
-          >
-            <motion.button
-              className="px-10 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
-              onClick={handleNext}
-              whileHover={{ scale: 1.03, boxShadow: '0 10px 25px -5px rgba(59, 130, 246, 0.4)' }}
-              whileTap={{ scale: 0.98 }}
-              disabled={currentPhase === 'Finals (Complete)'}
-            >
-              Next
-            </motion.button>
-          </motion.div>
+          <div className="mt-8 flex flex-col items-center">
+                      <PitchAnalyzer 
+                        isOpen={isPitchAnalyzerOpen}
+                        onClose={() => setIsPitchAnalyzerOpen(false)}
+                        teamA={selectedTeamA}
+                        teamB={selectedTeamB}
+                        onAnalyzeComplete={() => setIsPitchAnalyzed(true)}
+                      />
+                    </div>
+          
 
+          <motion.div
+                    className="mt-8 text-center w-full"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.4 }}
+                  >
+                    <motion.button
+                      className={`px-6 py-3 mt-8 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all duration-300 w-full max-w-md ${
+                        !isPitchAnalyzed ? 'opacity-50 cursor-not-allowed' : ''
+                      }`}
+                      whileHover={isPitchAnalyzed ? { scale: 1.02 } : {}}
+                      whileTap={isPitchAnalyzed ? { scale: 0.98 } : {}}
+                      onClick={handleNext}
+                      disabled={!isPitchAnalyzed}
+                    >
+                      Next
+                    </motion.button>
+                  </motion.div>
           {showFlowchartModal && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
               <div className="bg-[#1A2B4C] rounded-xl p-6 w-full max-w-4xl max-h-[80vh] overflow-y-auto">

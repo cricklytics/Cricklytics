@@ -3,6 +3,8 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { db } from '../../firebase';
 import { doc, setDoc, onSnapshot, getDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, updateDoc, limit } from 'firebase/firestore';
+
 
 const generateUUID = () => {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
@@ -12,7 +14,7 @@ const generateUUID = () => {
   });
 };
 
-const TournamentBracket = () => {
+const TournamentBracket = ({ tournamentName }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [teams, setTeams] = useState([]);
@@ -27,6 +29,252 @@ const TournamentBracket = () => {
   const [error, setError] = useState(null);
   const [canAdvanceToNextRound, setCanAdvanceToNextRound] = useState(false);
   const [finalRankings, setFinalRankings] = useState(null);
+
+  // console.log(tournamentName);
+
+  // Add these states inside the TournamentBracket component
+  const [editingMatchId, setEditingMatchId] = useState(null);
+  const [editedDate, setEditedDate] = useState('');
+  const [editedTime, setEditedTime] = useState('');
+
+// Helper to update Firestore with scheduled dates/times in simple format
+const saveTimetableToFirestore = async (allMatches, timeSlots) => {
+  try {
+    const tournamentDocRef = doc(db, 'KnockoutTournamentMatches', tournamentId);
+    const tournamentDoc = await getDoc(tournamentDocRef);
+    if (!tournamentDoc.exists()) {
+      console.error('Tournament document not found.');
+      return;
+    }
+
+    const data = tournamentDoc.data();
+    const updatedRounds = data.rounds.map((round) => {
+      const updatedMatches = round.matches.map((match) => {
+        // Find the index of this match in the flattened list
+        const matchIndex = allMatches.findIndex((m) => m.id === match.id);
+        if (matchIndex !== -1 && matchIndex < timeSlots.length) {
+          const slotTime = timeSlots[matchIndex];
+          return {
+            ...match,
+            scheduledDate: slotTime.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),  // e.g., "Aug 01, 2025"
+            scheduledTime: slotTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })   // e.g., "10:00 AM"
+          };
+        }
+        return match;  // No change if no slot available
+      });
+      return { ...round, matches: updatedMatches };
+    });
+
+    // Update the document with the new rounds
+    await setDoc(tournamentDocRef, { rounds: updatedRounds }, { merge: true });
+    console.log('Timetable saved to Firestore in simple format successfully.');
+  } catch (err) {
+    console.error('Error saving timetable to Firestore:', err);
+  }
+};
+
+
+    // NEW: State for toggling timetable visibility
+  const [showTimetable, setShowTimetable] = useState(false);
+  const [timetableData, setTimetableData] = useState([]);
+
+const fetchTimetable = async () => {
+  if (!tournamentId) return;
+  try {
+    const tournamentDocRef = doc(db, 'KnockoutTournamentMatches', tournamentId);
+    const tournamentDoc = await getDoc(tournamentDocRef);
+    if (!tournamentDoc.exists()) return;
+
+    const data = tournamentDoc.data();
+    const allMatches = data.rounds.flatMap(round => round.matches);
+
+    // Set timetableData using existing scheduledDate and scheduledTime
+    const generatedTimetable = allMatches.map((match) => ({
+      id: match.id,
+      phase: match.phase,
+      team1: match.team1?.name || 'TBD',
+      team2: match.team2?.name || 'TBD',
+      time: match.scheduledDate && match.scheduledTime 
+        ? `${match.scheduledDate}, ${match.scheduledTime}` 
+        : 'Not Scheduled',
+    }));
+
+    setTimetableData(generatedTimetable);
+  } catch (err) {
+    console.error('Error fetching timetable:', err);
+  }
+};
+
+const regenerateTimetable = async () => {
+  try {
+    const tournamentDocRef = doc(db, 'KnockoutTournamentMatches', tournamentId);
+    const tournamentDoc = await getDoc(tournamentDocRef);
+    if (!tournamentDoc.exists()) return;
+
+    const data = tournamentDoc.data();
+    const allMatches = data.rounds.flatMap(round => round.matches);
+
+    // -- 1. Get tournament boundaries (as before)
+    let startDate, endDate;
+    const tournamentsQuery = query(
+      collection(db, 'tournaments'),
+      where('name', '==', tournamentName),
+      limit(1)
+    );
+    const querySnapshot = await getDocs(tournamentsQuery);
+
+    if (!querySnapshot.empty) {
+      const tournamentData = querySnapshot.docs[0].data();
+      startDate = new Date(`${tournamentData.startDate}T00:00:00+05:30`);
+      endDate = new Date(`${tournamentData.endDate}T23:59:59+05:30`);
+    } else {
+      startDate = new Date('2025-08-04T00:00:00+05:30');
+      endDate = new Date('2025-08-06T23:59:59+05:30');
+    }
+
+    // -- 2. Gather all slots (3 per day) from start to end, in order
+    const dailyTimes = [
+      { hours: 10, minutes: 0 },
+      { hours: 16, minutes: 0 },
+      { hours: 20, minutes: 0 }
+    ];
+    let curDay = new Date(startDate);
+    const allSlots = [];
+    while (curDay <= endDate) {
+      for (const t of dailyTimes) {
+        const dt = new Date(curDay);
+        dt.setHours(t.hours, t.minutes, 0, 0);
+        if (dt <= endDate) allSlots.push(new Date(dt)); // clone
+      }
+      curDay.setDate(curDay.getDate() + 1);
+    }
+
+    // -- 3. Find latest PLAYED match slot (if any)
+    let latestPlayedTime = null;
+    allMatches.forEach(m => {
+      if (m.played && m.scheduledDate && m.scheduledTime) {
+        // Parse m.scheduledDate (e.g., "Jul 15, 2025") and m.scheduledTime ("10:00 AM")
+        let matchDate = new Date(`${m.scheduledDate} ${m.scheduledTime}`);
+        if (!isNaN(matchDate)) {
+          if (!latestPlayedTime || matchDate > latestPlayedTime) {
+            latestPlayedTime = matchDate;
+          }
+        }
+      }
+    });
+
+    // -- 4. Build a map: for each match, if it's played, reserve its slot
+    const reservedSlotTimes = new Set();
+    allMatches.forEach(m => {
+      if (m.scheduledDate && m.scheduledTime) {
+        reservedSlotTimes.add(`${m.scheduledDate},${m.scheduledTime}`);
+      }
+    });
+
+    // -- 5. Assign new slots to unplayed/unassigned matches, starting after latest played time
+    let slotIdx = 0;
+
+    // If latestPlayedTime exists, advance slotIdx to the earliest slot strictly after it
+    if (latestPlayedTime) {
+      while (slotIdx < allSlots.length && allSlots[slotIdx] <= latestPlayedTime) slotIdx++;
+    }
+
+    // Unplayed/unassigned in order
+    const assignableMatches = allMatches.filter(m => !m.played);
+
+    // -- So we can handle assignment by phase, but order here is order in allMatches
+    let assignedSlotsMap = {}; // matchId: {date, time}
+    assignableMatches.forEach(m => {
+      // Find next slot not reserved
+      while (
+        slotIdx < allSlots.length &&
+        reservedSlotTimes.has(`${allSlots[slotIdx].toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })},${allSlots[slotIdx].toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`)
+      ) {
+        slotIdx++;
+      }
+      if (slotIdx >= allSlots.length) return; // no more slots available
+
+      const dt = allSlots[slotIdx++];
+      assignedSlotsMap[m.id] = {
+        scheduledDate: dt.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
+        scheduledTime: dt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+      };
+      reservedSlotTimes.add(`${assignedSlotsMap[m.id].scheduledDate},${assignedSlotsMap[m.id].scheduledTime}`);
+    });
+
+    // -- 6. Build updatedRounds: for played matches, keep their time; for assigned, update; for others, clear
+    const updatedRounds = data.rounds.map(round => {
+      const updatedMatches = round.matches.map(match => {
+        if (match.played) return match; // Don't change played matches!
+        if (assignedSlotsMap[match.id]) {
+          return {
+            ...match,
+            scheduledDate: assignedSlotsMap[match.id].scheduledDate,
+            scheduledTime: assignedSlotsMap[match.id].scheduledTime
+          };
+        }
+        return {
+          ...match,
+          scheduledDate: null,
+          scheduledTime: null
+        };
+      });
+      return { ...round, matches: updatedMatches };
+    });
+
+    await updateDoc(tournamentDocRef, { rounds: updatedRounds });
+    fetchTimetable();
+    console.log('Smart dynamic timetable regenerated!');
+
+  } catch (err) {
+    console.error('Error in smart regenerateTimetable:', err);
+  }
+};
+
+
+    // NEW: Fetch timetable when button is toggled on
+  useEffect(() => {
+    if (showTimetable) {
+      fetchTimetable();
+    }
+  }, [showTimetable]);
+
+
+  
+// Add this function to update a single match's timetable in Firestore
+const updateMatchTimetable = async (matchId, newDate, newTime) => {
+  try {
+    const tournamentDocRef = doc(db, 'KnockoutTournamentMatches', tournamentId);
+    const tournamentDoc = await getDoc(tournamentDocRef);
+    if (!tournamentDoc.exists()) {
+      console.error('Tournament document not found.');
+      return;
+    }
+
+    const data = tournamentDoc.data();
+    const updatedRounds = data.rounds.map((round) => {
+      const updatedMatches = round.matches.map((match) => {
+        if (match.id === matchId) {
+          return {
+            ...match,
+            scheduledDate: newDate || null,  // Set to null if deleting
+            scheduledTime: newTime || null   // Set to null if deleting
+          };
+        }
+        return match;
+      });
+      return { ...round, matches: updatedMatches };
+    });
+
+    await updateDoc(tournamentDocRef, { rounds: updatedRounds });
+    console.log(`Match ${matchId} timetable updated in Firestore.`);
+    // Refetch timetable after update
+    fetchTimetable();
+  } catch (err) {
+    console.error('Error updating match timetable in Firestore:', err);
+  }
+};
+
 
   useEffect(() => {
     console.log('TournamentBracket received state:', location.state);
@@ -189,6 +437,7 @@ const TournamentBracket = () => {
           currentPhase: 'superKnockout',
           tournamentWinner: null,
           finalRankings: null,
+          tournamentName: tournamentName,
         });
         console.log('Super Knockout tournament initialized in Firebase');
       } catch (error) {
@@ -244,6 +493,7 @@ const TournamentBracket = () => {
           currentPhase: 'preQuarter',
           tournamentWinner: null,
           finalRankings: null,
+          tournamentName: tournamentName,
         });
         console.log('Knockout tournament initialized in Firebase');
       } catch (error) {
@@ -284,6 +534,7 @@ const TournamentBracket = () => {
           currentPhase: 'quarter',
           tournamentWinner: null,
           finalRankings: null,
+          tournamentName: tournamentName,
         });
         console.log('PlayOff tournament initialized in Firebase');
       } catch (error) {
@@ -322,6 +573,7 @@ const TournamentBracket = () => {
           currentPhase: 'eliminatorElite',
           tournamentWinner: null,
           finalRankings: null,
+          tournamentName: tournamentName,
         });
         console.log('Eliminator Elite tournament initialized in Firebase');
       } catch (error) {
@@ -357,6 +609,7 @@ const TournamentBracket = () => {
           currentPhase: 'championship',
           tournamentWinner: null,
           finalRankings: null,
+          tournamentName: tournamentName,
         });
         console.log('Championship tournament initialized in Firebase');
       } catch (error) {
@@ -1293,6 +1546,160 @@ const TournamentBracket = () => {
             )}
           </>
         )}
+        {tournamentId && (
+              <div className="text-center mt-8">
+                <button 
+                  onClick={() => setShowTimetable(!showTimetable)}
+                  className="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg text-white transition-transform duration-200 hover:scale-105"
+                >
+                  {showTimetable ? 'Hide Timetable' : 'View Timetable'}
+                </button>
+                {showTimetable && (
+                  <div className="mt-6 bg-gray-800 p-6 rounded-xl shadow-lg">
+                    <h3 className="text-2xl font-bold mb-4 text-blue-400">Match Timetable</h3>
+                    <button
+                      onClick={regenerateTimetable}
+                      className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded text-white mb-4"
+                    >
+                      Regenerate Timetable
+                    </button>
+                    {timetableData.length > 0 ? (
+                      <table className="w-full text-left">
+                        <thead>
+                          <tr>
+                            <th>Match ID</th>
+                            <th>Phase</th>
+                            <th>Teams</th>
+                            <th>Scheduled Time (IST)</th>
+                            <th>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {timetableData.map((item) => (
+                            <tr key={item.id}>
+                              <td>{item.id}</td>
+                              <td>{item.phase}</td>
+                              <td>{item.team1} vs {item.team2}</td>
+                              <td>
+                                {editingMatchId === item.id ? (
+                                  <div>
+                                    <input
+                                      type="date"
+                                      value={editedDate}
+                                      onChange={(e) => setEditedDate(e.target.value)}
+                                      className="text-black"
+                                    />
+                                    <input
+                                      type="time"
+                                      value={editedTime}
+                                      onChange={(e) => setEditedTime(e.target.value)}
+                                      className="text-black ml-2"
+                                    />
+                                  </div>
+                                ) : (
+                                  item.time
+                                )}
+                              </td>
+                              <td>
+                                {editingMatchId === item.id ? (
+                                  <div>
+                                    <button
+                                      onClick={() => {
+                                        // Parse and format date and time as needed (e.g., convert to simple format)
+                                        const formattedDate = new Date(editedDate).toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+                                        const formattedTime = new Date(`1970-01-01T${editedTime}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+                                        updateMatchTimetable(item.id, formattedDate, formattedTime);
+                                        setEditingMatchId(null);
+                                      }}
+                                      className="px-2 py-1 bg-green-600 hover:bg-green-700 rounded text-white mr-2"
+                                    >
+                                      Save
+                                    </button>
+                                    <button
+                                      onClick={() => setEditingMatchId(null)}
+                                      className="px-2 py-1 bg-gray-600 hover:bg-gray-700 rounded text-white"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div>
+                                    <button
+                                      onClick={() => {
+                                      // Initialize editedDate and editedTime from item.time (parse accordingly)
+                                      if (item.time === 'Not Scheduled') {
+                                        setEditedDate('');
+                                        setEditedTime('');
+                                        setEditingMatchId(item.id);
+                                        return;
+                                      }
+
+                                      const [datePart, timePart] = item.time.split(', ');
+                                      
+                                      // Parse date: "Aug 01, 2025" -> remove comma after day, split by space
+                                      const cleanedDate = datePart.replace(/,/g, '');
+                                      const dateParts = cleanedDate.split(' ');
+                                      const monthShort = dateParts[0];
+                                      const day = dateParts[1];
+                                      const year = dateParts[2];
+
+                                      // Convert short month to number (e.g., 'Aug' -> '08')
+                                      const monthMap = {
+                                        'Jan': '01', 'Feb': '02', 'Mar': '03', 'Apr': '04', 'May': '05', 'Jun': '06',
+                                        'Jul': '07', 'Aug': '08', 'Sep': '09', 'Oct': '10', 'Nov': '11', 'Dec': '12'
+                                      };
+                                      const month = monthMap[monthShort];
+
+                                      if (!month) {
+                                        console.error('Failed to parse month:', monthShort);
+                                        setEditedDate('');
+                                      } else {
+                                        setEditedDate(`${year}-${month}-${day.padStart(2, '0')}`);
+                                      }
+
+                                      // Parse time (same as before, handling optional seconds and case-insensitive AM/PM)
+                                      const match = timePart.match(/(\d+):(\d+)(?::\d+)? (AM|PM)/i);
+                                      if (match) {
+                                        const [_, hours, minutes, ampmRaw] = match;
+                                        const ampm = ampmRaw.toUpperCase();
+                                        let hour = parseInt(hours, 10);
+                                        if (ampm === 'PM' && hour < 12) hour += 12;
+                                        if (ampm === 'AM' && hour === 12) hour = 0;
+                                        setEditedTime(`${hour.toString().padStart(2, '0')}:${minutes}`);
+                                      } else {
+                                        setEditedTime('');
+                                        console.error('Failed to parse time:', timePart);
+                                      }
+                                      setEditingMatchId(item.id);
+                                    }}
+                                      className="px-2 py-1 bg-blue-600 hover:bg-blue-700 rounded text-white mr-2"
+                                    >
+                                      Edit
+                                    </button>
+                                    <button
+                                      onClick={() => {
+                                        if (window.confirm('Are you sure you want to delete this timetable entry?')) {
+                                          updateMatchTimetable(item.id, null, null);
+                                        }
+                                      }}
+                                      className="px-2 py-1 bg-red-600 hover:bg-red-700 rounded text-white"
+                                    >
+                                      Delete
+                                    </button>
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : (
+                      <p>No matches available or loading...</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
       </div>
     </div>
   );

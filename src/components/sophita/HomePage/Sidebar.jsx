@@ -1563,7 +1563,7 @@ const Sidebar = ({ isOpen, closeMenu, userProfile }) => {
   const [showCommentsDropdown, setShowCommentsDropdown] = useState(false);
   const [selectedColor, setSelectedColor] = useState("#5DE0E6");
   const [accountType, setAccountType] = useState("public");
-  const [showTournamentDropdown, setShowTournamentDropdown] = useState(false); 
+  // const [showTournamentDropdown, setShowTournamentDropdown] = useState(false); 
   const [accountSettingsBg, setAccountSettingsBg] = useState("rgb(93, 224, 230, 0.5)");
 
   const accountSettingsPanelRef = useRef(null);
@@ -1762,15 +1762,15 @@ const Sidebar = ({ isOpen, closeMenu, userProfile }) => {
               <FaTrophy className="min-w-[20px]" /> CV Cricket Awards
             </li>
             <li 
-              className="px-4 py-2 md:px-6 md:py-3 flex items-center justify-between cursor-pointer hover:bg-[rgba(0,0,0,0.1)] transition-all duration-300"
-              onClick={() => setShowTournamentDropdown(!showTournamentDropdown)}
+              className="px-4 py-2 md:px-6 md:py-3 flex items-center gap-2 md:gap-3 cursor-pointer hover:bg-[rgba(0,0,0,0.1)] transition-all duration-300"
+               onClick={() => navigate("/tournamentseries")}
             >
-              <span className="flex items-center gap-2 md:gap-3">
-                <FaTrophy className="min-w-[16px] md:min-w-[20px]" /> Tournament/Series
-              </span>
-              {showTournamentDropdown ? <FaChevronUp /> : <FaChevronDown />}
+              {/* <span className="flex items-center gap-2 md:gap-3"> */}
+                <FaTrophy className="min-w-[20px]" /> Tournament/Series
+              {/* </span> */}
+              {/* {showTournamentDropdown ? <FaChevronUp /> : <FaChevronDown />} */}
             </li>
-            {showTournamentDropdown && (
+            {/* {showTournamentDropdown && (
               <ul className="pl-6 md:pl-10 border-l-2 border-[#5DE0E6]">
                 <li 
                   className="flex items-center px-2 md:px-4 py-1 md:py-2 text-sm cursor-pointer hover:bg-[rgb(68,172,199)] transition-all duration-200"
@@ -1785,7 +1785,7 @@ const Sidebar = ({ isOpen, closeMenu, userProfile }) => {
                   ➕ Add Tournament
                 </li>
               </ul>
-            )}
+            )} */}
             <li className="px-4 py-2 md:px-6 md:py-3 flex items-center gap-2 md:gap-3 cursor-pointer hover:bg-[rgba(0,0,0,0.1)] transition-all duration-300"
               onClick={() => navigate('/match-start-sb', { state: { initialTab: 'Start Match', fromSidebar: true } })}>
               <FaUsers className="min-w-[20px]" /> Start a Match

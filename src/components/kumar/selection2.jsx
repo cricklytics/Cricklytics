@@ -29,7 +29,6 @@ const Selection2 = () => {
 
   const numberOfMatches = matchSchedule.length;
 
-
   console.log('Current tournamentName:', currentTournamentName);
   console.log('Received information:', information);
 
@@ -40,29 +39,26 @@ const Selection2 = () => {
     return `tournament_${timestamp}_${random}`;
   }
 
-
-const updateCurrentStageAndMatches = async (tName, numMatches) => {
-  if (!tName) return;
-  try {
-    const tournamentsQuery = query(
-      collection(db, 'tournaments'),
-      where('name', '==', tName)
-    );
-    const snapshots = await getDocs(tournamentsQuery);
-    if (!snapshots.empty) {
-      const docRef = snapshots.docs[0].ref;
-      await updateDoc(docRef, {
-        "Current Stage": "RoundRobin",
-        matches: numMatches,
-      });
-      // Optionally: console.log("Current Stage and matches updated");
+  const updateCurrentStageAndMatches = async (tName, numMatches) => {
+    if (!tName) return;
+    try {
+      const tournamentsQuery = query(
+        collection(db, 'tournaments'),
+        where('name', '==', tName)
+      );
+      const snapshots = await getDocs(tournamentsQuery);
+      if (!snapshots.empty) {
+        const docRef = snapshots.docs[0].ref;
+        await updateDoc(docRef, {
+          "Current Stage": "RoundRobin",
+          matches: numMatches,
+        });
+        // Optionally: console.log("Current Stage and matches updated");
+      }
+    } catch (err) {
+      console.error("Failed to update Current Stage and matches:", err);
     }
-  } catch (err) {
-    console.error("Failed to update Current Stage and matches:", err);
-  }
-};
-
-
+  };
 
   // Helper: Convert 12-hour time with AM/PM to 24-hour 'HH:MM'
   const to24Hour = (timeStr) => {
@@ -171,7 +167,6 @@ const updateCurrentStageAndMatches = async (tName, numMatches) => {
               where('name', '==', tournamentData.tournamentName || tournamentName)
             );
             const tournamentsSnapshot = await getDocs(tournamentsQuery);
-
             if (!tournamentsSnapshot.empty) {
               const docData = tournamentsSnapshot.docs[0].data(); // Use first matching document
               fetchedStartDate = docData.startDate;
@@ -272,7 +267,6 @@ const updateCurrentStageAndMatches = async (tName, numMatches) => {
               where('name', '==', tournamentData.tournamentName || '')
             );
             const tournamentsSnapshot = await getDocs(tournamentsQuery);
-
             if (!tournamentsSnapshot.empty) {
               const docData = tournamentsSnapshot.docs[0].data(); // Use first matching document
               fetchedStartDate = docData.startDate;
@@ -384,7 +378,6 @@ const updateCurrentStageAndMatches = async (tName, numMatches) => {
     const [day, month, year] = match.date.split('-');
     const monthMap = { Jan: '01', Feb: '02', Mar: '03', Apr: '04', May: '05', Jun: '06', Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11', Dec: '12' };
     const convertedDate = `20${year}-${monthMap[month]}-${day}`;
-
     // Convert time to 24-hour for input
     const convertedTime = to24Hour(match.time);
 
@@ -499,7 +492,6 @@ const updateCurrentStageAndMatches = async (tName, numMatches) => {
   const initializePlayoffs = (numTeams) => {
     let semiFinalMatches = [];
     let finalMatch = [];
-
     if (numTeams >= 4) {
       semiFinalMatches = [
         { id: 'semi_1', phase: 'Semi-Final 1', team1: 'TBD', team2: 'TBD', winner: null },
@@ -681,7 +673,7 @@ const updateCurrentStageAndMatches = async (tName, numMatches) => {
 
   const handleBack = () => {
     if (information === 'FromSidebar') {
-      navigate('/pendingTournament');
+      navigate('/tournament');
     } else {
       navigate('/TournamentPage', { state: { tournamentName: currentTournamentName || tournamentName, tournamentId } });
     }
@@ -700,27 +692,20 @@ const updateCurrentStageAndMatches = async (tName, numMatches) => {
     return 'bg-blue-900'; // Future match or no status
   };
   useEffect(() => {
-  if (currentTournamentName && matchSchedule.length > 0) {
-    updateCurrentStageAndMatches(currentTournamentName, matchSchedule.length);
-  }
-}, [currentTournamentName, matchSchedule]);
-
+    if (currentTournamentName && matchSchedule.length > 0) {
+      updateCurrentStageAndMatches(currentTournamentName, matchSchedule.length);
+    }
+  }, [currentTournamentName, matchSchedule]);
 
   return (
     <section className="bg-gradient-to-b from-[#0D171E] to-[#283F79] text-white p-4 md:px-8 md:pb-1 min-h-screen flex items-center w-full overflow-hidden z-0 relative">
       <div className="z-20 flex overflow-hidden justify-center w-full p-2 md:px-[5rem] md:pt-[1rem] relative">
-        <div className="z-30 gap-5 md:gap-10 bg-[#1A2B4C] rounded-xl md:rounded-[2rem] shadow-[8px_-5px_0px_2px_#253A6E] md:shadow-[22px_-14px_0px_5px_#253A6E] flex flex-col items-center justify-around w-full max-w-[70rem] m-2 md:m-4 p-4 md:pl-[5rem] md:pr-[5rem] md:pt-[5rem] md:pb-[1rem] text-start">
+        <div className="relative z-30 gap-5 min-h-[30rem] lg:min-h-fit lg:max-h-fit lg:p-[5rem] md:gap-10 bg-[#1A2B4C] rounded-xl md:rounded-[2rem] shadow-[8px_-5px_0px_2px_#253A6E] md:shadow-[22px_-14px_0px_5px_#253A6E] flex flex-col items-center justify-around w-full max-w-[70rem] m-2 md:m-4 p-4 md:pl-[5rem] md:pr-[5rem] md:pt-[5rem] md:pb-[1rem] text-start">
           <button
             onClick={handleBack}
             className="text-sm cursor-pointer absolute top-4 left-4 md:top-10 md:left-10"
           >
             <img src={nav} className="w-8 h-8 md:w-10 md:h-10 -scale-x-100" alt="Back" />
-          </button>
-          <button
-            onClick={() => setShowTimetable(!showTimetable)}
-            className="text-sm cursor-pointer absolute top-4 right-4 md:top-10 md:right-10 bg-[linear-gradient(120deg,_#000000,_#001A80)] px-4 py-2 rounded hover:bg-green-700"
-          >
-            {showTimetable ? 'Hide Timetable' : 'Show Timetable'}
           </button>
           <h1 className="text-2xl md:text-5xl font-bold mb-4 md:mb-2 mt-4 md:-mt-8 text-center">Round Robin Tournament</h1>
 
@@ -744,12 +729,20 @@ const updateCurrentStageAndMatches = async (tName, numMatches) => {
                   Start Date: {currentStartDate} | End Date: {currentEndDate}
                 </p>
               )}
-              <button
-                onClick={handleOpenModal}
-                className="mb-6 bg-[linear-gradient(120deg,_#000000,_#001A80)] px-4 py-2 rounded hover:bg-green-700 cursor-pointer text-sm md:text-base"
-              >
-                View Flowchart
-              </button>
+              <div className="flex flex-col sm:flex-row gap-4 mb-6 justify-center">
+                <button
+                  onClick={handleOpenModal}
+                  className="bg-[linear-gradient(120deg,_#000000,_#001A80)] px-4 py-2 rounded hover:bg-green-700 cursor-pointer text-sm md:text-base"
+                >
+                  View Flowchart
+                </button>
+                <button
+                  onClick={() => setShowTimetable(!showTimetable)}
+                  className="bg-[linear-gradient(120deg,_#000000,_#001A80)] px-4 py-2 rounded hover:bg-green-700 cursor-pointer text-sm md:text-base"
+                >
+                  {showTimetable ? 'Hide Timetable' : 'Show Timetable'}
+                </button>
+              </div>
 
               {/* Match Schedule Table */}
               {showTimetable && matchSchedule.length > 0 && (

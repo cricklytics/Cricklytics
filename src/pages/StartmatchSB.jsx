@@ -9,6 +9,7 @@ import { FiPlusCircle } from 'react-icons/fi';
 
 import logo from '../assets/pawan/PlayerProfile/picture-312.png';
 import bgImg from '../assets/sophita/HomePage/advertisement5.jpeg';
+import PitchAnalyzer from '../components/sophita/HomePage/PitchAnalyzer';
 
 const storage = getStorage();
 
@@ -39,7 +40,6 @@ const generateUniquePlayerId = async () => {
   return newId;
 };
 
-// Helper function to check if team name exists (case-insensitive)
 const checkTeamNameUnique = async (teamName, excludeTeamId = null) => {
   try {
     const teamsCollectionRef = collection(db, 'clubTeams');
@@ -59,7 +59,6 @@ const checkTeamNameUnique = async (teamName, excludeTeamId = null) => {
   }
 };
 
-// AddClubPlayerModal2 Component
 const AddClubPlayerModal2 = ({ onClose, team, onPlayerAdded }) => {
   const [formData, setFormData] = useState({
     playerId: '',
@@ -114,9 +113,8 @@ const AddClubPlayerModal2 = ({ onClose, team, onPlayerAdded }) => {
   const [filteredPlayerIds, setFilteredPlayerIds] = useState([]);
   const [playerIdSearch, setPlayerIdSearch] = useState('');
   const [isNewPlayer, setIsNewPlayer] = useState(false);
-  const [originalUserId, setOriginalUserId] = useState(null); // New state to store original userId
+  const [originalUserId, setOriginalUserId] = useState(null);
 
-  // Handle authentication state
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       if (user) {
@@ -131,7 +129,6 @@ const AddClubPlayerModal2 = ({ onClose, team, onPlayerAdded }) => {
     return () => unsubscribeAuth();
   }, []);
 
-  // Fetch player IDs from clubPlayers and PlayerDetails
   const fetchPlayerIds = async () => {
     try {
       const clubPlayersRef = collection(db, 'clubPlayers');
@@ -171,7 +168,6 @@ const AddClubPlayerModal2 = ({ onClose, team, onPlayerAdded }) => {
     fetchPlayerIds();
   }, []);
 
-  // Filter player IDs based on search
   useEffect(() => {
     if (playerIdSearch.trim() === '') {
       setFilteredPlayerIds(playerIds);
@@ -208,7 +204,6 @@ const AddClubPlayerModal2 = ({ onClose, team, onPlayerAdded }) => {
     }
   }, [playerIdSearch, playerIds]);
 
-  // Set teamName from team prop
   useEffect(() => {
     if (team?.teamName && !formData.playerId) {
       setFormData(prev => ({ ...prev, teamName: team.teamName }));
@@ -236,7 +231,7 @@ const AddClubPlayerModal2 = ({ onClose, team, onPlayerAdded }) => {
     if (selectedPlayerId) {
       try {
         let playerData = null;
-        let originalUserId = null; // Variable to store the original userId
+        let originalUserId = null;
         
         const clubPlayerQuery = query(
           collection(db, 'clubPlayers'),
@@ -245,7 +240,7 @@ const AddClubPlayerModal2 = ({ onClose, team, onPlayerAdded }) => {
         const clubPlayerSnapshot = await getDocs(clubPlayerQuery);
         if (!clubPlayerSnapshot.empty) {
           playerData = clubPlayerSnapshot.docs[0].data();
-          originalUserId = playerData.userId; // Store the original userId
+          originalUserId = playerData.userId;
         } else {
           const playerDetailsQuery = query(
             collection(db, 'PlayerDetails'),
@@ -254,12 +249,12 @@ const AddClubPlayerModal2 = ({ onClose, team, onPlayerAdded }) => {
           const playerDetailsSnapshot = await getDocs(playerDetailsQuery);
           if (!playerDetailsSnapshot.empty) {
             playerData = playerDetailsSnapshot.docs[0].data();
-            originalUserId = playerData.userId; // Store the original userId
+            originalUserId = playerData.userId;
           }
         }
 
         if (playerData) {
-          setOriginalUserId(originalUserId); // Set the originalUserId in state
+          setOriginalUserId(originalUserId);
           setFormData({
             ...formData,
             playerId: playerData.playerId.toString(),
@@ -372,7 +367,7 @@ const AddClubPlayerModal2 = ({ onClose, team, onPlayerAdded }) => {
     setIsNewPlayer(true);
     setPlayerIds(prev => [newPlayer, ...prev]);
     setFilteredPlayerIds(prev => [newPlayer, ...prev]);
-    setOriginalUserId(currentUserId); // For new players, set originalUserId to current user
+    setOriginalUserId(currentUserId);
   };
 
   const handleSubmit = async (e) => {
@@ -428,7 +423,6 @@ const AddClubPlayerModal2 = ({ onClose, team, onPlayerAdded }) => {
         })
         .filter(item => item !== null);
 
-      // Use originalUserId if it exists, otherwise use currentUserId for new players
       const userIdToUse = originalUserId || currentUserId;
 
       const playerData = {
@@ -451,7 +445,7 @@ const AddClubPlayerModal2 = ({ onClose, team, onPlayerAdded }) => {
         bestBowling: formData.bestBowling || '0',
         bio: formData.bio || '',
         recentMatches: recentMatchesParsed,
-        userId: userIdToUse, // Use the original userId or current user for new players
+        userId: userIdToUse,
         user: formData.user,
         audioUrl: formData.audioUrl || '',
         careerStats: {
@@ -568,7 +562,7 @@ const AddClubPlayerModal2 = ({ onClose, team, onPlayerAdded }) => {
       setIsNewPlayer(true);
       setPlayerIds(prev => [newPlayer, ...prev]);
       setFilteredPlayerIds(prev => [newPlayer, ...prev]);
-      setOriginalUserId(currentUserId); // Reset originalUserId for new player
+      setOriginalUserId(currentUserId);
       if (onPlayerAdded) {
         onPlayerAdded();
       }
@@ -617,6 +611,7 @@ const AddClubPlayerModal2 = ({ onClose, team, onPlayerAdded }) => {
           {success && <p className="text-green-500 text-sm mb-4">Player added successfully!</p>}
 
           <form onSubmit={handleSubmit} className="space-y-4">
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block mb-1 text-gray-300">Player ID</label>
@@ -1166,6 +1161,7 @@ const PlayerSelector = ({ teamA, teamB, overs, origin, scorer, onPlayerAdded }) 
         >
           <h1 className="text-4xl font-bold mb-6 text-black">Select Players</h1>
 
+
           <div className="flex flex-col md:flex-row gap-8">
             <motion.div className="flex-1" whileHover={{ scale: 1.02 }}>
               <div className="flex items-center gap-2 mb-3">
@@ -1365,6 +1361,8 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '', origin }) => {
   const [teamBError, setTeamBError] = useState(null);
   const [teamAId, setTeamAId] = useState(null);
   const [teamBId, setTeamBId] = useState(null);
+  const [isPitchAnalyzerOpen, setIsPitchAnalyzerOpen] = useState(false);
+  const [isPitchAnalyzed, setIsPitchAnalyzed] = useState(false);
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
@@ -1378,7 +1376,7 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '', origin }) => {
     return () => unsubscribeAuth();
   }, []);
 
-  const fetchAllTeams = async () => {
+ const fetchAllTeams = async () => {
     try {
       setLoadingTeams(true);
       const teamsCollectionRef = collection(db, 'clubTeams');
@@ -1390,6 +1388,7 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '', origin }) => {
         players: doc.data().players || [],
         ...doc.data()
       }));
+      
       setAllTeams(fetchedTeams);
     } catch (err) {
       console.error("Error fetching all teams:", err);
@@ -1425,17 +1424,22 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '', origin }) => {
   }, [selectedTeamA, selectedTeamB]);
 
   const handleNext = async () => {
+    if (!isPitchAnalyzed) {
+      alert('Please analyze the pitch conditions before proceeding.');
+      return;
+    }
+    
     if (!selectedTeamA || !selectedTeamB || !overs || !scorer) {
       alert('Please select both teams, enter overs, and assign the scorer.');
       return;
     }
+    
     if (selectedTeamA.toLowerCase() === selectedTeamB.toLowerCase()) {
       alert('Teams A and B cannot be the same. Please select different teams.');
       return;
     }
 
     try {
-      // Check for Team A
       let teamAName = selectedTeamA.trim();
       let teamADocId = null;
       const existingTeamA = await checkTeamNameUnique(teamAName);
@@ -1466,7 +1470,6 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '', origin }) => {
       setSelectedTeamA(teamAName);
       setTeamAId(teamADocId);
 
-      // Check for Team B
       let teamBName = selectedTeamB.trim();
       let teamBDocId = null;
       const existingTeamB = await checkTeamNameUnique(teamBName);
@@ -1503,6 +1506,10 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '', origin }) => {
       console.error("Error in handleNext:", err);
       alert("An error occurred while processing teams. Please try again.");
     }
+  };
+
+  const openPitchAnalyzer = () => {
+    setIsPitchAnalyzerOpen(true);
   };
 
   if (showPlayerSelector) {
@@ -1708,14 +1715,36 @@ const Startmatch = ({ initialTeamA = '', initialTeamB = '', origin }) => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.4 }}
           >
-            <motion.button
-              className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all duration-300 w-full max-w-md"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={handleNext}
-            >
-              Next
-            </motion.button>
+           {/* Replace the current Pitch Analyzer section with this: */}
+<div className="mt-8 flex flex-col items-center">
+ 
+
+  {/* Pitch Analyzer Button */}
+ 
+
+  {/* Pitch Analyzer Modal */}
+  <PitchAnalyzer 
+    isOpen={isPitchAnalyzerOpen}
+    onClose={() => setIsPitchAnalyzerOpen(false)}
+    teamA={selectedTeamA}
+    teamB={selectedTeamB}
+    onAnalyzeComplete={() => setIsPitchAnalyzed(true)}
+  />
+</div>
+
+ <motion.button
+    className={`px-6 py-3 mt-8 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all duration-300 w-full max-w-md ${
+      !isPitchAnalyzed ? 'opacity-50 cursor-not-allowed' : ''
+    }`}
+    whileHover={isPitchAnalyzed ? { scale: 1.02 } : {}}
+    whileTap={isPitchAnalyzed ? { scale: 0.98 } : {}}
+    onClick={handleNext}
+    disabled={!isPitchAnalyzed}
+  >
+    Next
+  </motion.button>
+
+          
           </motion.div>
         </div>
       </motion.div>

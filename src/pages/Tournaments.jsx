@@ -3,13 +3,15 @@ import { FaMapMarkerAlt, FaTrashAlt } from 'react-icons/fa';
 import logo from '../assets/sophita/HomePage/picture3_2.png';
 import backButton from '../assets/kumar/right-chevron.png';
 import { db, auth } from '../firebase';
-import { collection, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
+import { collection, onSnapshot, deleteDoc, doc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { useNavigate } from 'react-router-dom';
 
 export default function TournamentList() {
   const [activeTab, setActiveTab] = useState('myTournament');
   const [tournamentList, setTournamentList] = useState([]);
   const [selectedTournament, setSelectedTournament] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!auth.currentUser) return;
@@ -33,6 +35,21 @@ export default function TournamentList() {
     }
   };
 
+  const handleFollowToggle = async (tournament) => {
+    const tournamentRef = doc(db, 'tournaments', tournament.id);
+    if (tournament.followers?.includes(auth.currentUser.uid)) {
+      await updateDoc(tournamentRef, {
+        followers: arrayRemove(auth.currentUser.uid)
+      });
+    } else {
+      await updateDoc(tournamentRef, {
+        followers: arrayUnion(auth.currentUser.uid)
+      });
+    }
+    // Close modal after action
+    setIsModalOpen(false);
+  };
+
   const handleCardClick = (tournament) => {
     setSelectedTournament(tournament);
     setIsModalOpen(true);
@@ -45,7 +62,7 @@ export default function TournamentList() {
   } else if (activeTab === 'all') {
     tournamentsToShow = tournamentList.filter(t => t.userId !== auth.currentUser.uid);
   } else if (activeTab === 'following') {
-    tournamentsToShow = [];
+    tournamentsToShow = tournamentList.filter(t => t.followers?.includes(auth.currentUser.uid));
   }
 
   // Helper to render the tournament image or fallback first letter circle
@@ -69,67 +86,73 @@ export default function TournamentList() {
   };
 
   return (
-    <div className="min-h-screen p-4" style={{
-      backgroundImage: 'linear-gradient(140deg,#080006 15%,#FF0077)',
-      backgroundRepeat: 'no-repeat',
-      backgroundSize: 'cover',
-      backgroundPosition: 'center',
-    }}>
-      {/* Top Navbar */}
-      <div className="flex flex-col mt-0">
-        <div className="flex items-start">
+    <div
+      className="min-h-screen"
+      style={{
+        backgroundImage: 'linear-gradient(140deg,#080006 15%,#FF0077)',
+        backgroundRepeat: 'no-repeat',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }}
+    >
+      {/* Fixed Header */}
+      <div className="fixed top-0 left-0 right-0 z-10 bg-transparent">
+        {/* Top Navbar */}
+        <div className="flex flex-col p-4 pb-0">
+          <div className="flex items-start">
+            <img
+              src={logo}
+              alt="Cricklytics Logo"
+              className="h-7 w-7 md:h-10 object-contain block select-none"
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.src = "/images/Picture3 2.png";
+              }}
+            />
+            <span className="p-2 text-2xl font-bold text-white whitespace-nowrap text-shadow-[0_0_8px_rgba(93,224,1)]">
+              Cricklytics
+            </span>
+          </div>
+        </div>
+        <div className="md:absolute flex items-center gap-4 p-4 pt-0">
           <img
-            src={logo}
-            alt="Cricklytics Logo"
-            className="h-7 w-7 md:h-10 object-contain block select-none"
-            onError={(e) => {
-              e.target.onerror = null;
-              e.target.src = "/images/Picture3 2.png";
-            }}
+            src={backButton}
+            alt="Back"
+            className="h-8 w-8 cursor-pointer -scale-x-100"
+            onClick={() => window.history.back()}
           />
-          <span className="p-2 text-2xl font-bold text-white whitespace-nowrap text-shadow-[0_0_8px_rgba(93,224,1)]">
-            Cricklytics
-          </span>
         </div>
-      </div>
-      <div className="md:absolute flex items-center gap-4">
-        <img
-          src={backButton}
-          alt="Back"
-          className="h-8 w-8 cursor-pointer -scale-x-100"
-          onClick={() => window.history.back()}
-        />
-      </div>
 
-      {/* Tabs */}
-      <div className="flex justify-center space-x-12 text-white text-lg font-semibold border-b-4 border-white pb-2 mb-4">
-        <div
-          onClick={() => setActiveTab('myTournament')}
-          className={`cursor-pointer ${activeTab === 'myTournament' ? 'border-b-2 border-white text-blue-500' : ''}`}
-        >
-          My Tournament
-        </div>
-        <div
-          onClick={() => setActiveTab('following')}
-          className={`cursor-pointer ${activeTab === 'following' ? 'border-b-2 border-white text-blue-500' : ''}`}
-        >
-          Following
-        </div>
-        <div
-          onClick={() => setActiveTab('all')}
-          className={`cursor-pointer ${activeTab === 'all' ? 'border-b-2 border-white text-blue-500' : ''}`}
-        >
-          All
+        {/* Tabs */}
+        <div className="w-[95%] flex justify-center space-x-12 text-white text-lg font-semibold border-b-4 border-white pb-2 ml-10 mb-2 px-4">
+          <div
+            onClick={() => setActiveTab('myTournament')}
+            className={`cursor-pointer ${activeTab === 'myTournament' ? 'border-b-2 border-white text-blue-500' : ''}`}
+          >
+            My Tournament
+          </div>
+          <div
+            onClick={() => setActiveTab('following')}
+            className={`cursor-pointer ${activeTab === 'following' ? 'border-b-2 border-white text-blue-500' : ''}`}
+          >
+            Following
+          </div>
+          <div
+            onClick={() => setActiveTab('all')}
+            className={`cursor-pointer ${activeTab === 'all' ? 'border-b-2 border-white text-blue-500' : ''}`}
+          >
+            All
+          </div>
         </div>
       </div>
 
-      {/* Tournament Cards */}
-      <div className="max-w-xl mx-auto space-y-4">
-        {activeTab === 'following' ? (
+      {/* Content with padding to account for fixed header */}
+      <div className="pt-40 md:pt-38 max-w-xl mx-auto space-y-4 px-4">
+        {activeTab === 'following' && tournamentsToShow.length === 0 ? (
           <div className="text-white text-center py-10">
             <p className="text-2xl font-semibold">You haven’t followed any tournaments yet! 😔</p>
           </div>
-        ) : tournamentsToShow.length === 0 ? (
+        ) : activeTab !== 'following' && tournamentsToShow.length === 0 ? (
           <div className="text-white text-center py-10">
             <p className="text-xl font-semibold">No tournaments to show here.</p>
           </div>
@@ -156,8 +179,8 @@ export default function TournamentList() {
                       <span>{tournament.season || 'N/A'}</span>
                     </div>
                   </div>
-                  {/* Delete Icon */}
-                  {activeTab === 'myTournament' && (
+                  {/* Delete Icon - only for owned tournaments */}
+                  {tournament.userId === auth.currentUser.uid && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation(); // Prevent card click when deleting
@@ -207,7 +230,7 @@ export default function TournamentList() {
               </div>
               <div className="flex items-center gap-2">
                 <span className="font-semibold">Teams:</span>
-                <span>{selectedTournament.teams || 'N/A'}</span>
+                <span>{selectedTournament.noOfTeams || 'N/A'}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="font-semibold">Matches:</span>
@@ -235,13 +258,33 @@ export default function TournamentList() {
                 </div>
               )}
             </div>
-            <div className="flex justify-end mt-6">
+            <div className="flex justify-end mt-6 gap-2">
               <button
                 onClick={() => setIsModalOpen(false)}
                 className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded transition"
               >
                 Close
               </button>
+              {selectedTournament.userId === auth.currentUser.uid && (
+                <button
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    // Navigate with tournament id as example
+                    navigate("/Selection2", { state: { information: "FromSidebar", noOfTeams: selectedTournament.teams, tournamentName: selectedTournament.name } })
+                  }}
+                  className="bg-blue-700 hover:bg-blue-600 text-white px-4 py-2 rounded transition font-semibold"
+                >
+                  Continue
+                </button>
+              )}
+              {selectedTournament.userId !== auth.currentUser.uid && (
+                <button
+                  onClick={() => handleFollowToggle(selectedTournament)}
+                  className="bg-green-700 hover:bg-green-600 text-white px-4 py-2 rounded transition font-semibold"
+                >
+                  {selectedTournament.followers?.includes(auth.currentUser.uid) ? 'Unfollow' : 'Follow'}
+                </button>
+              )}
             </div>
           </div>
         </div>

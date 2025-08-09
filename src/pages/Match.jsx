@@ -12,11 +12,143 @@ const Match = () => {
   const [activeSubOption, setActiveSubOption] = useState("info");
   const [matches, setMatches] = useState([]);
 
-  const tabs = [
-    { id: "my-matches", label: "My Matches (Live + Past)" },
-    { id: "following", label: "Following (Live + Past)" },
-    { id: "all", label: "All" },
-  ];
+const tabs = [
+  { id: "my-matches", label: "My Matches (Live + Past)" },
+  { id: "following", label: "Following (Live + Past)" },
+  { id: "all", label: "All" },
+  { id: "live", label: "Live" },             // ✅ Added: Live matches tab
+  { id: "upcoming", label: "Upcoming" },     // 🟢 Capitalized
+  { id: "past", label: "Past" }              // 🟢 Capitalized
+];
+const pastMatches = [
+  {
+    id: "1",
+    tournament: "Budapest Kupa",
+    location: "Gb Oval, Szodliget, Budapest",
+    date: "17-Jul-25",
+    status: "RESULT",
+    match: "LEAGUE MATCHES",
+    team1: { name: "Budapest Zalmi", score: "172/10", overs: "24.3 Ov" },
+    team2: { name: "Nacionaline kriketo taryba", score: "144/9", overs: "25.0 Ov" },
+    result: "Budapest Zalmi won by 28 runs"
+  },
+  {
+    id: "2",
+    tournament: "Budapest Kupa",
+    location: "Gb Oval, Szodliget, Budapest",
+    date: "16-Jul-25",
+    status: "RESULT",
+    match: "LEAGUE MATCHES",
+    team1: { name: "Budapest Zalmi", score: "211/10", overs: "24.0 Ov" },
+    team2: { name: "Nacionaline kriketo taryba", score: "138/5", overs: "23.0 Ov" },
+    result: "Budapest Zalmi won by 73 runs"
+  },
+  {
+    id: "3",
+    tournament: "Budapest Kupa",
+    location: "Gb Oval, Szodliget, Budapest",
+    date: "15-Jul-25",
+    status: "RESULT",
+    match: "LEAGUE MATCHES",
+    team1: { name: "Budapest Zalmi", score: "134/10", overs: "17.5 Ov" },
+    team2: { name: "Nacionaline kriketo taryba", score: "79/10", overs: "15.0 Ov" },
+    result: "Budapest Zalmi won by 55 runs"
+  },
+];
+
+
+const liveMatches = [
+  {
+    id: "1",
+    tournament: "Budapest Kupa",
+    location: "GB-Ovid, Szudíjgyi, Budapest",
+    date: "17-Jul-53 | 23.Ov",
+    status: "LIVE",
+    battingTeam: "Team A",
+    bowlingTeam: "Team B",
+    score: "47/0",
+    overs: "4.3",
+    batting: [
+      {
+        name: "Khaibar Deldar",
+        runs: "32",
+        balls: "20",
+        fours: "1",
+        sixes: "3",
+        sr: "160",
+      }
+    ],
+    bowling: [
+      {
+        name: "DHARSAN S",
+        overs: "2.5",
+        maidens: "0",
+        runs: "29",
+        wickets: "0",
+        eco: "10"
+      }
+    ],
+    recentBalls: ["0", "0", "0", "4", "2", "1", "0", "6", "0"],
+    commentary: [
+      { over: "4.3", text: "Pandey S to Deldar, no run" },
+      { over: "4.2", text: "Pandey S to Deldar, SIX, pulled to deep midwicket" },
+    ]
+  },
+  {
+    id: "2",
+    tournament: "Nacionaline kirketo taryba",
+    location: "Budapest Zainé",
+    date: "Thu. 17 Jul. 1:20 PM",
+    status: "LIVE",
+    battingTeam: "Team C",
+    bowlingTeam: "Team D",
+    score: "42/1",
+    overs: "5.0",
+    batting: [
+      {
+        name: "Rona Moaz",
+        runs: "42",
+        balls: "30",
+        fours: "2",
+        sixes: "4",
+        sr: "163"
+      }
+    ],
+    bowling: [
+      {
+        name: "Virat Kholi",
+        overs: "2.0",
+        maidens: "0",
+        runs: "27",
+        wickets: "0",
+        eco: "10.5"
+      }
+    ],
+     recentBalls: ["0", "0", "0", "4", "2", "1", "0", "6", "0"],
+    commentary: [
+      { over: "2.3", text: "Pandey S to Deldar, no run" },
+      { over: "3.2", text: "Pandey S to Deldar, SIX, pulled to deep midwicket" },
+    ]
+  }
+];
+
+
+const upcomingMatches = [
+  {
+    id: "1",
+    tournament: "Budapest Kupa",
+    location: "GB-Ovid, Szudíjgyi, Budapest",
+    date: "17-Jul.53 | 23.Ov",
+    status: "UPCOMING"
+  },
+  {
+    id: "2",
+    tournament: "Nacionaline kirketo taryba",
+    location: "Budapest Zainé",
+    date: "Thu. 17 Jul. 120 PM",
+    status: "UPCOMING"
+  }
+];
 
   const subOptions = [
     { id: "info", label: "Info" },
@@ -25,6 +157,7 @@ const Match = () => {
     { id: "squad", label: "Squad" },
     { id: "analysis", label: "Analysis" },
     { id: "mvp", label: "MVP" },
+
   ];
 
   // Fetch match data from scoringpage collection
@@ -174,13 +307,45 @@ const Match = () => {
     }
   };
 
+  const getStatusBadgeStyle = (status) => {
+    switch (status.toUpperCase()) {
+      case "LIVE":
+        return "bg-gradient-to-r from-red-500 to-yellow-500";
+      case "UPCOMING":
+        return "bg-gradient-to-r from-orange-500 to-yellow-500";
+      case "PAST":
+        return "bg-gradient-to-r from-blue-500 to-cyan-500";
+      default:
+        return "bg-gray-500";
+    }
+  };
+
+ const getBackgroundStyle = (tab) => {
+  switch(tab) {
+    case "live":
+    case "upcoming":
+    case "past":
+      return { 
+        backgroundImage: 'linear-gradient(140deg, #4C1D95 15%, #7E22CE 50%, #A855F7 85%)' 
+      };
+    default:
+      return { 
+        backgroundImage: 'linear-gradient(140deg, #080006 15%, #FF0077)' 
+      };
+  }
+};
+
+
   return (
-    <div className="min-h-full bg-fixed text-white p-5" style={{
-      backgroundImage: 'linear-gradient(140deg,#080006 15%,#FF0077)',
-      backgroundRepeat: 'no-repeat',
-      backgroundSize: 'cover',
-      backgroundPosition: 'center',
-    }}>
+    <div 
+  className="min-h-full bg-fixed text-white p-5"
+  style={{
+    ...getBackgroundStyle(activeTab),
+    backgroundRepeat: 'no-repeat',
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+  }}
+>
       {/* Top Navigation Bar */}
       <div className="flex flex-col mt-0">
         <div className="flex items-start">
@@ -342,6 +507,7 @@ const Match = () => {
               </div>
             </div>
           )}
+
           {activeTab === "all" && (
             <div>
               <h2 className="text-2xl font-bold text-center mb-6 font-['Alegreya']">All Matches</h2>
@@ -372,6 +538,132 @@ const Match = () => {
               </div>
             </div>
           )}
+
+{activeTab === "live" && (
+  <div>
+    <h2 className="text-2xl font-bold text-center mb-6 font-['Alegreya']">Live</h2>
+
+    <div className="space-y-6">
+      {liveMatches.length === 0 ? (
+        <p className="text-center text-gray-300">No live match is currently available.</p>
+      ) : (
+        liveMatches.map((match) => {
+          return (
+            <div
+              key={match.id}
+              className="bg-[rgba(0,0,0,0.3)] p-6 rounded-lg shadow-md hover:bg-[rgba(0,0,0,0.5)] transition-all duration-300 cursor-pointer"
+              onClick={() => navigate("/match-details", { state: match })}
+            >
+              {/* Summary Header */}
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="text-2xl font-semibold text-white">{match.tournament}</h3>
+                <span
+                  className={`px-4 py-1 rounded-full text-sm ${getStatusBadgeStyle(match.status)}`}
+                >
+                  {match.status}
+                </span>
+              </div>
+              <p className="text-sm text-gray-300 mb-2">{match.location}</p>
+              <p className="text-sm text-gray-300 mb-2">{match.date}</p>
+              <div className="text-white text-lg font-bold mb-2">
+                {match.battingTeam} <span className="text-yellow-400">{match.score}</span> ({match.overs} Ov)
+              </div>
+              <p className="text-sm text-gray-300 mb-4">Yet to Bat: {match.bowlingTeam}</p>
+
+            </div>
+          );
+        })
+      )}
+    </div>
+  </div>
+)}
+      
+         
+          
+         {activeTab === "upcoming" && (
+        <div>
+          <h2 className="text-2xl font-bold text-center mb-6 font-['Alegreya']">Upcoming Matches</h2>
+          
+          {/* SHARE button at the top right */}
+          <div className="flex justify-end mb-6">
+            <button className="text-white hover:text-cyan-300 transition">
+              SHARE
+            </button>
+          </div>
+
+          {/* Match Schedule Banners */}
+          <div className="space-y-6">
+            {upcomingMatches.map((match) => (
+              <div key={match.id} className="bg-[rgba(0,0,0,0.3)] p-6 rounded-lg">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-xl font-bold">{match.tournament}</h3>
+                  <span className={`px-3 py-1 rounded-full text-sm ${getStatusBadgeStyle(match.status)}`}>
+                    {match.status}
+                  </span>
+                </div>
+                <p className="text-gray-300 mb-2">{match.location} | {match.date}</p>
+                
+                
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+  {activeTab === "past" && (
+  <div className="px-8 py-6">
+    <h2 className="text-4xl font-bold text-center mb-10 text-white font-['Alegreya']">Past Matches</h2>
+
+    <div className="space-y-6">
+      {pastMatches.map((match) => (
+        <div
+          key={match.id}
+          className="bg-gradient-to-r from-[#4b0082] to-[#6a0dad] rounded-2xl px-8 py-6 shadow-lg"
+        >
+          {/* Header row */}
+          <div className="flex justify-between items-center mb-2">
+            <h3 className="text-2xl font-bold text-white">{match.tournament}</h3>
+            <span className="bg-gray-700 text-white px-3 py-1 rounded-full text-sm font-semibold">
+              {match.status}
+            </span>
+          </div>
+
+          {/* Location and date */}
+          <p className="text-base text-gray-300 mb-2">{match.location} | {match.date}</p>
+
+          {/* Match type */}
+          <p className="text-xs uppercase text-cyan-300 font-semibold mb-3">{match.match}</p>
+
+          {/* Scores */}
+          <div className="space-y-1 text-white text-base">
+            {/* Team 1 */}
+            <div className="flex justify-between items-center">
+              <span className="font-medium">{match.team1.name}</span>
+              <span className="text-right">
+                <span className="font-bold">{match.team1.score}</span>{" "}
+                <span className="text-sm text-gray-300">({match.team1.overs})</span>
+              </span>
+            </div>
+
+            {/* Team 2 */}
+            <div className="flex justify-between items-center">
+              <span className="font-medium">{match.team2.name}</span>
+              <span className="text-right">
+                <span className="font-bold">{match.team2.score}</span>{" "}
+                <span className="text-sm text-gray-300">({match.team2.overs})</span>
+              </span>
+            </div>
+          </div>
+
+          {/* Result */}
+          <p className="text-sm text-white mt-4">{match.result}</p>
+        </div>
+      ))}
+    </div>
+  </div>
+)}
+
+
         </div>
       </div>
     </div>

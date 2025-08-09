@@ -698,7 +698,9 @@ const FixtureGenerator = () => {
       </header>
 
       {activeTab === 'Knockout Brackets' ? (
-        <TournamentBracket setActiveTab={setActiveTab} />
+        <TournamentBracket 
+        setActiveTab={setActiveTab}
+        tournamentName={tournamentName} />
       ) : activeTab === 'Start Match' ? (
         <Startmatch
           initialTeamA={selectedTeamA}
