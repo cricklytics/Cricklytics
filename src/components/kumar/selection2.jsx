@@ -6,7 +6,8 @@ import nav from '../../assets/kumar/right-chevron.png';
 
 const Selection2 = () => {
   const { state } = useLocation();
-  const { teams: teamNames = [], tournamentName = '', tournamentId: passedTournamentId = null, information = '' } = state || {};
+  const { teams: teamNames = [], tournamentName = '', tournamentId: passedTournamentId = null, information = '',User } = state || {};
+  console.log(User);
   const navigate = useNavigate();
   const [schedule, setSchedule] = useState([]);
   const [semiFinals, setSemiFinals] = useState([]);
@@ -26,6 +27,12 @@ const Selection2 = () => {
   const [editForm, setEditForm] = useState({ date: '', time: '' }); // Temp state for editing
   const hasStoredSchedule = useRef(false);
   const hasFetchedData = useRef(false);
+  const [isOwner, setIsOwner] = useState(true); // New state to track ownership
+  // Check if tournament has started (compare current date with start date)
+  const now = new Date();
+  const startDateObj = currentStartDate ? new Date(currentStartDate) : null;
+  const isTournamentStarted = startDateObj && now >= startDateObj;
+
 
   const numberOfMatches = matchSchedule.length;
 
@@ -43,14 +50,14 @@ const Selection2 = () => {
     if (!tName) return;
     try {
       const tournamentsQuery = query(
-        collection(db, 'tournaments'),
+        collection(db, 'tournament'),
         where('name', '==', tName)
       );
       const snapshots = await getDocs(tournamentsQuery);
       if (!snapshots.empty) {
         const docRef = snapshots.docs[0].ref;
         await updateDoc(docRef, {
-          "Current Stage": "RoundRobin",
+          "currentStage": "RoundRobin",
           matches: numMatches,
         });
         // Optionally: console.log("Current Stage and matches updated");
@@ -145,11 +152,9 @@ const Selection2 = () => {
           if (tournamentDoc.exists()) {
             const tournamentData = tournamentDoc.data();
 
-            // Check if the userId matches the current user's ID
+            // Check ownership
             if (tournamentData.userId !== currentUserId) {
-              setError('You do not have permission to view this tournament.');
-              setLoading(false);
-              return;
+              setIsOwner(false); // Not the owner, but proceed to display data
             }
 
             hasStoredSchedule.current = true;
@@ -163,7 +168,7 @@ const Selection2 = () => {
 
             // Fetch startDate and endDate from 'tournaments' collection
             const tournamentsQuery = query(
-              collection(db, 'tournaments'),
+              collection(db, 'tournament'),
               where('name', '==', tournamentData.tournamentName || tournamentName)
             );
             const tournamentsSnapshot = await getDocs(tournamentsQuery);
@@ -216,7 +221,7 @@ const Selection2 = () => {
 
               // Fetch dates before generating
               const tournamentsQuery = query(
-                collection(db, 'tournaments'),
+                collection(db, 'tournament'),
                 where('name', '==', tournamentName)
               );
               const tournamentsSnapshot = await getDocs(tournamentsQuery);
@@ -263,7 +268,7 @@ const Selection2 = () => {
 
             // Fetch startDate and endDate from 'tournaments' collection
             const tournamentsQuery = query(
-              collection(db, 'tournaments'),
+              collection(db, 'tournament'),
               where('name', '==', tournamentData.tournamentName || '')
             );
             const tournamentsSnapshot = await getDocs(tournamentsQuery);
@@ -319,7 +324,7 @@ const Selection2 = () => {
 
           // Fetch startDate and endDate before generating schedule
           const tournamentsQuery = query(
-            collection(db, 'tournaments'),
+            collection(db, 'tournament'),
             where('name', '==', tournamentName)
           );
           const tournamentsSnapshot = await getDocs(tournamentsQuery);
@@ -349,7 +354,7 @@ const Selection2 = () => {
           let fallbackStartDate = null;
           let fallbackEndDate = null;
           const tournamentsQuery = query(
-            collection(db, 'tournaments'),
+            collection(db, 'tournament'),
             where('name', '==', tournamentName)
           );
           const tournamentsSnapshot = await getDocs(tournamentsQuery);
@@ -556,6 +561,31 @@ const Selection2 = () => {
           tournamentWinner: null,
           userId,
         });
+        // Step 2: Update or set tournamentId in the tournament collection
+      const tournamentsQuery = query(
+        collection(db, 'tournament'),
+        where('name', '==', currentTournamentName || tournamentName)
+      );
+      const tournamentsSnapshot = await getDocs(tournamentsQuery);
+
+      if (!tournamentsSnapshot.empty) {
+        const tournamentDocRef = tournamentsSnapshot.docs[0].ref;
+        await updateDoc(tournamentDocRef, {
+          tournamentId: tournamentId, // Update the tournamentId field
+        });
+      } else {
+        // If no matching document exists, create a new one in the tournament collection
+        await setDoc(doc(db, 'tournament', tournamentId), {
+          name: currentTournamentName || tournamentName,
+          tournamentId: tournamentId,
+          startDate: startDate,
+          endDate: endDate,
+          userId: userId,
+          createdAt: new Date(),
+          currentStage: "RoundRobin",
+          matches: generatedMatchSchedule.length,
+        });
+      }
 
         console.log(`Tournament stored with ID: ${tournamentId}`);
       } catch (err) {
@@ -582,12 +612,10 @@ const Selection2 = () => {
       if (tournamentDoc.exists()) {
         const tournamentData = tournamentDoc.data();
         
-        // Check if the userId matches the current user's ID
+        // Check ownership
         const currentUserId = auth.currentUser?.uid;
         if (tournamentData.userId !== currentUserId) {
-          setError('You do not have permission to view this tournament flowchart.');
-          setLoading(false);
-          return;
+          setIsOwner(false); // Not the owner, but proceed
         }
 
         const flowchart = [];
@@ -755,7 +783,7 @@ const Selection2 = () => {
                           <th className="p-2 text-left">Date</th>
                           <th className="p-2 text-left">Match</th>
                           <th className="p-2 text-left">Time</th>
-                          <th className="p-2 text-left">Actions</th>
+                          {isOwner && <th className="p-2 text-left">Actions</th>}
                         </tr>
                       </thead>
                       <tbody>
@@ -789,29 +817,31 @@ const Selection2 = () => {
                                 match.time // This will now always include AM/PM
                               )}
                             </td>
-                            <td className="p-2">
-                              {editingIndex === index ? (
+                            {isOwner && (
+                              <td className="p-2">
+                                {editingIndex === index ? (
+                                  <button
+                                    onClick={() => handleSaveEdit(index)}
+                                    className="bg-green-600 px-2 py-1 rounded text-xs mr-2"
+                                  >
+                                    Save
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => handleEdit(index, match)}
+                                    className="bg-yellow-600 px-2 py-1 rounded text-xs mr-2"
+                                  >
+                                    Edit
+                                  </button>
+                                )}
                                 <button
-                                  onClick={() => handleSaveEdit(index)}
-                                  className="bg-green-600 px-2 py-1 rounded text-xs mr-2"
+                                  onClick={() => handleDelete(index)}
+                                  className="bg-red-600 px-2 py-1 rounded text-xs"
                                 >
-                                  Save
+                                  Delete
                                 </button>
-                              ) : (
-                                <button
-                                  onClick={() => handleEdit(index, match)}
-                                  className="bg-yellow-600 px-2 py-1 rounded text-xs mr-2"
-                                >
-                                  Edit
-                                </button>
-                              )}
-                              <button
-                                onClick={() => handleDelete(index)}
-                                className="bg-red-600 px-2 py-1 rounded text-xs"
-                              >
-                                Delete
-                              </button>
-                            </td>
+                              </td>
+                            )}
                           </tr>
                         ))}
                       </tbody>
@@ -879,22 +909,37 @@ const Selection2 = () => {
             </div>
           )}
 
-          <div className="flex justify-center w-full gap-4 mt-20">
-            <button
-              type="button"
-              className="rounded-xl w-32 md:w-44 bg-gray-500 h-8 md:h-9 text-white cursor-pointer hover:shadow-[0px_0px_13px_0px_#5DE0E6] text-sm md:text-base"
-              onClick={handleBack}
-            >
-              Back
-            </button>
-            <button
-              type="button"
-              className="rounded-xl w-32 md:w-44 bg-gradient-to-l from-[#5DE0E6] to-[#004AAD] h-8 md:h-9 text-white cursor-pointer hover:shadow-[0px_0px_13px_0px_#5DE0E6] text-sm md:text-base"
-              onClick={() => navigate('/match-start-rr', { state: { activeTab: 'Start Match', selectedTeams: teams, schedule, semiFinals, finals, tournamentId, tournamentName: currentTournamentName || tournamentName, information } })}
-            >
-              Proceed
-            </button>
+          <div className="flex flex-col items-center justify-center w-full gap-4 mt-20">
+            {!isTournamentStarted && currentStartDate && (
+              <p className="text-red-500 text-sm md:text-base text-center">
+                Tournament not yet started. It will start on {currentStartDate}.
+              </p>
+            )}
+            <div className="flex justify-center w-full gap-4">
+              <button
+                type="button"
+                className="rounded-xl w-32 md:w-44 bg-gray-500 h-8 md:h-9 text-white cursor-pointer hover:shadow-[0px_0px_13px_0px_#5DE0E6] text-sm md:text-base"
+                onClick={handleBack}
+              >
+                Back
+              </button>
+              <button
+                type="button"
+                className={`rounded-xl w-32 md:w-44 bg-gradient-to-l from-[#5DE0E6] to-[#004AAD] h-8 md:h-9 text-white ${
+                  isTournamentStarted ? 'cursor-pointer hover:shadow-[0px_0px_13px_0px_#5DE0E6]' : 'cursor-not-allowed opacity-50'
+                } text-sm md:text-base`}
+                onClick={() => {
+                  if (isTournamentStarted) {
+                    navigate('/match-start-rr', { state: { activeTab: 'Start Match', selectedTeams: teams, schedule, semiFinals, finals, User: User, tournamentId, tournamentName: currentTournamentName || tournamentName, information } });
+                  }
+                }}
+                disabled={!isTournamentStarted}
+              >
+                Proceed
+              </button>
+            </div>
           </div>
+
 
           {showModal && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">

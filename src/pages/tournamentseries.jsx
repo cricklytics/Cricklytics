@@ -94,16 +94,16 @@ function Tournamentseries() {
 
       try {
         // Query the tournament collection to find a document with matching name
-        const q = query(collection(db, 'tournaments'), where('name', '==', tournamentName));
+        const q = query(collection(db, 'tournament'), where('name', '==', tournamentName));
         const querySnapshot = await getDocs(q);
 
         if (!querySnapshot.empty) {
           // Update the first matching document
-          const docRef = doc(db, 'tournaments', querySnapshot.docs[0].id);
+          const docRef = doc(db, 'tournament', querySnapshot.docs[0].id);
           await updateDoc(docRef, tournamentData);
         } else {
           // Create a new document with auto-generated ID
-          await setDoc(doc(collection(db, 'tournaments')), tournamentData);
+          await setDoc(doc(collection(db, 'tournament')), tournamentData);
         }
 
         // Navigate to the next page with the number of teams

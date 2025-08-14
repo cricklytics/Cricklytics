@@ -34,7 +34,7 @@ const TournamentPage = () => {
     const fetchTournamentData = async () => {
       if (tournamentName) {
         try {
-          const tournamentsCollectionRef = collection(db, 'tournaments');
+          const tournamentsCollectionRef = collection(db, 'tournament');
           const q = query(tournamentsCollectionRef, where('name', '==', tournamentName));
           const querySnapshot = await getDocs(q);
 

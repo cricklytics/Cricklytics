@@ -121,7 +121,7 @@ const MatchDetails = () => {
         )}
 
         {/* Commentary */}
-        {match.commentary?.length > 0 && (
+        {/* {match.commentary?.length > 0 && (
           <div className="mt-4">
             <h4 className="text-md font-semibold mb-2">Commentary</h4>
             {match.commentary.map((item, i) => (
@@ -131,7 +131,7 @@ const MatchDetails = () => {
               </p>
             ))}
           </div>
-        )}
+        )} */}
       </div>
     </div>
   );

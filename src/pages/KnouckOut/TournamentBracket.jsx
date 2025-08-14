@@ -14,7 +14,7 @@ const generateUUID = () => {
   });
 };
 
-const TournamentBracket = ({ tournamentName }) => {
+const TournamentBracket = ({ tournamentName,User }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [teams, setTeams] = useState([]);
@@ -29,8 +29,11 @@ const TournamentBracket = ({ tournamentName }) => {
   const [error, setError] = useState(null);
   const [canAdvanceToNextRound, setCanAdvanceToNextRound] = useState(false);
   const [finalRankings, setFinalRankings] = useState(null);
+  const [tournamentStartDate, setTournamentStartDate] = useState(null);
+
 
   // console.log(tournamentName);
+  console.log(User);
 
   // Add these states inside the TournamentBracket component
   const [editingMatchId, setEditingMatchId] = useState(null);
@@ -117,7 +120,7 @@ const regenerateTimetable = async () => {
     // -- 1. Get tournament boundaries (as before)
     let startDate, endDate;
     const tournamentsQuery = query(
-      collection(db, 'tournaments'),
+      collection(db, 'tournament'),
       where('name', '==', tournamentName),
       limit(1)
     );
@@ -281,6 +284,48 @@ const updateMatchTimetable = async (matchId, newDate, newTime) => {
 
     const fetchTournament = async () => {
       const { tournamentId: stateTournamentId, currentPhase: stateCurrentPhase, teams: stateTeams, format: stateFormat } = location.state || {};
+        // NEW: If no stateTournamentId, query for existing doc by tournamentName
+        if (!stateTournamentId) {
+          try {
+            const matchesQuery = query(
+              collection(db, 'KnockoutTournamentMatches'),
+              where('tournamentName', '==', tournamentName),
+              limit(1)  // Assume one match; adjust if multiples possible
+            );
+            const querySnapshot = await getDocs(matchesQuery);
+
+            if (!querySnapshot.empty) {
+              // Found existing doc: Load its data
+              const existingDoc = querySnapshot.docs[0];
+              const data = existingDoc.data();
+              console.log(`Found existing tournament for ${tournamentName}:`, data);
+
+              setTeams(data.teams || []);
+              setTournamentId(existingDoc.id);  // Use the existing document ID
+              setCurrentPhase(data.currentPhase || null);
+              setTournamentWinner(data.tournamentWinner || null);
+              setFormat(data.format || null);
+              setFinalRankings(data.finalRankings || null);
+
+              const currentRound = data.rounds?.find((r) => r.stage === data.currentPhase);
+              if (currentRound) {
+                setMatches(currentRound.matches || []);
+                setMatchHistory(currentRound.matches || []);
+                setCanAdvanceToNextRound(currentRound.matches.every((m) => m.played));
+              }
+
+              setLoading(false);  // Exit early after loading
+              return;  // Prevent falling through to new creation
+            } else {
+              console.log(`No existing tournament found for ${tournamentName}. Proceeding to create new.`);
+            }
+          } catch (error) {
+            console.error('Error querying for existing tournament:', error);
+            setError('Failed to check for existing tournament. Please try again.');
+            setLoading(false);
+            return;
+          }
+        }
 
       if (stateTeams && !stateTournamentId) {
         const initialTeams = stateTeams.map((t, i) => ({
@@ -333,6 +378,28 @@ const updateMatchTimetable = async (matchId, newDate, newTime) => {
         navigate('/TournamentPage');
         return;
       }
+      // Fetch startDate from 'tournament' collection
+      try {
+        const tournamentsQuery = query(
+          collection(db, 'tournament'),
+          where('name', '==', tournamentName),
+          limit(1)
+        );
+        const querySnapshot = await getDocs(tournamentsQuery);
+
+        if (!querySnapshot.empty) {
+          const tournamentData = querySnapshot.docs[0].data();
+          setTournamentStartDate(tournamentData.startDate);  // Assuming it's a string like "2025-08-15"
+        } else {
+          console.error(`No matching tournament found for name: ${tournamentName}`);
+          // Optional: Set a default or handle error
+          setTournamentStartDate(null);
+        }
+      } catch (error) {
+        console.error('Error fetching tournament startDate:', error);
+        setTournamentStartDate(null);
+      }
+
       setLoading(false);
     };
 
@@ -367,6 +434,34 @@ const updateMatchTimetable = async (matchId, newDate, newTime) => {
 
     const newTournamentId = tournamentId || generateUUID();
     setTournamentId(newTournamentId);
+
+    // NEW: Update the 'tournament' collection with tournamentId and currentStage
+if (!tournamentId) {  // Only for new tournaments
+  try {
+    const tournamentsQuery = query(
+      collection(db, 'tournament'),
+      where('name', '==', tournamentName),
+      limit(1)
+    );
+    const querySnapshot = await getDocs(tournamentsQuery);
+    
+    if (!querySnapshot.empty) {
+      const tournamentDocRef = querySnapshot.docs[0].ref;  // Get the document reference
+      await updateDoc(tournamentDocRef, {
+        tournamentId: newTournamentId,  // Store the unique ID
+        currentStage: 'Knockout'        // Set currentStage to "Knockout"
+      });
+      console.log(`Updated tournament collection with tournamentId: ${newTournamentId} and currentStage: "Knockout"`);
+    } else {
+      console.error(`No matching tournament found for name: ${tournamentName}`);
+      // Optional: If you want to create a new document here, add setDoc logic
+    }
+  } catch (error) {
+    console.error('Error updating tournament collection:', error);
+    // Optional: Alert or handle error
+  }
+}
+
 
     if (formatType === 'superKnockout') {
       if (teamCount < 3) {
@@ -431,6 +526,7 @@ const updateMatchTimetable = async (matchId, newDate, newTime) => {
 
       try {
         await setDoc(doc(db, 'KnockoutTournamentMatches', newTournamentId), {
+          tournamentId: newTournamentId,
           format: 'superKnockout',
           teams: seededTeams,
           rounds,
@@ -487,6 +583,7 @@ const updateMatchTimetable = async (matchId, newDate, newTime) => {
 
       try {
         await setDoc(doc(db, 'KnockoutTournamentMatches', newTournamentId), {
+          tournamentId: newTournamentId,
           format: 'knockout',
           teams: seededTeams,
           rounds,
@@ -528,6 +625,7 @@ const updateMatchTimetable = async (matchId, newDate, newTime) => {
 
       try {
         await setDoc(doc(db, 'KnockoutTournamentMatches', newTournamentId), {
+          tournamentId: newTournamentId,
           format: 'playOff',
           teams: seededTeams,
           rounds,
@@ -567,6 +665,7 @@ const updateMatchTimetable = async (matchId, newDate, newTime) => {
 
       try {
         await setDoc(doc(db, 'KnockoutTournamentMatches', newTournamentId), {
+          tournamentId: newTournamentId,
           format: 'eliminatorElite',
           teams: seededTeams,
           rounds,
@@ -603,6 +702,7 @@ const updateMatchTimetable = async (matchId, newDate, newTime) => {
 
       try {
         await setDoc(doc(db, 'KnockoutTournamentMatches', newTournamentId), {
+          tournamentId: newTournamentId,
           format: 'championship',
           teams: seededTeams,
           rounds,
@@ -1181,7 +1281,6 @@ const updateMatchTimetable = async (matchId, newDate, newTime) => {
       },
     });
   };
-
   const handleStartMatch = (match) => {
     if (match.played) {
       console.log(`Match ${match.id} has already been played. Navigation to start-match stopped.`);
@@ -1199,6 +1298,21 @@ const updateMatchTimetable = async (matchId, newDate, newTime) => {
       return;
     }
 
+    // NEW: Check if tournament has started
+    const currentDate = new Date('2025-08-13T15:00:00+05:30');  // Use provided current date (Wednesday, August 13, 2025, 3 PM IST). In production, use new Date() for real-time.
+    if (tournamentStartDate) {
+      const startDateObj = new Date(`${tournamentStartDate}T00:00:00+05:30`);  // Parse startDate (adjust format if needed, e.g., add time if it's not midnight)
+      
+      if (currentDate < startDateObj) {
+        alert(`Tournament not yet started. It will start on ${tournamentStartDate}.`);
+        return;  // Prevent navigation
+      }
+    } else {
+      // Optional: If startDate not fetched, you could prevent starting or show a warning
+      alert('Unable to verify tournament start date. Proceeding anyway.');
+    }
+
+    // Proceed if tournament has started
     if (['superKnockout', 'playOff', 'knockout', 'eliminatorElite', 'championship'].includes(format) && tournamentId) {
       console.log(`Navigating to start-match-ko for match ${match.id} with teams:`, {
         teamA: match.team1,
@@ -1226,6 +1340,7 @@ const updateMatchTimetable = async (matchId, newDate, newTime) => {
       });
     }
   };
+
 
   const handleNextRound = async () => {
     if (!canAdvanceToNextRound || tournamentWinner) return;
@@ -1403,13 +1518,19 @@ const updateMatchTimetable = async (matchId, newDate, newTime) => {
             </div>
           ) : !match.team1?.isBye && !match.team2?.isBye ? (
             <motion.button 
-              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-white transition-all duration-200"
-              onClick={() => handleStartMatch(match)}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              Start Match
-            </motion.button>
+            className={`px-4 py-2 rounded-lg text-white transition-all duration-200 ${
+              User === 'Different User' 
+                ? 'bg-gray-500 cursor-not-allowed'  // Disabled style
+                : 'bg-purple-600 hover:bg-purple-700'  // Enabled style
+            }`}
+            onClick={() => handleStartMatch(match)}
+            whileHover={{ scale: User === 'Different User' ? 1 : 1.05 }}  // Disable hover animation if disabled
+            whileTap={{ scale: User === 'Different User' ? 1 : 0.95 }}    // Disable tap animation if disabled
+            disabled={User === 'Different User'}  // NEW: Disable the button
+          >
+            Start Match
+          </motion.button>
+
           ) : null}
         </div>
       )}
@@ -1557,12 +1678,15 @@ const updateMatchTimetable = async (matchId, newDate, newTime) => {
                 {showTimetable && (
                   <div className="mt-6 bg-gray-800 p-6 rounded-xl shadow-lg">
                     <h3 className="text-2xl font-bold mb-4 text-blue-400">Match Timetable</h3>
-                    <button
-                      onClick={regenerateTimetable}
-                      className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded text-white mb-4"
-                    >
-                      Regenerate Timetable
-                    </button>
+                    {User !== 'Different User' && (  // NEW: Conditional render to hide the button
+                      <button
+                        onClick={regenerateTimetable}
+                        className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded text-white mb-4"  // Restore original enabled styles
+                      >
+                        Regenerate Timetable
+                      </button>
+                    )}
+
                     {timetableData.length > 0 ? (
                       <table className="w-full text-left">
                         <thead>
@@ -1623,6 +1747,7 @@ const updateMatchTimetable = async (matchId, newDate, newTime) => {
                                     </button>
                                   </div>
                                 ) : (
+                                  User !== 'Different User' ? ( 
                                   <div>
                                     <button
                                       onClick={() => {
@@ -1687,6 +1812,7 @@ const updateMatchTimetable = async (matchId, newDate, newTime) => {
                                       Delete
                                     </button>
                                   </div>
+                                  ) : null
                                 )}
                               </td>
                             </tr>

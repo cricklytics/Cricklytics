@@ -458,6 +458,8 @@ const FixtureGenerator = () => {
   const { tournamentName } = location.state || {};
   const { tournamentId } = location.state || {};
   const {information} = location.state || {};
+  const {User} = location.state || {};
+  console.log(User);
   console.log(information);
   console.log(tournamentName);
 
@@ -703,6 +705,7 @@ const FixtureGenerator = () => {
           onTeamsSelectedForLiveScore={handleTeamsSelected}
           setActiveTab={setActiveTab}
           tournamentName={tournamentName}
+          User = {User}
           information = {information}
         />
       ) : (

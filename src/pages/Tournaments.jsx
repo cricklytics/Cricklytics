@@ -16,27 +16,31 @@ export default function TournamentList() {
   useEffect(() => {
     if (!auth.currentUser) return;
 
-    const unsubscribe = onSnapshot(collection(db, 'tournaments'), (snapshot) => {
-      const tournaments = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setTournamentList(tournaments);
-    }, (error) => {
-      console.error("Error fetching tournaments:", error);
-    });
+    const unsubscribe = onSnapshot(
+      collection(db, 'tournament'),
+      (snapshot) => {
+        const tournaments = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setTournamentList(tournaments);
+      },
+      (error) => {
+        console.error("Error fetching tournaments:", error);
+      }
+    );
 
     return () => unsubscribe();
   }, []);
 
   const handleDeleteTournament = async (id) => {
     if (window.confirm('Are you sure you want to delete this tournament?')) {
-      await deleteDoc(doc(db, 'tournaments', id));
+      await deleteDoc(doc(db, 'tournament', id));
     }
   };
 
   const handleFollowToggle = async (tournament) => {
-    const tournamentRef = doc(db, 'tournaments', tournament.id);
+    const tournamentRef = doc(db, 'tournament', tournament.id);
     if (tournament.followers?.includes(auth.currentUser.uid)) {
       await updateDoc(tournamentRef, {
         followers: arrayRemove(auth.currentUser.uid)
@@ -46,7 +50,6 @@ export default function TournamentList() {
         followers: arrayUnion(auth.currentUser.uid)
       });
     }
-    // Close modal after action
     setIsModalOpen(false);
   };
 
@@ -55,7 +58,6 @@ export default function TournamentList() {
     setIsModalOpen(true);
   };
 
-  // Filtering tournaments based on active tab
   let tournamentsToShow = [];
   if (activeTab === 'myTournament') {
     tournamentsToShow = tournamentList.filter(t => t.userId === auth.currentUser.uid);
@@ -65,7 +67,6 @@ export default function TournamentList() {
     tournamentsToShow = tournamentList.filter(t => t.followers?.includes(auth.currentUser.uid));
   }
 
-  // Helper to render the tournament image or fallback first letter circle
   const renderTournamentImage = (tournament) => {
     if (tournament.imageUrl && tournament.imageUrl.trim() !== '') {
       return (
@@ -97,7 +98,6 @@ export default function TournamentList() {
     >
       {/* Fixed Header */}
       <div className="fixed top-0 left-0 right-0 z-10 bg-transparent">
-        {/* Top Navbar */}
         <div className="flex flex-col p-4 pb-0">
           <div className="flex items-start">
             <img
@@ -119,12 +119,12 @@ export default function TournamentList() {
             src={backButton}
             alt="Back"
             className="h-8 w-8 cursor-pointer -scale-x-100"
-            onClick={() => window.history.back()}
+            onClick={ () => {navigate("/search-aft")}}
           />
         </div>
 
         {/* Tabs */}
-        <div className="w-[95%] flex justify-center space-x-12 text-white text-lg font-semibold border-b-4 border-white pb-2 ml-10 mb-2 px-4">
+        <div className="w-full flex justify-center space-x-6 sm:space-x-12 text-white text-sm sm:text-lg font-semibold border-b-4 border-white pb-2 px-2 sm:px-4">
           <div
             onClick={() => setActiveTab('myTournament')}
             className={`cursor-pointer ${activeTab === 'myTournament' ? 'border-b-2 border-white text-blue-500' : ''}`}
@@ -146,63 +146,71 @@ export default function TournamentList() {
         </div>
       </div>
 
-      {/* Content with padding to account for fixed header */}
-      <div className="pt-40 md:pt-38 max-w-xl mx-auto space-y-4 px-4">
-        {activeTab === 'following' && tournamentsToShow.length === 0 ? (
-          <div className="text-white text-center py-10">
-            <p className="text-2xl font-semibold">You haven’t followed any tournaments yet! 😔</p>
-          </div>
-        ) : activeTab !== 'following' && tournamentsToShow.length === 0 ? (
-          <div className="text-white text-center py-10">
-            <p className="text-xl font-semibold">No tournaments to show here.</p>
-          </div>
-        ) : (
-          tournamentsToShow.map((tournament) => (
-            <div
-              key={tournament.id}
-              onClick={() => handleCardClick(tournament)}
-              className="rounded-xl bg-white/5 border border-white/20 shadow-lg shadow-black/50 p-4 backdrop-blur relative overflow-hidden transition-transform duration-300 ease-in-out hover:-translate-y-1 cursor-pointer"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  {renderTournamentImage(tournament)}
-                  <span className="text-lg font-semibold text-white">{tournament.name}</span>
-                </div>
-
-                <div className="flex items-center gap-4">
-                  <div className="text-right text-sm space-y-1 text-white">
-                    <div className="flex items-center justify-end gap-2">
-                      <FaMapMarkerAlt className="text-white" />
-                      <span>{tournament.location}</span>
+      {/* Scrollable Border Box */}
+      <div className="w-full px-2 sm:px-4 pt-[140px]">
+         <div
+    className="border-2 border-white/40 rounded-lg overflow-y-auto"
+    style={{
+      maxHeight: "calc(100vh - 180px)",
+    }}
+  >
+          <div className="space-y-4 p-4">
+            {activeTab === 'following' && tournamentsToShow.length === 0 ? (
+              <div className="text-white text-center py-10">
+                <p className="text-2xl font-semibold">You haven’t followed any tournaments yet! 😔</p>
+              </div>
+            ) : activeTab !== 'following' && tournamentsToShow.length === 0 ? (
+              <div className="text-white text-center py-10">
+                <p className="text-xl font-semibold">No tournaments to show here.</p>
+              </div>
+            ) : (
+              tournamentsToShow.map((tournament) => (
+                <div
+                  key={tournament.id}
+                  onClick={() => handleCardClick(tournament)}
+                  className="rounded-xl bg-white/5 border border-white/20 shadow-lg shadow-black/50 p-4 backdrop-blur relative overflow-hidden transition-transform duration-300 ease-in-out hover:-translate-y-1 cursor-pointer"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-4">
+                    <div className="flex items-center">
+                      {renderTournamentImage(tournament)}
+                      <span className="text-lg font-semibold text-white">{tournament.name}</span>
                     </div>
-                    <div className="flex items-center justify-end gap-2">
-                      <span>{tournament.season || 'N/A'}</span>
+
+                    <div className="flex items-center gap-4">
+                      <div className="text-right text-sm space-y-1 text-white">
+                        <div className="flex items-center justify-end gap-2">
+                          <FaMapMarkerAlt className="text-white" />
+                          <span>{tournament.location}</span>
+                        </div>
+                        <div className="flex items-center justify-end gap-2">
+                          <span>{tournament.season || 'N/A'}</span>
+                        </div>
+                      </div>
+                      {tournament.userId === auth.currentUser.uid && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteTournament(tournament.id);
+                          }}
+                          className="text-red-500 hover:text-red-700 transition"
+                          aria-label="Delete Tournament"
+                          title="Delete Tournament"
+                        >
+                          <FaTrashAlt size={20} />
+                        </button>
+                      )}
                     </div>
                   </div>
-                  {/* Delete Icon - only for owned tournaments */}
-                  {tournament.userId === auth.currentUser.uid && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation(); // Prevent card click when deleting
-                        handleDeleteTournament(tournament.id);
-                      }}
-                      className="text-red-500 hover:text-red-700 transition ml-4"
-                      aria-label="Delete Tournament"
-                      title="Delete Tournament"
-                    >
-                      <FaTrashAlt size={20} />
-                    </button>
-                  )}
                 </div>
-              </div>
-            </div>
-          ))
-        )}
+              ))
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Tournament Details Modal */}
       {isModalOpen && selectedTournament && (
-        <div className="fixed inset-0 bg-black bg-opacity-90 flex justify-center items-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-90 flex justify-center items-center z-50 px-2">
           <div
             className="w-full max-w-md rounded-lg p-6 shadow-lg border-2 border-white"
             style={{
@@ -211,7 +219,7 @@ export default function TournamentList() {
             }}
           >
             <h2 className="text-xl font-bold mb-4 text-white text-center">Tournament Details</h2>
-            <div className="space-y-3 text-white">
+            <div className="space-y-3 text-white text-sm sm:text-base">
               <div className="flex items-center gap-2">
                 <span className="font-semibold">Name:</span>
                 <span>{selectedTournament.name}</span>
@@ -258,7 +266,7 @@ export default function TournamentList() {
                 </div>
               )}
             </div>
-            <div className="flex justify-end mt-6 gap-2">
+            <div className="flex flex-wrap justify-end mt-6 gap-2">
               <button
                 onClick={() => setIsModalOpen(false)}
                 className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded transition"
@@ -269,8 +277,19 @@ export default function TournamentList() {
                 <button
                   onClick={() => {
                     setIsModalOpen(false);
+                    const stage = selectedTournament.currentStage || 'N/A';
                     // Navigate with tournament id as example
+                    if (stage === 'RoundRobin') {
                     navigate("/Selection2", { state: { information: "FromSidebar", noOfTeams: selectedTournament.teams, tournamentName: selectedTournament.name } })
+                    }else if (stage == 'Knockout'){
+                      navigate("/match-start-ko", {
+                          state: {
+                            information: "FromSidebar",
+                            tournamentId: selectedTournament.tournamentId,
+                            tournamentName: selectedTournament.name,
+                          }
+                        });
+                    }
                   }}
                   className="bg-blue-700 hover:bg-blue-600 text-white px-4 py-2 rounded transition font-semibold"
                 >
@@ -278,12 +297,45 @@ export default function TournamentList() {
                 </button>
               )}
               {selectedTournament.userId !== auth.currentUser.uid && (
-                <button
-                  onClick={() => handleFollowToggle(selectedTournament)}
-                  className="bg-green-700 hover:bg-green-600 text-white px-4 py-2 rounded transition font-semibold"
-                >
-                  {selectedTournament.followers?.includes(auth.currentUser.uid) ? 'Unfollow' : 'Follow'}
-                </button>
+                <>
+                  <button
+                    onClick={() => handleFollowToggle(selectedTournament)}
+                    className="bg-green-700 hover:bg-green-600 text-white px-4 py-2 rounded transition font-semibold"
+                  >
+                    {selectedTournament.followers?.includes(auth.currentUser.uid) ? 'Unfollow' : 'Follow'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      const stage = selectedTournament.currentStage || 'N/A';
+                      if (stage === 'RoundRobin') {
+                        navigate("/Selection2", {
+                          state: {
+                            information: "FromSidebar",
+                            User: "Different User",
+                            tournamentId: selectedTournament.tournamentId,
+                            noOfTeams: selectedTournament.noOfTeams,
+                            tournamentName: selectedTournament.name
+                          }
+                        });
+                      } else if (stage === 'Knockout') {
+                        navigate("/match-start-ko", {
+                          state: {
+                            tournamentId: selectedTournament.tournamentId,
+                            tournamentName: selectedTournament.name,
+                            User: "Different User",
+                          }
+                        });
+                      } else {
+                        // Placeholder for other stages
+                        console.log(`Unsupported stage: ${stage}`);
+                      }
+                      setIsModalOpen(false); // Close modal after navigation
+                    }}
+                    className="bg-blue-700 hover:bg-blue-600 text-white px-4 py-2 rounded transition font-semibold"
+                  >
+                    View
+                  </button>
+                </>
               )}
             </div>
           </div>

@@ -139,9 +139,7 @@ const PlayerSelector = ({
                 <span className="ml-auto text-lg font-bold text-blue-700">
                   Selected: {selectedPlayers.left.length}/11
                 </span>
-              </div>
-
-              <div className="relative">
+              </div>  <div className="relative">
                 <div className="relative">
                   <input
                     type="text"
@@ -206,9 +204,7 @@ const PlayerSelector = ({
                 <span className="ml-auto text-lg font-bold text-indigo-700">
                   Selected: {selectedPlayers.right.length}/11
                 </span>
-              </div>
-
-              <div className="relative">
+              </div>  <div className="relative">
                 <div className="relative">
                   <input
                     type="text"
@@ -294,6 +290,7 @@ const Startmatch = ({
   setActiveTab,
   tournamentName,
   information,
+  User
 }) => {
   console.group('Startmatch Props');
   console.log('Initial Team A:', initialTeamA);
@@ -308,6 +305,7 @@ const Startmatch = ({
   console.log('setActiveTab:', typeof setActiveTab);
   console.log('TournamentName:', tournamentName);
   console.log('information:', information);
+  console.log(User);
   console.groupEnd();
 
   const [allTeams, setAllTeams] = useState([]);
@@ -334,11 +332,11 @@ const Startmatch = ({
   const [flowchartError, setFlowchartError] = useState(null);
   const [tournamentImageUrl, setTournamentImageUrl] = useState('');
   const [isPitchAnalyzerOpen, setIsPitchAnalyzerOpen] = useState(false);
-  const [isPitchAnalyzed, setIsPitchAnalyzed] = useState(false);
-  
-
-  const scorers = ['John Doe', 'Jane Smith', 'Mike Johnson'];
+  const [isPitchAnalyzed, setIsPitchAnalyzed] = useState(false);  const scorers = ['John Doe', 'Jane Smith', 'Mike Johnson'];
   const navigate = useNavigate();
+
+  // Check if it's a different user
+  const isDifferentUser = User === 'Different User';
 
   // Fetch teams from Firebase
   useEffect(() => {
@@ -377,7 +375,7 @@ const Startmatch = ({
       }
 
       try {
-        const tournamentsCollectionRef = collection(db, 'tournaments');
+        const tournamentsCollectionRef = collection(db, 'tournament');
         const querySnapshot = await getDocs(tournamentsCollectionRef);
         const matchingTournament = querySnapshot.docs.find(doc => 
           doc.data().name.toLowerCase() === tournamentName.toLowerCase()
@@ -423,9 +421,7 @@ const Startmatch = ({
 
         const tournamentDoc = querySnapshot.docs[0];
         setTournamentDocId(tournamentDoc.id);
-        const tournamentData = tournamentDoc.data();
-
-        const roundRobinMatches = Object.keys(tournamentData.roundRobin || {}).flatMap(groupKey => {
+        const tournamentData = tournamentDoc.data();  const roundRobinMatches = Object.keys(tournamentData.roundRobin || {}).flatMap(groupKey => {
           const groupNumber = groupKey.split('_').pop();
           return (tournamentData.roundRobin[groupKey] || []).map(match => ({
             ...match,
@@ -538,9 +534,7 @@ const Startmatch = ({
       } finally {
         setLoadingTournament(false);
       }
-    };
-
-    if (tournamentId) {
+    };  if (tournamentId) {
       fetchTournamentData();
     }
   }, [tournamentId]);
@@ -667,9 +661,7 @@ const Startmatch = ({
     if (selectedMatch && selectedMatch.winner !== null) {
       alert('This match has already been played.');
       return;
-    }
-
-    if (!selectedTeamA || !selectedTeamB || !overs) {
+    }  if (!selectedTeamA || !selectedTeamB || !overs) {
       alert('Please select a match and enter overs.');
       return;
     }
@@ -811,9 +803,7 @@ const Startmatch = ({
             >
               View Flowchart
             </button>
-          </motion.div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full">
+          </motion.div>  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full">
             <motion.div
               className="flex flex-col space-y-6 w-full"
               initial={{ opacity: 0, x: -20 }}
@@ -898,9 +888,7 @@ const Startmatch = ({
                     />
                   </div>
                 </div>
-              </motion.div>
-
-              <motion.div
+              </motion.div>  <motion.div
                 className="min-h-[200px] bg-gradient-to-br from-blue-50 to-indigo-50 bg-opacity-90 rounded-xl shadow-xl p-6 w-full border border-blue-100 flex flex-col justify-center"
                 whileHover={{ scale: 1.01 }}
               >
@@ -916,6 +904,7 @@ const Startmatch = ({
                     onChange={(e) => setOvers(e.target.value)}
                     min="1"
                     max="50"
+                    disabled={isDifferentUser} // Disable for different user
                   />
                 </div>
               </motion.div>
@@ -941,6 +930,7 @@ const Startmatch = ({
                       }`}
                       value={tossWinner}
                       onChange={(e) => setTossWinner(e.target.value)}
+                      disabled={isDifferentUser} // Disable for different user
                     >
                       <option value="">Select Team</option>
                       {selectedTeamA && <option value={selectedTeamA}>{selectedTeamA}</option>}
@@ -958,6 +948,7 @@ const Startmatch = ({
                           checked={tossDecision === 'Batting'}
                           onChange={() => setTossDecision('Batting')}
                           className="h-5 w-5 text-blue-600 focus:ring-blue-500"
+                          disabled={isDifferentUser} // Disable for different user
                         />
                         <span className="text-black font-medium">Batting</span>
                       </label>
@@ -969,6 +960,7 @@ const Startmatch = ({
                           checked={tossDecision === 'Bowling'}
                           onChange={() => setTossDecision('Bowling')}
                           className="h-5 w-5 text-blue-600 focus:ring-blue-500"
+                          disabled={isDifferentUser} // Disable for different user
                         />
                         <span className="text-black font-medium">Bowling</span>
                       </label>
@@ -989,6 +981,7 @@ const Startmatch = ({
                     }`}
                     value={scorer}
                     onChange={(e) => setScorer(e.target.value)}
+                    disabled={isDifferentUser} // Disable for different user
                   >
                     <option value="">Select Scorer</option>
                     {scorers.map(person => (
@@ -998,9 +991,7 @@ const Startmatch = ({
                 </div>
               </motion.div>
             </motion.div>
-          </div>
-
-          <div className="mt-8 flex flex-col items-center">
+          </div>  <div className="mt-8 flex flex-col items-center">
                       <PitchAnalyzer 
                         isOpen={isPitchAnalyzerOpen}
                         onClose={() => setIsPitchAnalyzerOpen(false)}
@@ -1018,13 +1009,13 @@ const Startmatch = ({
                     transition={{ duration: 0.5, delay: 0.4 }}
                   >
                     <motion.button
-                      className={`px-6 py-3 mt-8 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all duration-300 w-full max-w-md ${
-                        !isPitchAnalyzed ? 'opacity-50 cursor-not-allowed' : ''
-                      }`}
+                     className={`px-6 py-3 mt-8 font-semibold rounded-lg shadow-md hover:shadow-lg transition-all duration-300 w-full max-w-md ${
+                                  !isPitchAnalyzed || isDifferentUser ? 'bg-gray-400 text-gray-700 cursor-not-allowed opacity-70' : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white'
+                                }`}
                       whileHover={isPitchAnalyzed ? { scale: 1.02 } : {}}
                       whileTap={isPitchAnalyzed ? { scale: 0.98 } : {}}
                       onClick={handleNext}
-                      disabled={!isPitchAnalyzed}
+                      disabled={!isPitchAnalyzed || isDifferentUser}
                     >
                       Next
                     </motion.button>

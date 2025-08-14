@@ -460,6 +460,8 @@ const FixtureGenerator = () => {
   const { tournamentName: stateTournamentName } = location.state || {};
   const tournamentName = stateTournamentName || localStorage.getItem('tournamentName') || 'Default Tournament';
   console.log(tournamentName);
+  const {User} = location.state || {};
+  console.log(User);
 
   // Fetch match data from Firestore for Live Score and Match Analytics
   useEffect(() => {
@@ -619,7 +621,7 @@ const FixtureGenerator = () => {
         if (location.state?.origin) {
           navigate('/TournamentPage', { state: { tournamentName } });
         } else {
-          navigate('/TournamentPage', { state: { tournamentName } });
+          navigate('/tournament', { state: { tournamentName } });
         }
         break;
       case 'Start Match':
@@ -700,7 +702,10 @@ const FixtureGenerator = () => {
       {activeTab === 'Knockout Brackets' ? (
         <TournamentBracket 
         setActiveTab={setActiveTab}
-        tournamentName={tournamentName} />
+        tournamentName={tournamentName}
+        User={User}
+        // tournamentId={tournamentId}
+         />
       ) : activeTab === 'Start Match' ? (
         <Startmatch
           initialTeamA={selectedTeamA}
@@ -884,35 +889,46 @@ const FixtureGenerator = () => {
           )}
 
           {activeTab === 'Match Analytics' && (
-            <div className="rounded-lg p-6 text-white">
-              <div className="flex border-b border-gray-700 mb-6">
-                <button
-                  className={`py-2 px-4 mr-2 ${
-                    activeAnalyticsTab === 'scorecard'
-                      ? 'border-b-2 border-blue-600 font-semibold'
-                      : 'text-blue-400'
-                  }`}
-                  onClick={() => setActiveAnalyticsTab('scorecard')}
-                >
-                  Scorecard
-                </button>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {activeAnalyticsTab === 'scorecard' && (
-                  <>
-                    <div className="bg-gray-700 rounded-lg p-4 md:col-span-2">
-                      <h3 className="text-lg font-semibold mb-4">Worm Graph</h3>
-                      <WormGraph matchData={matchData} />
-                    </div>
-                    <div className="bg-gray-700 rounded-lg p-4 md:col-span-2">
-                      <h3 className="text-lg font-semibold mb-4">Scorecard</h3>
-                      <Scorecard matchData={matchData} />
-                    </div>
-                  </>
-                )}
-              </div>
+            <div className="rounded-lg p-4 sm:p-6 text-white">
+                {/* Tab Navigation - Scrollable on small screens if many tabs */}
+            <div className="flex overflow-x-auto scrollbar-hide border-b border-gray-700 mb-4 sm:mb-6">
+            <button
+                    className={`py-2 px-3 sm:px-4 mr-2 whitespace-nowrap ${
+                      activeAnalyticsTab === 'scorecard'
+                        ? 'border-b-2 border-blue-600 font-semibold'
+                        : 'text-blue-400 hover:text-blue-300'
+                    }`}
+                    onClick={() => setActiveAnalyticsTab('scorecard')}
+            >
+                    Scorecard
+            </button>
+                  {/* Add more tabs here if needed */}
             </div>
-          )}
+            
+                {/* Content Area */}
+            <div className="space-y-4 sm:space-y-6">
+                  {activeAnalyticsTab === 'scorecard' && (
+            <>
+                      {/* Worm Graph - Full width on all screens */}
+            <div className="bg-gray-700 rounded-lg p-3 sm:p-4">
+              <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Worm Graph</h3>
+            <div className="overflow-x-auto">
+              <WormGraph matchData={matchData} />
+            </div>
+            </div>
+            
+                      {/* Scorecard - Full width on all screens */}
+            <div className="bg-gray-700 rounded-lg p-3 sm:p-4">
+              <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">Scorecard</h3>
+            <div className="overflow-x-auto">
+              <Scorecard matchData={matchData} />
+            </div>
+            </div>
+            </>
+              )}
+            </div>
+            </div>
+            )}
         </main>
       )}
     </div>
